@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/contexts/NotificationContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -88,7 +89,9 @@ interface GetMessagesResponse {
 function ChatContent() {
   const { user } = useAuth();
   const { notifyError, notifySuccess } = useNotifications();
-  
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   // Product selection state
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -124,6 +127,22 @@ function ChatContent() {
     fetchProducts();
     fetchSessions();
   }, []);
+
+  // Handle product from URL parameter (from products page chat button)
+  useEffect(() => {
+    const productId = searchParams.get('product');
+    if (productId && products.length > 0 && !selectedProduct) {
+      const product = products.find(p => p.insurance_id === productId);
+      if (product) {
+        console.log('🔗 Product from URL:', product);
+        // Call handleProductSelect and clean URL after it completes
+        handleProductSelect(product).then(() => {
+          console.log('✅ Product selection completed, clearing URL parameter');
+          router.replace('/chat', { scroll: false });
+        });
+      }
+    }
+  }, [searchParams, products]);
   
   // Load messages when current session ID changes (not just session object)
   useEffect(() => {
@@ -413,13 +432,23 @@ function ChatContent() {
   
   const handleSessionSelect = async (session: ChatSessionWithDetails) => {
     if (currentSession?.session_id === session.session_id) return;
-    
+
+    console.log('🔍 Session Select - Session clicked:', session.session_name);
+    console.log('🔍 Session Select - Looking for insurance_id:', session.insurance_id);
+    console.log('🔍 Session Select - Products available:', products.length);
+    console.log('🔍 Session Select - Products array:', products.map(p => ({ id: p.insurance_id, name: p.insurance_name })));
+
     setCurrentSession(session);
-    
+
     // Find the associated product
     const associatedProduct = products.find(p => p.insurance_id === session.insurance_id);
+    console.log('🔍 Session Select - Found product:', associatedProduct ? associatedProduct.insurance_name : 'NOT FOUND');
+
     if (associatedProduct) {
       setSelectedProduct(associatedProduct);
+      console.log('✅ Session Select - Product set successfully:', associatedProduct.insurance_name);
+    } else {
+      console.warn('⚠️ Session Select - No matching product found for insurance_id:', session.insurance_id);
     }
   };
 

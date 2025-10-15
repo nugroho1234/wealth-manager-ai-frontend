@@ -17,6 +17,7 @@ interface Product {
   created_at: string;
   processing_status: string;
   pdf_url?: string;
+  discontinued: boolean;
 }
 
 function AdminProductsContent() {
@@ -43,18 +44,19 @@ function AdminProductsContent() {
   const fetchProducts = async () => {
     try {
       setIsLoading(true);
-      
+
+      // Admin view: include discontinued products
       const response = await apiClient.get<{
         success: boolean;
         message: string;
         data: Product[];
-      }>('/api/v1/products?limit=50');
-      
+      }>('/api/v1/products?limit=50&include_discontinued=true');
+
       const productList = response.data.data || [];
       console.log('Products fetched:', productList.length);
-      
+
       setProducts(productList);
-      
+
     } catch (error: any) {
       console.error('Error fetching products:', error);
       const errorMessage = error.detail || error.message || 'Failed to fetch products';
@@ -129,11 +131,40 @@ function AdminProductsContent() {
       notifyError('Document Error', 'No PDF document available for this product');
       return;
     }
-    
+
     const gcsBaseUrl = 'https://storage.googleapis.com/wealth-manager-public';
     const documentUrl = `${gcsBaseUrl}/${product.pdf_url}`;
-    
+
     window.open(documentUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleToggleDiscontinued = async (product: Product) => {
+    const action = product.discontinued ? 'reactivate' : 'discontinue';
+    const confirmMessage = product.discontinued
+      ? `Are you sure you want to reactivate "${product.insurance_name}"? It will be visible to users again.`
+      : `Are you sure you want to discontinue "${product.insurance_name}"? It will be hidden from users but existing chat sessions will continue to work.`;
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      await apiClient.put(`/api/v1/products/${product.insurance_id}`, {
+        discontinued: !product.discontinued
+      });
+
+      notifySuccess(
+        'Success',
+        `Product ${action}d successfully`
+      );
+
+      // Refresh products list
+      await fetchProducts();
+    } catch (error: any) {
+      console.error(`Error ${action}ing product:`, error);
+      const errorMessage = error.detail || error.message || `Failed to ${action} product`;
+      notifyError('Update Error', errorMessage);
+    }
   };
 
   const toggleRowExpansion = (productId: string) => {
@@ -367,11 +398,18 @@ function AdminProductsContent() {
                       <tr key={product.insurance_id} className="hover:bg-gray-50/50 transition-colors">
                         <td className="px-6 py-4">
                           <div>
-                            <div className="text-sm font-medium text-gray-900 mb-1">
-                              {product.insurance_name || 'Untitled Product'}
+                            <div className="text-sm font-medium text-gray-900 mb-1 flex items-center gap-2">
+                              <span className={product.discontinued ? 'text-gray-400' : ''}>
+                                {product.insurance_name || 'Untitled Product'}
+                              </span>
+                              {product.discontinued && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                                  DISCONTINUED
+                                </span>
+                              )}
                             </div>
                             <div className="text-xs text-gray-500">
-                              {expandedRows.has(product.insurance_id) 
+                              {expandedRows.has(product.insurance_id)
                                 ? product.key_features || 'No description available'
                                 : truncateText(product.key_features, 80)
                               }
@@ -415,7 +453,7 @@ function AdminProductsContent() {
                                 </svg>
                               </button>
                             )}
-                            
+
                             {/* Edit Button */}
                             <button
                               onClick={() => handleEditProduct(product)}
@@ -425,6 +463,27 @@ function AdminProductsContent() {
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                               </svg>
+                            </button>
+
+                            {/* Discontinue/Reactivate Button */}
+                            <button
+                              onClick={() => handleToggleDiscontinued(product)}
+                              className={`p-2 rounded-lg transition-colors duration-200 ${
+                                product.discontinued
+                                  ? 'bg-green-100 hover:bg-green-200 text-green-600'
+                                  : 'bg-red-100 hover:bg-red-200 text-red-600'
+                              }`}
+                              title={product.discontinued ? 'Reactivate Product' : 'Discontinue Product'}
+                            >
+                              {product.discontinued ? (
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                              ) : (
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                </svg>
+                              )}
                             </button>
                           </div>
                         </td>

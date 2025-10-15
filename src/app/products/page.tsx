@@ -26,6 +26,8 @@ interface SearchResult {
   category: string;
   results: Product[];
   total: number;
+  category_fallback?: boolean;
+  requested_category?: string;
 }
 
 function ProductsContent() {
@@ -41,6 +43,8 @@ function ProductsContent() {
   const [aiCategory, setAiCategory] = useState('All');
   const [aiResults, setAiResults] = useState<Product[]>([]);
   const [isAiSearching, setIsAiSearching] = useState(false);
+  const [categoryFallback, setCategoryFallback] = useState(false);
+  const [requestedCategory, setRequestedCategory] = useState<string | null>(null);
   
   // Manual Search state
   const [manualProducts, setManualProducts] = useState<Product[]>([]);
@@ -57,6 +61,13 @@ function ProductsContent() {
   // Product selection state
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [showMobileWarning, setShowMobileWarning] = useState(false);
+
+  // Chat modal state
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [productToChat, setProductToChat] = useState<Product | null>(null);
+  const [chatSessions, setChatSessions] = useState<any[]>([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
 
   useEffect(() => {
     fetchCategories();
@@ -138,7 +149,14 @@ function ProductsContent() {
       
       if (response.data.success) {
         setAiResults(response.data.data.results);
-        notifySuccess('Search Complete', `Found ${response.data.data.total} relevant products`);
+        setCategoryFallback(response.data.data.category_fallback || false);
+        setRequestedCategory(response.data.data.requested_category || null);
+
+        if (response.data.data.category_fallback) {
+          notifySuccess('Search Complete', `No products in '${response.data.data.requested_category}'. Showing ${response.data.data.total} from all categories.`);
+        } else {
+          notifySuccess('Search Complete', `Found ${response.data.data.total} relevant products`);
+        }
       }
       
     } catch (error: any) {
@@ -161,8 +179,84 @@ function ProductsContent() {
     setExpandedCards(newExpanded);
   };
 
-  const handleChatClick = (product: Product) => {
-    console.log('Chat with product:', product.insurance_name);
+  const fetchChatSessions = async () => {
+    try {
+      setIsLoadingSessions(true);
+      const response = await apiClient.get<{
+        success: boolean;
+        sessions: any[];
+        active_count: number;
+      }>('/api/v1/chat/sessions', {
+        params: {
+          status: 'active',
+          limit: 50
+        }
+      });
+
+      if (response.data.success) {
+        setChatSessions(response.data.sessions);
+        return response.data.sessions;
+      }
+      return [];
+    } catch (error: any) {
+      console.error('Error fetching chat sessions:', error);
+      notifyError('Error', 'Failed to fetch chat sessions');
+      return [];
+    } finally {
+      setIsLoadingSessions(false);
+    }
+  };
+
+  const handleArchiveSession = async (sessionId: string) => {
+    try {
+      setIsArchiving(true);
+      const response = await apiClient.delete(`/api/v1/chat/sessions/${sessionId}`);
+
+      if (response.data.success) {
+        // Remove from local state
+        setChatSessions(prev => prev.filter(s => s.session_id !== sessionId));
+        notifySuccess('Session Archived', 'Chat session has been archived');
+
+        // After archiving, navigate to chat with the selected product
+        if (productToChat) {
+          router.push(`/chat?product=${productToChat.insurance_id}`);
+        }
+        setShowArchiveModal(false);
+        setProductToChat(null);
+      }
+    } catch (error: any) {
+      console.error('Error archiving session:', error);
+      notifyError('Error', 'Failed to archive session');
+    } finally {
+      setIsArchiving(false);
+    }
+  };
+
+  const handleChatClick = async (product: Product) => {
+    // Fetch current sessions
+    const sessions = await fetchChatSessions();
+
+    // Check if there's already an existing session for this product
+    const existingSession = sessions.find((s: any) => s.insurance_id === product.insurance_id);
+
+    if (existingSession) {
+      // Session already exists - navigate directly (even if we have 5 sessions)
+      console.log('✅ Existing session found for product:', product.insurance_name);
+      router.push(`/chat?product=${product.insurance_id}`);
+      return;
+    }
+
+    // No existing session - check if we're at the limit
+    if (sessions.length >= 5) {
+      // Show archive modal to make room for new session
+      console.log('⚠️ No existing session, and at 5 session limit. Showing archive modal.');
+      setProductToChat(product);
+      setShowArchiveModal(true);
+    } else {
+      // Navigate directly to create new session
+      console.log('✅ No existing session, but have room. Creating new session.');
+      router.push(`/chat?product=${product.insurance_id}`);
+    }
   };
 
   const handleSelectClick = (product: Product) => {
@@ -474,8 +568,26 @@ function ProductsContent() {
                 </form>
               </div>
 
+              {/* Category Fallback Warning Banner */}
+              {categoryFallback && aiResults.length > 0 && (
+                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg mb-6">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-yellow-700">
+                        <strong>No insurance products with the {requestedCategory} found.</strong> Displaying other categories.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* AI Search Results */}
-              {aiResults.length > 0 && (
+              {aiResults.length > 0 ? (
                 <div>
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-xl font-semibold text-gray-900">
@@ -489,7 +601,15 @@ function ProductsContent() {
                     {aiResults.map(renderProductCard)}
                   </div>
                 </div>
-              )}
+              ) : aiQuery && !isAiSearching ? (
+                <div className="text-center py-12">
+                  <div className="text-6xl mb-4">🔍</div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No matching insurance products found</h3>
+                  <p className="text-gray-600">
+                    Try adjusting your search query or selecting "All Categories".
+                  </p>
+                </div>
+              ) : null}
             </div>
           )}
 
@@ -645,6 +765,94 @@ function ProductsContent() {
                     <strong>Mobile Notice:</strong> Comparing 5 products on mobile may affect readability. Consider using fewer products for better experience.
                   </p>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Archive Session Modal */}
+        {showArchiveModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900">Chat Session Limit Reached</h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    You have 5 active chats (maximum). Archive one to continue with{' '}
+                    <strong>{productToChat?.insurance_name}</strong>
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowArchiveModal(false);
+                    setProductToChat(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {isLoadingSessions ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>
+                  <p className="text-sm text-gray-600 mt-3">Loading sessions...</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {chatSessions.map((session: any) => (
+                    <div
+                      key={session.session_id}
+                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="flex-1 min-w-0 mr-4">
+                        <h4 className="font-medium text-gray-900 truncate">
+                          {session.session_name}
+                        </h4>
+                        <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500">
+                          <span>{session.message_count} messages</span>
+                          <span>•</span>
+                          <span>
+                            Last active: {new Date(session.last_message_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleArchiveSession(session.session_id)}
+                        disabled={isArchiving}
+                        className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded-lg text-sm font-medium transition-colors flex items-center space-x-2"
+                      >
+                        {isArchiving ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            <span>Archiving...</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            <span>Archive</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={() => {
+                    setShowArchiveModal(false);
+                    setProductToChat(null);
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           </div>
