@@ -25,7 +25,7 @@ const profileSchema = z.object({
       message: 'Please enter a valid phone number',
     }
   ),
-  company_id: z.number().optional(),
+  company_id: z.string().optional(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -42,7 +42,7 @@ function ProfileContent() {
       first_name: user?.first_name || '',
       last_name: user?.last_name || '',
       phone: user?.phone || '',
-      company_id: user?.company_id ? parseInt(user.company_id) : undefined,
+      company_id: user?.company_id || undefined,
     },
   });
 

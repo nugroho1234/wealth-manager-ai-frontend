@@ -89,5 +89,5 @@ export interface ProfileUpdateData {
   first_name?: string;
   last_name?: string;
   phone?: string;
-  company_id?: number;
+  company_id?: string;
 }
