@@ -66,6 +66,36 @@ function ProposalsContent() {
     }
   };
 
+  // Delete proposal
+  const handleDeleteProposal = async (proposalId: string, clientName: string, status: string, e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent navigation to proposal detail
+    e.stopPropagation(); // Stop event bubbling
+
+    // Confirm deletion with status-specific message
+    const statusWarning = (status === 'extracting' || status === 'generating')
+      ? '\n\nWarning: This proposal is currently being processed. Deleting it will stop the process.'
+      : '';
+
+    if (!confirm(`Are you sure you want to delete the proposal for "${clientName}"?${statusWarning}\n\nThis action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const response = await apiClient.delete(`/api/v1/proposals/${proposalId}`);
+
+      if (response.data.success) {
+        toast.success('Proposal deleted successfully');
+        // Reload proposals list
+        loadProposals();
+      } else {
+        toast.error(response.data.message || 'Failed to delete proposal');
+      }
+    } catch (error: any) {
+      console.error('Error deleting proposal:', error);
+      toast.error(error.detail || 'Failed to delete proposal');
+    }
+  };
+
   useEffect(() => {
     loadProposals();
 
@@ -244,26 +274,36 @@ function ProposalsContent() {
         {filteredProposals.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredProposals.map((proposal) => (
-              <Link
-                key={proposal.proposal_id}
-                href={`/proposals/${proposal.proposal_id}`}
-                className="block"
-              >
-                <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6 hover:shadow-2xl hover:scale-[1.02] transition-all duration-200">
-                  {/* Header */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-semibold text-gray-900 truncate">
-                        {proposal.client_name}
-                      </h3>
-                      <p className="text-sm text-gray-600 capitalize">
-                        {proposal.proposal_type.replace('_', ' ')} Proposal
-                      </p>
+              <div key={proposal.proposal_id} className="relative">
+                <Link
+                  href={`/proposals/${proposal.proposal_id}`}
+                  className="block"
+                >
+                  <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6 hover:shadow-2xl hover:scale-[1.02] transition-all duration-200">
+                    {/* Header */}
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1 min-w-0 pr-2">
+                        <h3 className="text-lg font-semibold text-gray-900 truncate">
+                          {proposal.client_name}
+                        </h3>
+                        <p className="text-sm text-gray-600 capitalize">
+                          {proposal.proposal_type.replace('_', ' ')} Proposal
+                        </p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {getStatusIcon(proposal.status)}
+                        {/* Delete Button */}
+                        <button
+                          onClick={(e) => handleDeleteProposal(proposal.proposal_id, proposal.client_name, proposal.status, e)}
+                          className="p-2 rounded-lg transition-colors text-red-600 hover:bg-red-50 hover:text-red-700"
+                          title="Delete proposal"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-1">
-                      {getStatusIcon(proposal.status)}
-                    </div>
-                  </div>
 
                   {/* Status Badge */}
                   <div className="mb-4">
@@ -311,8 +351,9 @@ function ProposalsContent() {
                       </div>
                     </div>
                   )}
-                </div>
-              </Link>
+                  </div>
+                </Link>
+              </div>
             ))}
           </div>
         ) : (
