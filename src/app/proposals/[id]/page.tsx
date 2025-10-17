@@ -153,6 +153,7 @@ function ProposalDetailContent() {
   const [companyInfo, setCompanyInfo] = useState<any>(null);
   const [commissionData, setCommissionData] = useState<any>({});
   const [loadingCommissions, setLoadingCommissions] = useState(false);
+  const [loadedCommissionIds, setLoadedCommissionIds] = useState<string>('');
   const [selectedHighlightedInsurance, setSelectedHighlightedInsurance] = useState<string>('');
   const [page4Content, setPage4Content] = useState<any>(null);
   const [generatingPage4, setGeneratingPage4] = useState(false);
@@ -502,6 +503,11 @@ function ProposalDetailContent() {
 
       console.log('🔍 COMMISSION DEBUG: Final commission lookup object:', commissionLookup);
       setCommissionData(commissionLookup);
+
+      // ✅ Track which insurance IDs were loaded to prevent redundant API calls
+      const loadedIds = insuranceIds.sort().join(',');
+      setLoadedCommissionIds(loadedIds);
+      console.log('🔍 COMMISSION DEBUG: Marked IDs as loaded:', loadedIds);
     } catch (error) {
       console.error('🔍 COMMISSION DEBUG: Error loading commission data:', error);
       console.error('🔍 COMMISSION DEBUG: Error details:', {
@@ -575,11 +581,28 @@ function ProposalDetailContent() {
   useEffect(() => {
     if (extractedData && extractedData.length > 0) {
       const allMapped = extractedData.every((data: any) => data.matched_insurance_id);
+
       if (allMapped) {
-        loadCommissionData(extractedData);
+        // Create sorted, comma-separated string of current insurance IDs
+        const currentInsuranceIds = extractedData
+          .filter((data: any) => data.matched_insurance_id)
+          .map((data: any) => data.matched_insurance_id)
+          .sort()
+          .join(',');
+
+        // ✅ Only load if the set of insurance IDs has changed
+        // This prevents redundant API calls during polling while still reloading when insurances change
+        if (currentInsuranceIds && currentInsuranceIds !== loadedCommissionIds) {
+          console.log('🔍 COMMISSION DEBUG: Insurance IDs changed, loading commissions');
+          console.log('🔍 COMMISSION DEBUG: Previous IDs:', loadedCommissionIds);
+          console.log('🔍 COMMISSION DEBUG: Current IDs:', currentInsuranceIds);
+          loadCommissionData(extractedData);
+        } else if (currentInsuranceIds === loadedCommissionIds) {
+          console.log('🔍 COMMISSION DEBUG: Insurance IDs unchanged, skipping commission load');
+        }
       }
     }
-  }, [extractedData]); // Removed loadCommissionData from dependencies
+  }, [extractedData, loadedCommissionIds]); // Added loadedCommissionIds dependency
 
   // Generate Page 4 recommendation content
   const generatePage4Content = useCallback(async (forceRegenerate = false) => {
@@ -2338,19 +2361,18 @@ function ProposalDetailContent() {
                             Assign Manually
                           </button>
                         )}
-                        
-                        {(illustration.extraction_status === 'failed' || illustration.extraction_status === 'error') && (
-                          <button
-                            onClick={() => handleDeleteIllustration(illustration.id, illustration.original_filename)}
-                            className="px-3 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors flex items-center space-x-1"
-                            title="Delete failed illustration"
-                          >
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                            <span>Delete</span>
-                          </button>
-                        )}
+
+                        {/* Delete button visible for all illustrations */}
+                        <button
+                          onClick={() => handleDeleteIllustration(illustration.id, illustration.original_filename)}
+                          className="px-3 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors flex items-center space-x-1"
+                          title="Delete illustration"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          <span>Delete</span>
+                        </button>
                       </div>
                     </div>
                     

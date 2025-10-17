@@ -9,7 +9,7 @@ export const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000, // Increased to 30 seconds for AI model responses (was 10000ms)
+  timeout: 120000, // Increased to 120 seconds for LLM extraction tasks (OpenAI has 90s timeout)
 });
 
 // Token management
