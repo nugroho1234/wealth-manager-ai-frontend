@@ -167,6 +167,7 @@ function ProposalDetailContent() {
   const [loadingConversions, setLoadingConversions] = useState(false);
   const [hasCalculatedInitialRates, setHasCalculatedInitialRates] = useState(false);
   const [hasShownCompletionNotification, setHasShownCompletionNotification] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [editMode, setEditMode] = useState<{[key: string]: boolean}>({});
   const [editData, setEditData] = useState<{[key: string]: any}>({});
   const [savingChanges, setSavingChanges] = useState<{[key: string]: boolean}>({});
@@ -1526,6 +1527,9 @@ function ProposalDetailContent() {
       // Auto-save any pending changes before generating
       await handleSaveDraft();
 
+      // Disable button during generation
+      setIsGenerating(true);
+
       toast('Generating proposal... This may take a moment');
 
       // Prepare generation request - backend expects proposal_id and generation_type only
@@ -1546,6 +1550,10 @@ function ProposalDetailContent() {
         // Open proposal preview in new tab so user can review while keeping builder page open
         const previewUrl = `/proposals/${proposalId}/preview`;
         window.open(previewUrl, '_blank');
+
+        // Re-enable button after successful generation
+        console.log('✅ GENERATE BUTTON: Generation successful, re-enabling button');
+        setIsGenerating(false);
       } else {
         throw new Error(response.data.message || 'Failed to generate proposal');
       }
@@ -1554,6 +1562,8 @@ function ProposalDetailContent() {
       console.error('Error generating proposal:', error);
       const errorMessage = error.response?.data?.detail || error.message || 'Failed to generate proposal';
       toast.error(errorMessage);
+      // Re-enable button on error
+      setIsGenerating(false);
     }
   }, [handleSaveDraft, proposal, extractedData, proposalId, user?.user_id]);
 
@@ -1773,6 +1783,22 @@ function ProposalDetailContent() {
   // =============================================================================
   // END AUTOMATIC STATUS POLLING SYSTEM
   // =============================================================================
+
+  // Safety timeout: Re-enable button after 3 minutes if it's still generating
+  useEffect(() => {
+    if (!isGenerating) return;
+
+    console.log('⏱️ GENERATE BUTTON: Starting 3-minute safety timeout');
+    const timeout = setTimeout(() => {
+      console.log('⏱️ GENERATE BUTTON: Safety timeout reached, re-enabling button');
+      setIsGenerating(false);
+      toast.warning('Generation took longer than expected. Button re-enabled. Please check proposal status.');
+    }, 180000); // 3 minutes
+
+    return () => {
+      clearTimeout(timeout);
+    };
+  }, [isGenerating]);
 
   // File upload handling
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
@@ -3682,12 +3708,22 @@ function ProposalDetailContent() {
                               >
                                 Save Draft
                               </button>
-                              <button 
+                              <button
                                 onClick={handleGenerateProposal}
-                                disabled={!page4Content}
-                                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={!page4Content || isGenerating}
+                                className={`px-6 py-2 bg-green-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 ${isGenerating ? '' : 'hover:bg-green-700'}`}
                               >
-                                Generate Proposal
+                                {isGenerating ? (
+                                  <>
+                                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span>Generating...</span>
+                                  </>
+                                ) : (
+                                  <span>Generate Proposal</span>
+                                )}
                               </button>
                             </div>
                           </div>
