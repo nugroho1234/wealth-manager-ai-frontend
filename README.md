@@ -347,6 +347,38 @@ This is a proprietary internal application. For questions or issues, contact the
 
 Proprietary - Internal use only
 
+## Version History
+
+### Version 1.1.0 (December 2025)
+
+**New Features:**
+- **User Management Interface** - New admin page at `/admin/users`
+  - View all users with pagination (20 per page)
+  - Filter users by role and company
+  - Edit user profiles (first name, last name, phone)
+  - Update user roles (SUPER_ADMIN only)
+  - Real-time user statistics dashboard
+  - Profile completion status indicators
+
+**Improvements:**
+- **Enhanced Admin UI** - Consistent white background design across all admin pages
+- **Better Data Display** - User avatars with fallback initials, role badges with color coding
+- **Improved UX** - Modal-based editing with inline validation and error handling
+
+**Bug Fixes:**
+- Fixed pagination field mapping to match backend API response
+- Resolved user data fetching issues with proper role handling
+- Fixed CORS and authentication token handling for user management endpoints
+
+### Version 1.0.0 (November 2025)
+- Initial release with core features
+- Passwordless OTP authentication with role-based access
+- PDF document upload with real-time processing
+- AI-powered chat for insurance document queries
+- Product comparison tool (up to 5 products)
+- Professional proposal generation with PDF export
+- Responsive design with collapsible sidebar
+
 ## Support
 
 For deployment issues:
