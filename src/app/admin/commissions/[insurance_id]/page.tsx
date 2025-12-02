@@ -8,6 +8,8 @@ import { UserRole } from '@/types/auth';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useParams } from 'next/navigation';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '${API_BASE_URL}';
+
 
 interface Commission {
   commission_id: string;
@@ -104,7 +106,7 @@ function CommissionEditContent() {
   const fetchCommissions = async () => {
     try {
       const response = await fetch(
-        `http://localhost:8000/api/v1/commissions/insurance/${insurance_id}`,
+        `${API_BASE_URL}/api/v1/commissions/insurance/${insurance_id}`,
         {
           headers: {
             'Authorization': `Bearer ${getAuthToken()}`,
@@ -144,8 +146,8 @@ function CommissionEditContent() {
 
     try {
       const url = editingCommission
-        ? `http://localhost:8000/api/v1/commissions/${editingCommission.commission_id}`
-        : `http://localhost:8000/api/v1/commissions`;
+        ? `${API_BASE_URL}/api/v1/commissions/${editingCommission.commission_id}`
+        : `${API_BASE_URL}/api/v1/commissions`;
 
       const method = editingCommission ? 'PUT' : 'POST';
       
@@ -187,7 +189,7 @@ function CommissionEditContent() {
     setSaving(true);
     try {
       const response = await fetch(
-        `http://localhost:8000/api/v1/commissions/${commissionId}`,
+        `${API_BASE_URL}/api/v1/commissions/${commissionId}`,
         {
           method: 'DELETE',
           headers: {
@@ -382,7 +384,7 @@ function CommissionEditContent() {
             };
 
             promises.push(
-              fetch('http://localhost:8000/api/v1/commissions', {
+              fetch('${API_BASE_URL}/api/v1/commissions', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -573,7 +575,7 @@ function CommissionEditContent() {
 
       // Delete each commission
       for (const commission of commissionsToDelete) {
-        await fetch(`http://localhost:8000/api/v1/commissions/${commission.commission_id}`, {
+        await fetch(`${API_BASE_URL}/api/v1/commissions/${commission.commission_id}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${getAuthToken()}`,
@@ -658,7 +660,7 @@ function CommissionEditContent() {
 
       // Delete all commissions for this premium term
       const deletePromises = commissionsToDelete.map(commission =>
-        fetch(`http://localhost:8000/api/v1/commissions/${commission.commission_id}`, {
+        fetch(`${API_BASE_URL}/api/v1/commissions/${commission.commission_id}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -722,7 +724,7 @@ function CommissionEditContent() {
 
         if (existing) {
           // Update existing commission
-          await fetch(`http://localhost:8000/api/v1/commissions/${existing.commission_id}`, {
+          await fetch(`${API_BASE_URL}/api/v1/commissions/${existing.commission_id}`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
@@ -734,7 +736,7 @@ function CommissionEditContent() {
           });
         } else {
           // Create new commission
-          await fetch(`http://localhost:8000/api/v1/commissions`, {
+          await fetch(`${API_BASE_URL}/api/v1/commissions`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

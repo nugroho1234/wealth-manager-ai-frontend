@@ -7,6 +7,8 @@ import Sidebar from '@/components/Sidebar';
 import { UserRole } from '@/types/auth';
 import { useRouter } from 'next/navigation';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
 interface Insurance {
   insurance_id: string;
   insurance_name: string;
@@ -80,7 +82,7 @@ function CommissionsContent() {
       
       // Use the new optimized endpoint that returns products with commission data in one call
       const displayRoleId = getDisplayRoleId();
-      const response = await fetch(`http://localhost:8000/api/v1/commissions/products-with-commissions?display_role_id=${displayRoleId}&limit=2000`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/commissions/products-with-commissions?display_role_id=${displayRoleId}&limit=2000`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
