@@ -20,6 +20,13 @@ interface Product {
   discontinued: boolean;
 }
 
+interface ProductsResponse {
+  products: Product[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 function AdminProductsContent() {
   const { user } = useAuth();
   const { notifyError, notifySuccess } = useNotifications();
@@ -34,55 +41,62 @@ function AdminProductsContent() {
   const [selectedProvider, setSelectedProvider] = useState<string>('');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+  const [showDiscontinued, setShowDiscontinued] = useState(true);
+
   useEffect(() => {
     fetchProducts();
-    fetchTotalCount();
     fetchCategories();
     fetchProviders();
-  }, []);
+  }, [currentPage, itemsPerPage, selectedCategory, selectedProvider, showDiscontinued]);
 
   const fetchProducts = async () => {
     try {
       setIsLoading(true);
 
+      const offset = (currentPage - 1) * itemsPerPage;
+
+      // Build query parameters
+      const params = new URLSearchParams({
+        limit: itemsPerPage.toString(),
+        offset: offset.toString(),
+        include_discontinued: showDiscontinued.toString(),
+      });
+
+      if (selectedCategory) {
+        params.append('category', selectedCategory);
+      }
+
+      if (selectedProvider) {
+        params.append('provider', selectedProvider);
+      }
+
       // Admin view: include discontinued products
       const response = await apiClient.get<{
         success: boolean;
         message: string;
-        data: Product[];
-      }>('/api/v1/products?limit=50&include_discontinued=true');
+        data: ProductsResponse;
+      }>(`/api/v1/products?${params.toString()}`);
 
-      const productList = response.data.data || [];
-      console.log('Products fetched:', productList.length);
+      const data = response.data.data;
+      const productList = data.products || [];
+      const total = data.total || 0;
+
+      console.log('Products fetched:', productList.length, 'Total:', total);
 
       setProducts(productList);
+      setTotalCount(total);
 
     } catch (error: any) {
       console.error('Error fetching products:', error);
       const errorMessage = error.detail || error.message || 'Failed to fetch products';
       notifyError('Fetch Error', errorMessage);
       setProducts([]);
+      setTotalCount(0);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const fetchTotalCount = async () => {
-    try {
-      const response = await apiClient.get<{
-        success: boolean;
-        message: string;
-        data: { total_count: number };
-      }>('/api/v1/products/count');
-      
-      const count = response.data.data?.total_count || 0;
-      console.log('Total products count:', count);
-      
-      setTotalCount(count);
-      
-    } catch (error: any) {
-      console.error('Error fetching products count:', error);
-      // Don't show error notification for count failure, just log it
     }
   };
 
@@ -93,14 +107,13 @@ function AdminProductsContent() {
         message: string;
         data: string[];
       }>('/api/v1/products/categories');
-      
+
       const categories = response.data.data || [];
-      
+
       setAllCategories(categories);
-      
+
     } catch (error: any) {
       console.error('Error fetching categories:', error);
-      // Don't show error notification for categories failure, just log it
     }
   };
 
@@ -111,14 +124,13 @@ function AdminProductsContent() {
         message: string;
         data: string[];
       }>('/api/v1/products/providers');
-      
+
       const providers = response.data.data || [];
-      
+
       setAllProviders(providers);
-      
+
     } catch (error: any) {
       console.error('Error fetching providers:', error);
-      // Don't show error notification for providers failure, just log it
     }
   };
 
@@ -205,29 +217,50 @@ function AdminProductsContent() {
       'insurance': 'bg-orange-100 text-orange-800',
       'other': 'bg-gray-100 text-gray-800'
     };
-    
+
     const normalizedCategory = category?.toLowerCase().trim() || 'other';
     return colors[normalizedCategory] || colors.other;
   };
 
+  // Pagination controls
+  const totalPages = totalCount > 0 ? Math.ceil(totalCount / itemsPerPage) : 0;
+  const startIndex = totalCount > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0;
+  const endIndex = totalCount > 0 ? Math.min(currentPage * itemsPerPage, totalCount) : 0;
 
-  // Filter products based on search and filters
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage: number) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset to first page when changing items per page
+  };
+
+  const handleFilterChange = (filterType: 'category' | 'provider', value: string) => {
+    if (filterType === 'category') {
+      setSelectedCategory(value);
+    } else {
+      setSelectedProvider(value);
+    }
+    setCurrentPage(1); // Reset to first page when changing filters
+  };
+
+  // Filter products client-side for search (since API doesn't support search yet)
   const filteredProducts = products.filter(product => {
-    const matchesSearch = !searchTerm || 
+    const matchesSearch = !searchTerm ||
       product.insurance_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.provider?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.key_features?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesCategory = !selectedCategory || product.category === selectedCategory;
-    const matchesProvider = !selectedProvider || product.provider === selectedProvider;
-    
-    return matchesSearch && matchesCategory && matchesProvider;
+
+    return matchesSearch;
   });
 
-  // Use categories and providers from API (spans all insurances)
+  // Use categories and providers from API
   const uniqueCategories = allCategories;
   const uniqueProviders = allProviders;
-  
 
   return (
     <Sidebar>
@@ -244,7 +277,7 @@ function AdminProductsContent() {
                   Edit and manage insurance products in the system
                 </p>
               </div>
-              
+
               <button
                 onClick={() => router.push('/dashboard')}
                 className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
@@ -264,7 +297,7 @@ function AdminProductsContent() {
                 <div className="text-sm text-gray-600">Total Products</div>
               </div>
             </div>
-            
+
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
               <div className="text-center">
                 <div className="text-3xl font-bold text-green-600 mb-2">
@@ -273,7 +306,7 @@ function AdminProductsContent() {
                 <div className="text-sm text-gray-600">Completed</div>
               </div>
             </div>
-            
+
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
               <div className="text-center">
                 <div className="text-3xl font-bold text-blue-600 mb-2">
@@ -282,7 +315,7 @@ function AdminProductsContent() {
                 <div className="text-sm text-gray-600">Providers</div>
               </div>
             </div>
-            
+
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
               <div className="text-center">
                 <div className="text-3xl font-bold text-purple-600 mb-2">
@@ -295,7 +328,7 @@ function AdminProductsContent() {
 
           {/* Filters */}
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20 mb-8">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               {/* Search */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -317,7 +350,7 @@ function AdminProductsContent() {
                 </label>
                 <select
                   value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  onChange={(e) => handleFilterChange('category', e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                 >
                   <option value="">All Categories</option>
@@ -334,7 +367,7 @@ function AdminProductsContent() {
                 </label>
                 <select
                   value={selectedProvider}
-                  onChange={(e) => setSelectedProvider(e.target.value)}
+                  onChange={(e) => handleFilterChange('provider', e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                 >
                   <option value="">All Providers</option>
@@ -343,23 +376,39 @@ function AdminProductsContent() {
                   ))}
                 </select>
               </div>
+            </div>
 
-              {/* Clear Filters */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Actions
-                </label>
-                <button
-                  onClick={() => {
-                    setSearchTerm('');
-                    setSelectedCategory('');
-                    setSelectedProvider('');
+            {/* Bottom row with checkbox and clear button */}
+            <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+              {/* Show Discontinued Checkbox */}
+              <label className="flex items-center cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={showDiscontinued}
+                  onChange={(e) => {
+                    setShowDiscontinued(e.target.checked);
+                    setCurrentPage(1);
                   }}
-                  className="w-full px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  Clear Filters
-                </button>
-              </div>
+                  className="w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500 cursor-pointer"
+                />
+                <span className="ml-2 text-sm font-medium text-gray-700 group-hover:text-gray-900">
+                  Show discontinued products
+                </span>
+              </label>
+
+              {/* Clear Filters Button */}
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setSelectedCategory('');
+                  setSelectedProvider('');
+                  setShowDiscontinued(true);
+                  setCurrentPage(1);
+                }}
+                className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm"
+              >
+                Clear All Filters
+              </button>
             </div>
           </div>
 
@@ -374,132 +423,226 @@ function AdminProductsContent() {
               <div className="text-6xl mb-4">📋</div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">No Products Found</h3>
               <p className="text-gray-600">
-                {products.length === 0 
-                  ? "No products available in the system." 
+                {products.length === 0
+                  ? "No products available in the system."
                   : "No products match your current filters."
                 }
               </p>
             </div>
           ) : (
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50/80">
-                    <tr>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-900">Product</th>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-900">Provider</th>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-900">Category</th>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-900">Created</th>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-900">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {filteredProducts.map((product) => (
-                      <tr key={product.insurance_id} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-6 py-4">
-                          <div>
-                            <div className="text-sm font-medium text-gray-900 mb-1 flex items-center gap-2">
-                              <span className={product.discontinued ? 'text-gray-400' : ''}>
-                                {product.insurance_name || 'Untitled Product'}
-                              </span>
-                              {product.discontinued && (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
-                                  DISCONTINUED
+            <>
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50/80">
+                      <tr>
+                        <th className="px-6 py-4 text-left text-sm font-medium text-gray-900">Product</th>
+                        <th className="px-6 py-4 text-left text-sm font-medium text-gray-900">Provider</th>
+                        <th className="px-6 py-4 text-left text-sm font-medium text-gray-900">Category</th>
+                        <th className="px-6 py-4 text-left text-sm font-medium text-gray-900">Created</th>
+                        <th className="px-6 py-4 text-left text-sm font-medium text-gray-900">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {filteredProducts.map((product) => (
+                        <tr key={product.insurance_id} className="hover:bg-gray-50/50 transition-colors">
+                          <td className="px-6 py-4">
+                            <div>
+                              <div className="text-sm font-medium text-gray-900 mb-1 flex items-center gap-2">
+                                <span className={product.discontinued ? 'text-gray-400' : ''}>
+                                  {product.insurance_name || 'Untitled Product'}
                                 </span>
-                              )}
+                                {product.discontinued && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                                    DISCONTINUED
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {expandedRows.has(product.insurance_id)
+                                  ? product.key_features || 'No description available'
+                                  : truncateText(product.key_features, 80)
+                                }
+                                {product.key_features && product.key_features.length > 80 && (
+                                  <button
+                                    onClick={() => toggleRowExpansion(product.insurance_id)}
+                                    className="ml-2 text-blue-600 hover:text-blue-800 font-medium focus:outline-none"
+                                  >
+                                    {expandedRows.has(product.insurance_id) ? 'Show Less' : 'Show More'}
+                                  </button>
+                                )}
+                              </div>
                             </div>
-                            <div className="text-xs text-gray-500">
-                              {expandedRows.has(product.insurance_id)
-                                ? product.key_features || 'No description available'
-                                : truncateText(product.key_features, 80)
-                              }
-                              {product.key_features && product.key_features.length > 80 && (
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-gray-900">
+                              {product.provider || 'Unknown'}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(product.category)}`}>
+                              {product.category || 'Other'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-gray-900">
+                              {formatDate(product.created_at)}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center space-x-2">
+                              {/* View Document Button */}
+                              {product.pdf_url && (
                                 <button
-                                  onClick={() => toggleRowExpansion(product.insurance_id)}
-                                  className="ml-2 text-blue-600 hover:text-blue-800 font-medium focus:outline-none"
+                                  onClick={() => handleViewDocument(product)}
+                                  className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors duration-200"
+                                  title="View PDF Document"
                                 >
-                                  {expandedRows.has(product.insurance_id) ? 'Show Less' : 'Show More'}
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                  </svg>
                                 </button>
                               )}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-gray-900">
-                            {product.provider || 'Unknown'}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(product.category)}`}>
-                            {product.category || 'Other'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-gray-900">
-                            {formatDate(product.created_at)}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center space-x-2">
-                            {/* View Document Button */}
-                            {product.pdf_url && (
+
+                              {/* Edit Button */}
                               <button
-                                onClick={() => handleViewDocument(product)}
-                                className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors duration-200"
-                                title="View PDF Document"
+                                onClick={() => handleEditProduct(product)}
+                                className="p-2 bg-orange-100 hover:bg-orange-200 text-orange-600 rounded-lg transition-colors duration-200"
+                                title="Edit Product"
                               >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                 </svg>
                               </button>
-                            )}
 
-                            {/* Edit Button */}
-                            <button
-                              onClick={() => handleEditProduct(product)}
-                              className="p-2 bg-orange-100 hover:bg-orange-200 text-orange-600 rounded-lg transition-colors duration-200"
-                              title="Edit Product"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                              </svg>
-                            </button>
-
-                            {/* Discontinue/Reactivate Button */}
-                            <button
-                              onClick={() => handleToggleDiscontinued(product)}
-                              className={`p-2 rounded-lg transition-colors duration-200 ${
-                                product.discontinued
-                                  ? 'bg-green-100 hover:bg-green-200 text-green-600'
-                                  : 'bg-red-100 hover:bg-red-200 text-red-600'
-                              }`}
-                              title={product.discontinued ? 'Reactivate Product' : 'Discontinue Product'}
-                            >
-                              {product.discontinued ? (
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                              ) : (
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                                </svg>
-                              )}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                              {/* Discontinue/Reactivate Button */}
+                              <button
+                                onClick={() => handleToggleDiscontinued(product)}
+                                className={`p-2 rounded-lg transition-colors duration-200 ${
+                                  product.discontinued
+                                    ? 'bg-green-100 hover:bg-green-200 text-green-600'
+                                    : 'bg-red-100 hover:bg-red-200 text-red-600'
+                                }`}
+                                title={product.discontinued ? 'Reactivate Product' : 'Discontinue Product'}
+                              >
+                                {product.discontinued ? (
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                ) : (
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                  </svg>
+                                )}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-          )}
 
-          {/* Showing Results */}
-          {!isLoading && filteredProducts.length > 0 && (
-            <div className="mt-6 text-center text-sm text-gray-600">
-              Showing {filteredProducts.length} of {totalCount} products (displaying latest {products.length})
-            </div>
+              {/* Pagination Controls */}
+              <div className="mt-6 bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                  {/* Results Info */}
+                  <div className="text-sm text-gray-600">
+                    Showing <span className="font-medium text-gray-900">{startIndex}</span> to{' '}
+                    <span className="font-medium text-gray-900">{endIndex}</span> of{' '}
+                    <span className="font-medium text-gray-900">{totalCount}</span> products
+                  </div>
+
+                  {/* Page Controls */}
+                  <div className="flex items-center gap-2">
+                    {/* First Page */}
+                    <button
+                      onClick={() => handlePageChange(1)}
+                      disabled={currentPage === 1 || totalPages === 0}
+                      className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      First
+                    </button>
+
+                    {/* Previous Page */}
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1 || totalPages === 0}
+                      className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      ← Previous
+                    </button>
+
+                    {/* Page Numbers */}
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNum;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = currentPage - 2 + i;
+                        }
+
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => handlePageChange(pageNum)}
+                            className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                              currentPage === pageNum
+                                ? 'bg-primary-600 text-white'
+                                : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Next Page */}
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage >= totalPages || totalPages === 0}
+                      className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Next →
+                    </button>
+
+                    {/* Last Page */}
+                    <button
+                      onClick={() => handlePageChange(totalPages)}
+                      disabled={currentPage >= totalPages || totalPages === 0}
+                      className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Last
+                    </button>
+                  </div>
+
+                  {/* Items Per Page */}
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="itemsPerPage" className="text-sm text-gray-600">
+                      Per page:
+                    </label>
+                    <select
+                      id="itemsPerPage"
+                      value={itemsPerPage}
+                      onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                      className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    >
+                      <option value={10}>10</option>
+                      <option value={20}>20</option>
+                      <option value={50}>50</option>
+                      <option value={100}>100</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </>
           )}
         </main>
       </div>
