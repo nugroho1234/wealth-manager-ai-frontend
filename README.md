@@ -249,8 +249,9 @@ wealth-manager-frontend/
 
 ### Admin Routes (ADMIN, SUPER_ADMIN)
 - `/admin/upload` - Insurance document upload
+- `/admin/products` - Product management with pagination and filtering
 - `/admin/commissions` - Commission rate management (SUPER_ADMIN only)
-- `/admin/users` - User management
+- `/admin/users` - User management with pagination and filtering
 
 ## Scripts
 
@@ -352,6 +353,23 @@ Proprietary - Internal use only
 ### Version 1.1.0 (December 2025)
 
 **New Features:**
+
+- **Products Pagination Interface** - Complete pagination UI for products listing at `/admin/products`
+  - Pagination controls: First, Previous, Next, Last buttons
+  - Page number display with current position
+  - Configurable items per page (20, 50, 100)
+  - Total count and range display (e.g., "Showing 1 to 20 of 150 products")
+  - Pagination resets when applying filters
+  - Smooth loading states during page transitions
+
+- **Show Discontinued Products Filter** - Enhanced filtering UI
+  - Clean checkbox design replacing awkward toggle switch
+  - Better layout: 3-column filter grid with separate bottom row
+  - Checkbox on left, "Clear All Filters" button on right
+  - Border-top separator for visual hierarchy
+  - Hover states and cursor feedback
+  - Filters integrate seamlessly with pagination
+
 - **User Management Interface** - New admin page at `/admin/users`
   - View all users with pagination (20 per page)
   - Filter users by role and company
@@ -360,15 +378,25 @@ Proprietary - Internal use only
   - Real-time user statistics dashboard
   - Profile completion status indicators
 
+- **Profile Auto-Completion** - Intelligent profile status updates
+  - Automatically checks profile completion on login
+  - Automatically updates status when editing profile
+  - Real-time profile completion indicators
+  - Required fields: first name, last name, phone
+
 **Improvements:**
 - **Enhanced Admin UI** - Consistent white background design across all admin pages
 - **Better Data Display** - User avatars with fallback initials, role badges with color coding
 - **Improved UX** - Modal-based editing with inline validation and error handling
+- **Products Page Performance** - Optimized with pagination to handle large product catalogs
+- **Better Filter Organization** - Cleaner filter layout with logical grouping
 
 **Bug Fixes:**
 - Fixed pagination field mapping to match backend API response
 - Resolved user data fetching issues with proper role handling
 - Fixed CORS and authentication token handling for user management endpoints
+- Products page now displays accurate total counts and pagination states
+- Profile completion status updates correctly after editing
 
 ### Version 1.0.0 (November 2025)
 - Initial release with core features
