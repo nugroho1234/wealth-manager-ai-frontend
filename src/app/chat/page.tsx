@@ -206,18 +206,23 @@ function ChatContent() {
   const fetchProducts = async () => {
     try {
       setIsLoadingProducts(true);
-      
+
       const response = await apiClient.get<{
         success: boolean;
         message: string;
-        data: Product[];
-      }>('/api/v1/products');
-      
-      const productList = response.data.data || [];
+        data: {
+          products: Product[];
+          total: number;
+          limit: number;
+          offset: number;
+        };
+      }>('/api/v1/products?limit=1000'); // Fetch all products for chat selector
+
+      const productList = response.data.data.products || [];
       console.log('📦 Products loaded:', productList.length, 'products');
       console.log('📦 First product:', productList[0]);
       setProducts(productList);
-      
+
     } catch (error: any) {
       console.error('Error fetching products:', error);
       const errorMessage = error.detail || error.message || 'Failed to fetch products';
@@ -347,20 +352,21 @@ function ChatContent() {
   };
   
   const createNewSession = async (insuranceId: string, firstMessage?: string) => {
+    const requestPayload = {
+      insurance_id: insuranceId,
+      first_message: firstMessage
+    };
+
     try {
       console.log('🚀 createNewSession called with:', { insuranceId, firstMessage, currentSessionsCount: sessions.length });
-      
+
       // Check if we're at the session limit (5 max)
       if (sessions.length >= 5) {
         console.log('⚠️ Session limit reached');
         notifyError('Session Limit', 'You can have maximum 5 active chat sessions. Please archive some sessions first.');
         return;
       }
-      
-      const requestPayload = {
-        insurance_id: insuranceId,
-        first_message: firstMessage
-      };
+
       console.log('📡 Making API request to create session...');
       console.log('📋 Request payload:', requestPayload);
       const response = await apiClient.post<CreateSessionResponse>('/api/v1/chat/sessions', requestPayload);
