@@ -216,7 +216,7 @@ function ChatContent() {
           limit: number;
           offset: number;
         };
-      }>('/api/v1/products?limit=1000'); // Fetch all products for chat selector
+      }>('/api/v1/products?limit=100'); // Fetch products for chat selector (max allowed)
 
       const productList = response.data.data.products || [];
       console.log('📦 Products loaded:', productList.length, 'products');
