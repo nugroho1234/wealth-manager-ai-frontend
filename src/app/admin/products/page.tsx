@@ -46,6 +46,15 @@ function AdminProductsContent() {
   const [itemsPerPage, setItemsPerPage] = useState(20);
   const [showDiscontinued, setShowDiscontinued] = useState(true);
 
+  // Delete confirmation modal state
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Bulk selection state
+  const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+
   useEffect(() => {
     fetchProducts();
     fetchCategories();
@@ -176,6 +185,89 @@ function AdminProductsContent() {
       console.error(`Error ${action}ing product:`, error);
       const errorMessage = error.detail || error.message || `Failed to ${action} product`;
       notifyError('Update Error', errorMessage);
+    }
+  };
+
+  const handleDeleteProduct = async () => {
+    if (!productToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await apiClient.delete(`/api/v1/products/${productToDelete.insurance_id}`);
+
+      notifySuccess(
+        'Product Deleted',
+        `"${productToDelete.insurance_name}" has been permanently deleted.`
+      );
+
+      // Close modal
+      setProductToDelete(null);
+
+      // Refresh products list
+      await fetchProducts();
+    } catch (error: any) {
+      console.error('Error deleting product:', error);
+      notifyError(
+        'Delete Error',
+        error.detail || error.message || 'Failed to delete product'
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedProducts.size === 0) return;
+
+    setIsBulkDeleting(true);
+    try {
+      // Delete all selected products
+      const deletePromises = Array.from(selectedProducts).map(productId =>
+        apiClient.delete(`/api/v1/products/${productId}`)
+      );
+
+      await Promise.all(deletePromises);
+
+      notifySuccess(
+        'Products Deleted',
+        `${selectedProducts.size} product${selectedProducts.size > 1 ? 's' : ''} deleted successfully.`
+      );
+
+      // Clear selection and close modal
+      setSelectedProducts(new Set());
+      setShowBulkDeleteModal(false);
+
+      // Refresh products list
+      await fetchProducts();
+    } catch (error: any) {
+      console.error('Error deleting products:', error);
+      notifyError(
+        'Delete Error',
+        error.detail || error.message || 'Failed to delete some products'
+      );
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const toggleSelectProduct = (productId: string) => {
+    const newSelected = new Set(selectedProducts);
+    if (newSelected.has(productId)) {
+      newSelected.delete(productId);
+    } else {
+      newSelected.add(productId);
+    }
+    setSelectedProducts(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedProducts.size === filteredProducts.length) {
+      // Deselect all
+      setSelectedProducts(new Set());
+    } else {
+      // Select all
+      const allIds = new Set(filteredProducts.map(p => p.insurance_id));
+      setSelectedProducts(allIds);
     }
   };
 
@@ -431,11 +523,63 @@ function AdminProductsContent() {
             </div>
           ) : (
             <>
+              {/* Bulk Actions Bar */}
+              {user?.role === 'SUPER_ADMIN' && selectedProducts.size > 0 && (
+                <div className="bg-primary-50 border-l-4 border-primary-600 rounded-2xl p-4 mb-4 shadow-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-shrink-0 w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
+                        <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          {selectedProducts.size} product{selectedProducts.size > 1 ? 's' : ''} selected
+                        </p>
+                        <p className="text-xs text-gray-600">
+                          Bulk actions are available
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setSelectedProducts(new Set())}
+                        className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        Clear Selection
+                      </button>
+                      <button
+                        onClick={() => setShowBulkDeleteModal(true)}
+                        className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Delete Selected ({selectedProducts.size})
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead className="bg-gray-50/80">
                       <tr>
+                        {/* Checkbox column for SUPER_ADMIN */}
+                        {user?.role === 'SUPER_ADMIN' && (
+                          <th className="px-6 py-4 text-left">
+                            <input
+                              type="checkbox"
+                              checked={filteredProducts.length > 0 && selectedProducts.size === filteredProducts.length}
+                              onChange={toggleSelectAll}
+                              className="w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500 cursor-pointer"
+                              title="Select all products"
+                            />
+                          </th>
+                        )}
                         <th className="px-6 py-4 text-left text-sm font-medium text-gray-900">Product</th>
                         <th className="px-6 py-4 text-left text-sm font-medium text-gray-900">Provider</th>
                         <th className="px-6 py-4 text-left text-sm font-medium text-gray-900">Category</th>
@@ -446,6 +590,18 @@ function AdminProductsContent() {
                     <tbody className="divide-y divide-gray-200">
                       {filteredProducts.map((product) => (
                         <tr key={product.insurance_id} className="hover:bg-gray-50/50 transition-colors">
+                          {/* Checkbox column for SUPER_ADMIN */}
+                          {user?.role === 'SUPER_ADMIN' && (
+                            <td className="px-6 py-4">
+                              <input
+                                type="checkbox"
+                                checked={selectedProducts.has(product.insurance_id)}
+                                onChange={() => toggleSelectProduct(product.insurance_id)}
+                                className="w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500 cursor-pointer"
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </td>
+                          )}
                           <td className="px-6 py-4">
                             <div>
                               <div className="text-sm font-medium text-gray-900 mb-1 flex items-center gap-2">
@@ -535,6 +691,19 @@ function AdminProductsContent() {
                                   </svg>
                                 )}
                               </button>
+
+                              {/* Delete Button (SUPER_ADMIN only) */}
+                              {user?.role === 'SUPER_ADMIN' && (
+                                <button
+                                  onClick={() => setProductToDelete(product)}
+                                  className="p-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg transition-colors duration-200 border border-red-200"
+                                  title="Delete Product Permanently"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -646,6 +815,155 @@ function AdminProductsContent() {
           )}
         </main>
       </div>
+
+      {/* Single Delete Confirmation Modal */}
+      {productToDelete && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-fade-in">
+            {/* Modal Header */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Delete Product</h3>
+                <p className="text-sm text-gray-500">This action cannot be undone</p>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="mb-6 space-y-3">
+              <p className="text-gray-700">
+                Are you sure you want to permanently delete this product?
+              </p>
+              <div className="bg-gray-50 rounded-lg p-3 space-y-1">
+                <p className="text-sm font-medium text-gray-900">
+                  <span className="text-gray-500">Product:</span> {productToDelete.insurance_name}
+                </p>
+                <p className="text-sm text-gray-600">
+                  <span className="text-gray-500">Provider:</span> {productToDelete.provider}
+                </p>
+              </div>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <p className="text-sm text-yellow-800">
+                  <strong>Note:</strong> If this product is used in proposals or chats, historical references will be kept but the product will be permanently deleted.
+                </p>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setProductToDelete(null)}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteProduct}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isDeleting ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete Permanently'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Delete Confirmation Modal */}
+      {showBulkDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 animate-fade-in">
+            {/* Modal Header */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Delete Multiple Products</h3>
+                <p className="text-sm text-gray-500">This action cannot be undone</p>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="mb-6 space-y-3">
+              <p className="text-gray-700">
+                Are you sure you want to permanently delete <strong>{selectedProducts.size} product{selectedProducts.size > 1 ? 's' : ''}</strong>?
+              </p>
+
+              {/* List of products to delete */}
+              <div className="bg-gray-50 rounded-lg p-4 max-h-60 overflow-y-auto">
+                <p className="text-sm font-medium text-gray-700 mb-2">Products to be deleted:</p>
+                <ul className="space-y-2">
+                  {filteredProducts
+                    .filter(p => selectedProducts.has(p.insurance_id))
+                    .map(product => (
+                      <li key={product.insurance_id} className="flex items-start gap-2 text-sm">
+                        <svg className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        <div>
+                          <p className="font-medium text-gray-900">{product.insurance_name}</p>
+                          <p className="text-gray-600">{product.provider} • {product.category}</p>
+                        </div>
+                      </li>
+                    ))}
+                </ul>
+              </div>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <p className="text-sm text-yellow-800">
+                  <strong>Warning:</strong> All selected products will be permanently deleted. If any of these products are used in proposals or chats, historical references will be kept but the products will be removed from the system.
+                </p>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowBulkDeleteModal(false)}
+                disabled={isBulkDeleting}
+                className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={isBulkDeleting}
+                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isBulkDeleting ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Deleting {selectedProducts.size} products...
+                  </>
+                ) : (
+                  `Delete ${selectedProducts.size} Product${selectedProducts.size > 1 ? 's' : ''} Permanently`
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Sidebar>
   );
 }
