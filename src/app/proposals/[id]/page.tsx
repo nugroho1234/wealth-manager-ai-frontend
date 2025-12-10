@@ -199,9 +199,11 @@ function ProposalDetailContent() {
   // Load proposal data with retry logic
   const loadProposal = useCallback(async (currentRetry = 0) => {
     setRetryCount(currentRetry);
-    
+
     try {
-      const response = await apiClient.get(`/api/v1/proposals/${proposalId}`);
+      // Add timestamp to prevent caching
+      const timestamp = new Date().getTime();
+      const response = await apiClient.get(`/api/v1/proposals/${proposalId}?t=${timestamp}`);
       const proposalData = response.data.data;
       setProposal(proposalData);
 
@@ -1828,8 +1830,11 @@ function ProposalDetailContent() {
       
       await apiClient.post(`/api/v1/proposals/${proposalId}/illustrations`, formData);
       toast.success(`Successfully uploaded ${acceptedFiles.length} illustrations`);
-      
-      // Reload proposal data
+
+      // Add a small delay to ensure backend has processed the upload
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Reload proposal data with cache busting
       await loadProposal();
       
     } catch (error) {
