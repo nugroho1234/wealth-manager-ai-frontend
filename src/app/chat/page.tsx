@@ -574,6 +574,11 @@ function ChatContent() {
         }
 
         notifySuccess('Session Archived', 'Chat session has been archived');
+
+        // Refresh archived sessions list if it's currently expanded
+        if (showArchivedSessions) {
+          await fetchArchivedSessions();
+        }
       }
 
     } catch (error: any) {
@@ -602,6 +607,11 @@ function ChatContent() {
         }
 
         notifySuccess('Session Archived', 'Chat session has been archived');
+
+        // Refresh archived sessions list if it's currently expanded
+        if (showArchivedSessions) {
+          await fetchArchivedSessions();
+        }
 
         // Close the modal
         setShowArchiveModal(false);
