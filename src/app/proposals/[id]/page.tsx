@@ -1836,10 +1836,11 @@ function ProposalDetailContent() {
 
       // Reload proposal data with cache busting
       await loadProposal();
-      
-    } catch (error) {
+
+    } catch (error: any) {
       console.error('Error uploading files:', error);
-      toast.error('Failed to upload files');
+      const errorMessage = error?.response?.data?.detail || 'Failed to upload files';
+      toast.error(errorMessage);
     } finally {
       setUploading(false);
     }
