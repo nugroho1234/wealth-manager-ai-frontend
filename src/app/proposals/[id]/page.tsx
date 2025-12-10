@@ -205,6 +205,12 @@ function ProposalDetailContent() {
       const timestamp = new Date().getTime();
       const response = await apiClient.get(`/api/v1/proposals/${proposalId}?t=${timestamp}`);
       const proposalData = response.data.data;
+
+      // Debug: Log the illustrations data
+      console.log('📊 [PROPOSAL DATA] Loaded proposal:', proposalId);
+      console.log('📊 [ILLUSTRATIONS] Count:', proposalData.illustrations?.length || 0);
+      console.log('📊 [ILLUSTRATIONS] Data:', JSON.stringify(proposalData.illustrations, null, 2));
+
       setProposal(proposalData);
 
       // Reset currency calculation flag for new proposal
@@ -1823,18 +1829,22 @@ function ProposalDetailContent() {
 
       // Upload all files together as the backend expects
       const formData = new FormData();
-      
+
       acceptedFiles.forEach((file) => {
         formData.append('files', file);
       });
-      
-      await apiClient.post(`/api/v1/proposals/${proposalId}/illustrations`, formData);
+
+      console.log('📤 [UPLOAD] Uploading', acceptedFiles.length, 'illustrations');
+      const uploadResponse = await apiClient.post(`/api/v1/proposals/${proposalId}/illustrations`, formData);
+      console.log('✅ [UPLOAD] Response:', uploadResponse.data);
+
       toast.success(`Successfully uploaded ${acceptedFiles.length} illustrations`);
 
       // Add a small delay to ensure backend has processed the upload
       await new Promise(resolve => setTimeout(resolve, 500));
 
       // Reload proposal data with cache busting
+      console.log('🔄 [RELOAD] Reloading proposal data...');
       await loadProposal();
 
     } catch (error: any) {
