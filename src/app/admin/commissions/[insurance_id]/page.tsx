@@ -8,7 +8,7 @@ import { UserRole } from '@/types/auth';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useParams } from 'next/navigation';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '${API_BASE_URL}';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 
 interface Commission {
@@ -384,7 +384,7 @@ function CommissionEditContent() {
             };
 
             promises.push(
-              fetch('${API_BASE_URL}/api/v1/commissions', {
+              fetch(`${API_BASE_URL}/api/v1/commissions`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
