@@ -713,40 +713,61 @@ function CommissionEditContent() {
     setSaving(true);
     try {
       const changes = Object.values(pendingChanges);
-      
+
+      console.log('💾 Saving changes:', changes);
+
+      let successCount = 0;
+      let errorCount = 0;
+
       for (const change of changes) {
         // Check if commission already exists
         const existing = commissions.find(
-          c => c.premium_term === change.premium_term && 
-               c.commission_year === change.commission_year && 
+          c => c.premium_term === change.premium_term &&
+               c.commission_year === change.commission_year &&
                c.role_id === change.role_id
         );
 
-        if (existing) {
-          // Update existing commission
-          await fetch(`${API_BASE_URL}/api/v1/commissions/${existing.commission_id}`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${getAuthToken()}`,
-            },
-            body: JSON.stringify({
-              commission_rate: change.commission_rate
-            }),
-          });
-        } else {
-          // Create new commission
-          await fetch(`${API_BASE_URL}/api/v1/commissions`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${getAuthToken()}`,
-            },
-            body: JSON.stringify({
-              ...change,
-              insurance_id
-            }),
-          });
+        try {
+          let response;
+          if (existing) {
+            // Update existing commission
+            console.log(`Updating commission ${existing.commission_id}:`, change);
+            response = await fetch(`${API_BASE_URL}/api/v1/commissions/${existing.commission_id}`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${getAuthToken()}`,
+              },
+              body: JSON.stringify({
+                commission_rate: change.commission_rate
+              }),
+            });
+          } else {
+            // Create new commission
+            console.log('Creating new commission:', { ...change, insurance_id });
+            response = await fetch(`${API_BASE_URL}/api/v1/commissions`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${getAuthToken()}`,
+              },
+              body: JSON.stringify({
+                ...change,
+                insurance_id
+              }),
+            });
+          }
+
+          if (response.ok) {
+            successCount++;
+          } else {
+            const errorData = await response.json();
+            console.error(`Failed to save commission:`, errorData);
+            errorCount++;
+          }
+        } catch (err) {
+          console.error('Error saving individual commission:', err);
+          errorCount++;
         }
       }
 
@@ -754,10 +775,17 @@ function CommissionEditContent() {
       await fetchCommissions();
       setPendingChanges({});
       setEditMode(false);
-      
+
+      // Show result
+      if (errorCount === 0) {
+        alert(`✅ Successfully saved ${successCount} commission rate(s)`);
+      } else {
+        alert(`⚠️ Saved ${successCount} commission rate(s), but ${errorCount} failed. Check console for details.`);
+      }
+
     } catch (error) {
       console.error('Error saving changes:', error);
-      alert('Failed to save changes');
+      alert('❌ Failed to save changes. Please check the console for details.');
     } finally {
       setSaving(false);
     }
