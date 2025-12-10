@@ -115,6 +115,10 @@ function ChatContent() {
   const [showSessionActions, setShowSessionActions] = useState<string | null>(null);
   const [renameSessionId, setRenameSessionId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [pendingProductId, setPendingProductId] = useState<string | null>(null);
+  const [showArchivedSessions, setShowArchivedSessions] = useState(false);
+  const [archivedSessions, setArchivedSessions] = useState<ChatSessionWithDetails[]>([]);
   
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -238,7 +242,7 @@ function ChatContent() {
       setIsLoadingSessions(true);
       console.log('Current user:', user);
       console.log('Auth headers:', apiClient.defaults.headers.common['Authorization']);
-      
+
       const response = await apiClient.get<ListSessionsResponse>('/api/v1/chat/sessions', {
         params: {
           status: 'active',
@@ -247,11 +251,11 @@ function ChatContent() {
           order_direction: 'desc'
         }
       });
-      
+
       if (response.data.success) {
         setSessions(response.data.sessions);
       }
-      
+
     } catch (error: any) {
       console.error('Error fetching sessions:', error);
       console.error('Error type:', typeof error);
@@ -259,13 +263,37 @@ function ChatContent() {
       console.error('Error detail:', error?.detail);
       console.error('Error message:', error?.message);
       console.error('Error response:', error?.response);
-      
+
       const errorMessage = error?.detail || error?.message || error?.response?.data?.detail || 'Failed to fetch chat sessions';
       const safeErrorMessage = typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage);
       notifyError('Fetch Error', safeErrorMessage);
       setSessions([]);
     } finally {
       setIsLoadingSessions(false);
+    }
+  };
+
+  const fetchArchivedSessions = async () => {
+    try {
+      const response = await apiClient.get<ListSessionsResponse>('/api/v1/chat/sessions', {
+        params: {
+          status: 'archived',
+          limit: 50,
+          order_by: 'last_message_at',
+          order_direction: 'desc'
+        }
+      });
+
+      if (response.data.success) {
+        setArchivedSessions(response.data.sessions);
+      }
+
+    } catch (error: any) {
+      console.error('Error fetching archived sessions:', error);
+      const errorMessage = error?.detail || error?.message || 'Failed to fetch archived sessions';
+      const safeErrorMessage = typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage);
+      notifyError('Fetch Error', safeErrorMessage);
+      setArchivedSessions([]);
     }
   };
   
@@ -362,8 +390,9 @@ function ChatContent() {
 
       // Check if we're at the session limit (5 max)
       if (sessions.length >= 5) {
-        console.log('⚠️ Session limit reached');
-        notifyError('Session Limit', 'You can have maximum 5 active chat sessions. Please archive some sessions first.');
+        console.log('⚠️ Session limit reached - showing archive modal');
+        setPendingProductId(insuranceId);
+        setShowArchiveModal(true);
         return;
       }
 
@@ -532,28 +561,63 @@ function ChatContent() {
   const handleArchiveSession = async (sessionId: string) => {
     try {
       const response = await apiClient.delete(`/api/v1/chat/sessions/${sessionId}`);
-      
+
       if (response.data.success) {
         // Remove session from list
         setSessions(prev => prev.filter(s => s.session_id !== sessionId));
-        
+
         // If this was the current session, clear it
         if (currentSession?.session_id === sessionId) {
           setCurrentSession(null);
           setSelectedProduct(null);
           setMessages([]);
         }
-        
+
         notifySuccess('Session Archived', 'Chat session has been archived');
       }
-      
+
     } catch (error: any) {
       console.error('Error archiving session:', error);
       const errorMessage = error.detail || error.message || 'Failed to archive session';
       notifyError('Archive Error', errorMessage);
     }
-    
+
     setShowSessionActions(null);
+  };
+
+  const handleArchiveAndCreateNew = async (sessionIdToArchive: string) => {
+    try {
+      // Archive the selected session
+      const response = await apiClient.delete(`/api/v1/chat/sessions/${sessionIdToArchive}`);
+
+      if (response.data.success) {
+        // Remove from active sessions
+        setSessions(prev => prev.filter(s => s.session_id !== sessionIdToArchive));
+
+        // Clear current session if it was archived
+        if (currentSession?.session_id === sessionIdToArchive) {
+          setCurrentSession(null);
+          setSelectedProduct(null);
+          setMessages([]);
+        }
+
+        notifySuccess('Session Archived', 'Chat session has been archived');
+
+        // Close the modal
+        setShowArchiveModal(false);
+
+        // Now create the new session if we have a pending product
+        if (pendingProductId) {
+          await createNewSession(pendingProductId);
+          setPendingProductId(null);
+        }
+      }
+
+    } catch (error: any) {
+      console.error('Error archiving session:', error);
+      const errorMessage = error.detail || error.message || 'Failed to archive session';
+      notifyError('Archive Error', errorMessage);
+    }
   };
 
   const handleRenameSession = async (sessionId: string, newName: string) => {
@@ -794,6 +858,11 @@ function ChatContent() {
 
             {/* Sessions List */}
             <div className="flex-1 overflow-y-auto">
+              {/* Active Sessions Header */}
+              <div className="px-3 pt-3 pb-2">
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active Sessions</h3>
+              </div>
+
               {isLoadingSessions ? (
                 <div className="p-6 text-center">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600 mx-auto"></div>
@@ -898,6 +967,78 @@ function ChatContent() {
                   ))}
                 </div>
               )}
+
+              {/* Archived Sessions Section */}
+              <div className="border-t border-gray-200 mt-4">
+                <button
+                  onClick={() => {
+                    setShowArchivedSessions(!showArchivedSessions);
+                    if (!showArchivedSessions) {
+                      fetchArchivedSessions();
+                    }
+                  }}
+                  className="w-full px-3 py-3 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center">
+                    <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                    </svg>
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      Archived Sessions ({archivedSessions.length})
+                    </h3>
+                  </div>
+                  <svg
+                    className={`w-4 h-4 text-gray-500 transition-transform ${showArchivedSessions ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {showArchivedSessions && (
+                  <div className="space-y-2 p-3 bg-gray-50">
+                    {archivedSessions.length === 0 ? (
+                      <div className="p-4 text-center">
+                        <p className="text-xs text-gray-500">No archived sessions</p>
+                      </div>
+                    ) : (
+                      archivedSessions.map((session) => (
+                        <div
+                          key={session.session_id}
+                          onClick={() => handleSessionSelect(session)}
+                          className="relative cursor-pointer rounded-lg p-3 bg-white border border-gray-200 hover:border-gray-300 transition-all duration-200"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center">
+                                <h4 className="font-medium text-sm text-gray-700 truncate">
+                                  {session.session_name}
+                                </h4>
+                                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                                  Archived
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {session.insurance_title || session.insurance_company}
+                              </p>
+                              <div className="flex items-center justify-between mt-2">
+                                <span className="text-xs text-gray-400">
+                                  {session.message_count} messages
+                                </span>
+                                <span className="text-xs text-gray-400">
+                                  {new Date(session.last_message_at).toLocaleDateString()}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -905,9 +1046,19 @@ function ChatContent() {
           <div className="flex-1 flex flex-col">
             {/* Chat Header */}
             <div className="bg-white/80 backdrop-blur-sm border-b border-white/20 p-6 shadow-sm">
-              <h1 className="text-2xl font-bold text-gray-900">
-                {currentSession ? currentSession.session_name : 'Insurance Chat Assistant'}
-              </h1>
+              <div className="flex items-center">
+                <h1 className="text-2xl font-bold text-gray-900">
+                  {currentSession ? currentSession.session_name : 'Insurance Chat Assistant'}
+                </h1>
+                {currentSession && currentSession.status === 'archived' && (
+                  <span className="ml-3 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600">
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                    </svg>
+                    Archived
+                  </span>
+                )}
+              </div>
               <p className="text-gray-600 mt-1">
                 {currentSession && selectedProduct
                   ? `Chatting about ${selectedProduct.provider}'s ${selectedProduct.insurance_name}`
@@ -1023,33 +1174,45 @@ function ChatContent() {
             {/* Message Input */}
             <div className="bg-white/80 backdrop-blur-sm border-t border-white/20 p-6 shadow-sm">
               {currentSession ? (
-                <div className="flex space-x-3">
-                  <div className="flex-1">
-                    <textarea
-                      value={inputMessage}
-                      onChange={(e) => setInputMessage(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder="Ask a question about this insurance product..."
-                      rows={1}
-                      disabled={isSendingMessage}
-                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none disabled:bg-gray-50 disabled:cursor-not-allowed"
-                      style={{ minHeight: '48px' }}
-                    />
-                  </div>
-                  <button
-                    onClick={handleSendMessage}
-                    disabled={!inputMessage.trim() || isSendingMessage || isTyping}
-                    className="bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 text-white rounded-lg px-6 py-3 transition-colors duration-200 flex items-center justify-center min-w-[64px]"
-                  >
-                    {isSendingMessage ? (
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    ) : (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                currentSession.status === 'archived' ? (
+                  <div className="text-center">
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                      <svg className="w-8 h-8 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
                       </svg>
-                    )}
-                  </button>
-                </div>
+                      <p className="text-gray-600 font-medium mb-1">This session is archived</p>
+                      <p className="text-sm text-gray-500">You can view messages but cannot send new ones</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex space-x-3">
+                    <div className="flex-1">
+                      <textarea
+                        value={inputMessage}
+                        onChange={(e) => setInputMessage(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Ask a question about this insurance product..."
+                        rows={1}
+                        disabled={isSendingMessage}
+                        className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none disabled:bg-gray-50 disabled:cursor-not-allowed"
+                        style={{ minHeight: '48px' }}
+                      />
+                    </div>
+                    <button
+                      onClick={handleSendMessage}
+                      disabled={!inputMessage.trim() || isSendingMessage || isTyping}
+                      className="bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 text-white rounded-lg px-6 py-3 transition-colors duration-200 flex items-center justify-center min-w-[64px]"
+                    >
+                      {isSendingMessage ? (
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                )
               ) : (
                 <div className="text-center">
                   <p className="text-gray-500 mb-3">No active chat session</p>
@@ -1066,6 +1229,89 @@ function ChatContent() {
         </div>
 
         {/* Click outside handlers are now handled by useEffect */}
+
+        {/* Archive Session Selection Modal */}
+        {showArchiveModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Session Limit Reached</h3>
+                <button
+                  onClick={() => {
+                    setShowArchiveModal(false);
+                    setPendingProductId(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <p className="text-gray-600 mb-4">
+                You have reached the maximum of 5 active chat sessions. Please select one session to archive before creating a new one.
+              </p>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                <div className="flex">
+                  <svg className="w-5 h-5 text-yellow-600 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  <p className="text-sm text-yellow-800">
+                    Archived sessions will be moved to the "Archived" section and can be viewed but not edited.
+                  </p>
+                </div>
+              </div>
+
+              <div className="max-h-96 overflow-y-auto space-y-2 mb-4">
+                {sessions.map((session) => (
+                  <div
+                    key={session.session_id}
+                    className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-sm text-gray-900 truncate">
+                          {session.session_name}
+                        </h4>
+                        <p className="text-xs text-gray-600 mt-1">
+                          {session.insurance_title || session.insurance_company}
+                        </p>
+                        <div className="flex items-center justify-between mt-2">
+                          <span className="text-xs text-gray-500">
+                            {session.message_count} messages
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            Last active: {new Date(session.last_message_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleArchiveAndCreateNew(session.session_id)}
+                        className="ml-4 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+                      >
+                        Archive This
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  onClick={() => {
+                    setShowArchiveModal(false);
+                    setPendingProductId(null);
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Rename Session Modal */}
         {renameSessionId && (
