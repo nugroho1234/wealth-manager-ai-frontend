@@ -59,22 +59,22 @@ export default function Sidebar({ children }: SidebarProps) {
   const mainNavigationItems: SidebarItem[] = [
     {
       name: 'Dashboard',
-      href: '/dashboard',
+      href: '/oracle/dashboard',
       icon: '🏠',
     },
     {
       name: 'Search for Insurance',
-      href: '/products',
+      href: '/oracle/products',
       icon: '🔍',
     },
     {
       name: 'Chat with Insurance',
-      href: '/chat',
+      href: '/oracle/chat',
       icon: '💬',
     },
     {
       name: 'Manage Proposals',
-      href: '/proposals',
+      href: '/oracle/proposals',
       icon: '📊',
     },
   ];
@@ -82,17 +82,17 @@ export default function Sidebar({ children }: SidebarProps) {
   const bottomNavigationItems: SidebarItem[] = [
     {
       name: 'Notifications',
-      href: '/notifications',
+      href: '/oracle/notifications',
       icon: '🔔',
     },
     {
       name: 'Settings',
-      href: '/settings',
+      href: '/oracle/settings',
       icon: '⚙️',
     },
     {
       name: 'Profile',
-      href: '/profile',
+      href: '/oracle/profile',
       icon: '👤',
     },
     {

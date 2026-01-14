@@ -147,7 +147,7 @@ export default function FileUpload({
         message: string;
         uploads: UploadResponse[];
         failed_uploads: Array<{[key: string]: string}>;
-      }>('/api/v1/admin/upload-insurance', formData, {
+      }>('/api/v1/oracle/admin/upload-insurance', formData, {
         onUploadProgress: (progressEvent) => {
           if (progressEvent.total) {
             const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);

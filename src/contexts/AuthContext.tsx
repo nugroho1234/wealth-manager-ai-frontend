@@ -76,6 +76,24 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
   }
 }
 
+// Helper function to get redirect path based on plan type
+function getRedirectPath(user: User | null): string {
+  if (!user) return '/login';
+
+  // If user has no plan_type or it's null, default to meeting_tracker
+  // This ensures new users start with the meeting tracker
+  const planType = user.plan_type || 'meeting_tracker';
+
+  switch (planType) {
+    case 'meeting_tracker':
+      return '/meeting-tracker/dashboard';
+    case 'oracle':
+      return '/oracle/dashboard';
+    default:
+      return '/meeting-tracker/dashboard';
+  }
+}
+
 // Context interface
 interface AuthContextType extends AuthState {
   requestOTP: (email: string) => Promise<OTPResponse>;
@@ -84,6 +102,7 @@ interface AuthContextType extends AuthState {
   updateProfile: (data: ProfileUpdateData) => Promise<void>;
   checkEmailAllowed: (email: string) => Promise<boolean>;
   refreshUser: () => Promise<void>;
+  getRedirectPath: () => string;
 }
 
 // Create context
@@ -213,6 +232,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  const getUserRedirectPath = (): string => {
+    return getRedirectPath(state.user);
+  };
+
   const contextValue: AuthContextType = {
     ...state,
     requestOTP,
@@ -221,6 +244,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     updateProfile,
     checkEmailAllowed,
     refreshUser,
+    getRedirectPath: getUserRedirectPath,
   };
 
   return (

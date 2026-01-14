@@ -64,7 +64,7 @@ export default function CreateProposalForm({ onProposalCreated }: CreateProposal
   const loadSavedSearches = async () => {
     setLoadingSearches(true);
     try {
-      const response = await apiClient.get('/api/v1/ai-generation/saved-searches');
+      const response = await apiClient.get('/api/v1/oracle/ai-generation/saved-searches');
       setSavedSearches(response.data.data?.searches || []);
     } catch (error) {
       console.error('Error loading saved searches:', error);
@@ -78,7 +78,7 @@ export default function CreateProposalForm({ onProposalCreated }: CreateProposal
     setLoading(true);
     
     try {
-      const response = await apiClient.post('/api/v1/proposals', data);
+      const response = await apiClient.post('/api/v1/oracle/proposals', data);
       toast.success('Proposal created successfully!');
       onProposalCreated(response.data.data.proposal_id);
     } catch (error: any) {
