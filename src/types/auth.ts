@@ -5,6 +5,7 @@ export interface User {
   last_name: string | null;
   phone: string | null;
   role: UserRole;  // Backend returns role as string, not object
+  role_id: number;  // Numeric role ID for hierarchy checks (1=SUPER_ADMIN, 2=ADMIN, etc.)
   company_id: string | null;  // Backend returns UUID as string
   company?: Company;
   is_profile_complete: boolean;  // Backend uses this field name

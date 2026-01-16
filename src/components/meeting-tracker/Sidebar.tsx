@@ -14,43 +14,14 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8
 
 export default function MeetingTrackerSidebar({ children }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const pathname = usePathname();
+  const router = useRouter();
+  const { user, logout } = useAuth();
   const [categoryStats, setCategoryStats] = useState({
     sales: 0,
     recruitment: 0,
     new: 0,
   });
-  const pathname = usePathname();
-  const router = useRouter();
-  const { user, logout } = useAuth();
-
-  useEffect(() => {
-    fetchCategoryStats();
-  }, []);
-
-  const fetchCategoryStats = async () => {
-    try {
-      const authTokens = localStorage.getItem('auth_tokens');
-      if (!authTokens) return;
-      const { access_token: token } = JSON.parse(authTokens);
-
-      const res = await fetch(`${API_BASE_URL}/api/v1/meeting-tracker/meetings`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) return;
-
-      const data = await res.json();
-      const meetings = data.meetings || [];
-
-      setCategoryStats({
-        sales: meetings.filter((m: any) => m.category === 'S').length,
-        recruitment: meetings.filter((m: any) => m.category === 'R').length,
-        new: meetings.filter((m: any) => m.category === 'N').length,
-      });
-    } catch (error) {
-      console.error('Error fetching category stats:', error);
-    }
-  };
 
   const navigation = [
     {
@@ -75,11 +46,51 @@ export default function MeetingTrackerSidebar({ children }: SidebarProps) {
     },
   ];
 
-  const filters = [
-    { name: 'Sales', count: categoryStats.sales, color: 'bg-blue-500' },
-    { name: 'Recruitment', count: categoryStats.recruitment, color: 'bg-green-500' },
-    { name: 'New', count: categoryStats.new, color: 'bg-purple-500' },
+  // Admin navigation (only for role_id 1 and 2)
+  const adminNavigation = [
+    {
+      name: 'Companies',
+      href: '/meeting-tracker/admin/companies',
+      icon: '🏢',
+    },
+    {
+      name: 'Dashboard',
+      href: '/meeting-tracker/admin/dashboard',
+      icon: '📊',
+    },
   ];
+
+  const isAdmin = user?.role_id === 1 || user?.role_id === 2;
+  const isAdminPage = pathname?.startsWith('/meeting-tracker/admin');
+
+  // Fetch category stats for filters
+  useEffect(() => {
+    const fetchCategoryStats = async () => {
+      if (!user || isAdminPage) return;
+
+      try {
+        const token = localStorage.getItem('access_token');
+        if (!token) return;
+
+        const response = await fetch(`${API_BASE_URL}/api/v1/meeting-tracker/tasks/stats`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setCategoryStats({
+            sales: data.sales || 0,
+            recruitment: data.recruitment || 0,
+            new: data.new || 0,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch category stats:', error);
+      }
+    };
+
+    fetchCategoryStats();
+  }, [user, isAdminPage]);
 
   const handleLogout = async () => {
     try {
@@ -128,9 +139,18 @@ export default function MeetingTrackerSidebar({ children }: SidebarProps) {
               </h1>
             </Link>
             {user && (
-              <p className="text-sm text-gray-400 mt-2">
-                {user.first_name || user.email.split('@')[0]}
-              </p>
+              <div className="mt-2">
+                <p className="text-sm font-medium text-white">
+                  {user.first_name && user.last_name
+                    ? `${user.first_name} ${user.last_name}`
+                    : user.first_name || user.email.split('@')[0]}
+                </p>
+                {isAdmin && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    Admin Access
+                  </p>
+                )}
+              </div>
             )}
           </div>
 
@@ -162,32 +182,109 @@ export default function MeetingTrackerSidebar({ children }: SidebarProps) {
               })}
             </div>
 
-            {/* Filters */}
-            <div>
-              <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                Filters
-              </h3>
-              {filters.map((filter) => (
-                <div
-                  key={filter.name}
-                  className="flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-gray-300"
+            {/* Filters - Show on non-admin pages */}
+            {!isAdminPage && (
+              <div className="mb-6">
+                <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  Filters
+                </h3>
+                <Link
+                  href="/meeting-tracker/dashboard?category=sales"
+                  className="flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
                 >
-                  <div className="flex items-center">
-                    <span className={`w-2 h-2 rounded-full ${filter.color} mr-3`}></span>
-                    {filter.name}
-                  </div>
-                  <span className="text-xs text-gray-400 bg-gray-700 px-2 py-0.5 rounded-full">
-                    {filter.count}
+                  <span className="flex items-center">
+                    <span className="mr-3 text-lg">💼</span>
+                    Sales
                   </span>
+                  <span className="bg-gray-700 text-gray-300 text-xs font-semibold px-2 py-1 rounded-full">
+                    {categoryStats.sales}
+                  </span>
+                </Link>
+                <Link
+                  href="/meeting-tracker/dashboard?category=recruitment"
+                  className="flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                >
+                  <span className="flex items-center">
+                    <span className="mr-3 text-lg">👥</span>
+                    Recruitment
+                  </span>
+                  <span className="bg-gray-700 text-gray-300 text-xs font-semibold px-2 py-1 rounded-full">
+                    {categoryStats.recruitment}
+                  </span>
+                </Link>
+                <Link
+                  href="/meeting-tracker/dashboard?category=new"
+                  className="flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                >
+                  <span className="flex items-center">
+                    <span className="mr-3 text-lg">✨</span>
+                    New
+                  </span>
+                  <span className="bg-gray-700 text-gray-300 text-xs font-semibold px-2 py-1 rounded-full">
+                    {categoryStats.new}
+                  </span>
+                </Link>
+              </div>
+            )}
+
+            {/* Admin Panel Button - Show on non-admin pages for admins */}
+            {isAdmin && !isAdminPage && (
+              <div className="mb-6">
+                <Link
+                  href="/meeting-tracker/admin/companies"
+                  className="flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 transition-colors"
+                >
+                  <span className="mr-2 text-lg">⚡</span>
+                  Admin Panel
+                </Link>
+              </div>
+            )}
+
+            {/* Admin Navigation - Show on admin pages */}
+            {isAdmin && isAdminPage && (
+              <div className="mb-6">
+                <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  Admin
+                </h3>
+                {adminNavigation.map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={`
+                        flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors
+                        ${
+                          isActive
+                            ? 'bg-purple-600 text-white'
+                            : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                        }
+                      `}
+                    >
+                      <span className="mr-3 text-lg">{item.icon}</span>
+                      {item.name}
+                    </Link>
+                  );
+                })}
+
+                {/* Back to Workspace Button */}
+                <div className="mt-4 pt-4 border-t border-gray-700">
+                  <Link
+                    href="/meeting-tracker/dashboard"
+                    className="flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                  >
+                    <span className="mr-2 text-lg">👤</span>
+                    Back to Workspace
+                  </Link>
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
           </nav>
 
           {/* App Switcher */}
           <div className="p-4 border-t border-gray-700">
             <Link
-              href="/oracle/chat"
+              href="/oracle/dashboard"
               className="w-full flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
             >
               <span className="mr-2">🔄</span>
