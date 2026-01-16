@@ -403,13 +403,6 @@ function ProductsContent() {
               {isExpanded ? 'Show Less' : 'Show More'}
             </button>
           )}
-          {product.matched_content && (
-            <div className="mt-2 p-2 bg-purple-50 rounded-lg">
-              <p className="text-xs text-purple-700">
-                <strong>AI Match:</strong> {product.matched_content}
-              </p>
-            </div>
-          )}
         </div>
 
         {/* Footer */}

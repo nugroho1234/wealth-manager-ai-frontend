@@ -15,6 +15,7 @@ interface Product {
   provider_country?: string;
   category: string;
   key_features?: string;
+  key_features_bullets?: string;
   age_of_entry?: string;
   premium?: string;
   minimum_sum_assured?: string;
@@ -559,7 +560,7 @@ function CompareContent() {
                       {products.map(product => (
                         <td key={product.insurance_id} className="px-6 py-4 text-sm text-gray-700 min-w-64 max-w-80">
                           <div className="whitespace-pre-wrap break-words leading-relaxed">
-                            {formatValue(product.key_features)}
+                            {formatValue(product.key_features_bullets || product.key_features)}
                           </div>
                         </td>
                       ))}
