@@ -8,6 +8,11 @@ import { useState, useEffect, useRef } from 'react';
 // API Base URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
+interface Company {
+  company_id: string;
+  name: string;
+}
+
 interface TeamMember {
   member_id: string;
   user_id: string;
@@ -22,6 +27,10 @@ interface TeamMember {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  company?: {
+    company_id: string;
+    name: string;
+  };
 }
 
 interface PaginatedResponse {
@@ -56,6 +65,11 @@ function AdminHierarchyContent() {
   const [total, setTotal] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [levelFilter, setLevelFilter] = useState<number | null>(null);
+  const [companyFilter, setCompanyFilter] = useState<string>('');
+
+  // Companies list for dropdown
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(true);
 
   // CSV Upload state
   const [uploading, setUploading] = useState(false);
@@ -64,14 +78,59 @@ function AdminHierarchyContent() {
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Edit Member state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    first_name: '',
+    last_name: '',
+    level: 1,
+    manager_id: '',
+    team_name: '',
+    position_title: '',
+  });
+
   // Check if user is admin
   const isAdmin = user?.role_id === 1 || user?.role_id === 2;
 
   useEffect(() => {
     if (isAdmin) {
+      fetchCompanies();
+    }
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (isAdmin) {
       fetchMembers();
     }
-  }, [page, searchQuery, levelFilter, isAdmin]);
+  }, [page, searchQuery, levelFilter, companyFilter, isAdmin]);
+
+  const fetchCompanies = async () => {
+    try {
+      setLoadingCompanies(true);
+      const authTokens = localStorage.getItem('auth_tokens');
+      if (!authTokens) return;
+      const { access_token: token } = JSON.parse(authTokens);
+
+      const res = await fetch(
+        `${API_BASE_URL}/api/v1/admin/meeting-tracker/companies/active?limit=100`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (!res.ok) throw new Error('Failed to fetch companies');
+
+      const data: Company[] = await res.json();
+      setCompanies(data);
+    } catch (error) {
+      console.error('Error fetching companies:', error);
+    } finally {
+      setLoadingCompanies(false);
+    }
+  };
 
   const fetchMembers = async () => {
     try {
@@ -87,6 +146,7 @@ function AdminHierarchyContent() {
 
       if (searchQuery) params.append('search', searchQuery);
       if (levelFilter) params.append('level', levelFilter.toString());
+      if (companyFilter) params.append('company_id', companyFilter);
 
       const res = await fetch(
         `${API_BASE_URL}/api/v1/admin/meeting-tracker/hierarchy/members?${params}`,
@@ -165,28 +225,120 @@ function AdminHierarchyContent() {
       if (!authTokens) return;
       const { access_token: token } = JSON.parse(authTokens);
 
-      const res = await fetch(
-        `${API_BASE_URL}/api/v1/admin/meeting-tracker/hierarchy/export`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const params = new URLSearchParams();
+      if (companyFilter) params.append('company_id', companyFilter);
+
+      const exportUrl = `${API_BASE_URL}/api/v1/admin/meeting-tracker/hierarchy/export${params.toString() ? `?${params}` : ''}`;
+
+      const res = await fetch(exportUrl, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       if (!res.ok) throw new Error('Failed to export CSV');
 
       const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
+      const blobUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
+      a.href = blobUrl;
       a.download = `team-hierarchy-${new Date().toISOString().split('T')[0]}.csv`;
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(blobUrl);
       document.body.removeChild(a);
     } catch (error) {
       console.error('Error exporting CSV:', error);
       alert('Failed to export CSV');
     }
+  };
+
+  const handleEditClick = (member: TeamMember) => {
+    setEditingMember(member);
+    setEditFormData({
+      first_name: member.first_name,
+      last_name: member.last_name,
+      level: member.level,
+      manager_id: member.manager_id || '',
+      team_name: member.team_name || '',
+      position_title: member.position_title || '',
+    });
+    setEditError(null);
+    setShowEditModal(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingMember) return;
+
+    try {
+      setSaving(true);
+      setEditError(null);
+
+      const authTokens = localStorage.getItem('auth_tokens');
+      if (!authTokens) return;
+      const { access_token: token } = JSON.parse(authTokens);
+
+      // Build update payload (only include changed fields)
+      const updatePayload: any = {};
+
+      if (editFormData.first_name !== editingMember.first_name) {
+        updatePayload.first_name = editFormData.first_name;
+      }
+      if (editFormData.last_name !== editingMember.last_name) {
+        updatePayload.last_name = editFormData.last_name;
+      }
+      if (editFormData.level !== editingMember.level) {
+        updatePayload.level = editFormData.level;
+      }
+      if (editFormData.manager_id !== (editingMember.manager_id || '')) {
+        updatePayload.manager_id = editFormData.manager_id || null;
+      }
+      if (editFormData.team_name !== (editingMember.team_name || '')) {
+        updatePayload.team_name = editFormData.team_name || null;
+      }
+      if (editFormData.position_title !== (editingMember.position_title || '')) {
+        updatePayload.position_title = editFormData.position_title || null;
+      }
+
+      const res = await fetch(
+        `${API_BASE_URL}/api/v1/admin/meeting-tracker/hierarchy/members/${editingMember.member_id}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updatePayload),
+        }
+      );
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.detail || 'Failed to update team member');
+      }
+
+      // Success - refresh the members list and close modal
+      await fetchMembers();
+      setShowEditModal(false);
+      setEditingMember(null);
+    } catch (error: any) {
+      console.error('Error updating team member:', error);
+      setEditError(error.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Get available managers for the selected company (exclude the editing member itself)
+  const getAvailableManagers = () => {
+    if (!editingMember) return [];
+
+    // Filter members from the same company and with level < editing member's level
+    // Also exclude the member being edited to prevent self-reference
+    return members.filter(
+      (m) =>
+        m.member_id !== editingMember.member_id &&
+        m.level < editFormData.level &&
+        (m.company?.company_id === editingMember.company?.company_id || !editingMember.company)
+    );
   };
 
   const handleDrag = (e: React.DragEvent) => {
@@ -255,7 +407,7 @@ function AdminHierarchyContent() {
 
           {/* Filters */}
           <div className="bg-gray-800 rounded-xl p-6 mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Search by name or email
@@ -273,6 +425,27 @@ function AdminHierarchyContent() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Filter by company
+                </label>
+                <select
+                  value={companyFilter}
+                  onChange={(e) => {
+                    setCompanyFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  disabled={loadingCompanies}
+                >
+                  <option value="">All Companies</option>
+                  {companies.filter((c) => c.status !== 'inactive').map((company) => (
+                    <option key={company.company_id} value={company.company_id}>
+                      {company.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
                   Filter by level
                 </label>
                 <select
@@ -284,10 +457,11 @@ function AdminHierarchyContent() {
                   className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="">All Levels</option>
-                  <option value="1">Level 1 (Top)</option>
-                  <option value="2">Level 2</option>
-                  <option value="3">Level 3</option>
-                  <option value="4">Level 4 (Bottom)</option>
+                  {Array.from({ length: 10 }, (_, i) => i + 1).map((level) => (
+                    <option key={level} value={level}>
+                      Level {level}{level === 1 ? ' (Top)' : ''}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -359,6 +533,9 @@ function AdminHierarchyContent() {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                           Team
                         </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                          Actions
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-700">
@@ -385,6 +562,14 @@ function AdminHierarchyContent() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-gray-400">
                             {member.team_name || '-'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <button
+                              onClick={() => handleEditClick(member)}
+                              className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded transition-colors"
+                            >
+                              Edit
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -560,6 +745,187 @@ function AdminHierarchyContent() {
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Member Modal */}
+      {showEditModal && editingMember && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-700">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold">Edit Team Member</h2>
+                <button
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingMember(null);
+                    setEditError(null);
+                  }}
+                  className="text-gray-400 hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              {/* Member Info */}
+              <div className="bg-gray-700 rounded-lg p-4 mb-6">
+                <div className="text-sm text-gray-400">Editing member:</div>
+                <div className="text-lg font-semibold">{editingMember.email}</div>
+              </div>
+
+              {/* Error Alert */}
+              {editError && (
+                <div className="mb-6 bg-red-900/20 border border-red-700 rounded-lg p-4">
+                  <div className="flex items-start">
+                    <span className="text-red-400 text-xl mr-3">⚠️</span>
+                    <div>
+                      <h3 className="text-red-400 font-semibold mb-1">Error</h3>
+                      <p className="text-red-300 text-sm">{editError}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Edit Form */}
+              <div className="space-y-4">
+                {/* First Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    First Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.first_name}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, first_name: e.target.value })
+                    }
+                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Enter first name"
+                  />
+                </div>
+
+                {/* Last Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Last Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.last_name}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, last_name: e.target.value })
+                    }
+                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Enter last name"
+                  />
+                </div>
+
+                {/* Level */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Level * (Lower number = higher rank)
+                  </label>
+                  <select
+                    value={editFormData.level}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, level: parseInt(e.target.value) })
+                    }
+                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  >
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map((level) => (
+                      <option key={level} value={level}>
+                        Level {level}{level === 1 ? ' (Top)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Note: If this member has subordinates, the new level must be lower (smaller number) than all subordinate levels.
+                  </p>
+                </div>
+
+                {/* Manager */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Manager {editFormData.level > 1 ? '*' : '(Level 1 cannot have manager)'}
+                  </label>
+                  <select
+                    value={editFormData.manager_id}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, manager_id: e.target.value })
+                    }
+                    disabled={editFormData.level === 1}
+                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="">No Manager</option>
+                    {getAvailableManagers().map((manager) => (
+                      <option key={manager.member_id} value={manager.member_id}>
+                        {manager.first_name} {manager.last_name} (Level {manager.level})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Only members with level lower (smaller number) than {editFormData.level} can be selected.
+                  </p>
+                </div>
+
+                {/* Team Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Team Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.team_name}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, team_name: e.target.value })
+                    }
+                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="e.g., Engineering, Sales, Marketing"
+                  />
+                </div>
+
+                {/* Position Title */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Position Title
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.position_title}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, position_title: e.target.value })
+                    }
+                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="e.g., Senior Engineer, Sales Manager"
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingMember(null);
+                    setEditError(null);
+                  }}
+                  disabled={saving}
+                  className="flex-1 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={saving || !editFormData.first_name || !editFormData.last_name}
+                  className="flex-1 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
