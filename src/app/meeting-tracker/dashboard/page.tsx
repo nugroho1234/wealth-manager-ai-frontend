@@ -3,6 +3,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import MeetingTrackerSidebar from '@/components/meeting-tracker/Sidebar';
+import TeamFilter from '@/components/meeting-tracker/TeamFilter';
 import { useState, useEffect } from 'react';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, subMonths, subYears } from 'date-fns';
 
@@ -20,6 +21,12 @@ interface Meeting {
   confidence: string;
   has_report: boolean;
   draft_saved: boolean;
+  user?: {
+    user_id: string;
+    email: string;
+    first_name: string;
+    last_name: string;
+  };
 }
 
 interface DashboardStats {
@@ -47,6 +54,9 @@ function DashboardContent() {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'R' | 'N' | 'S'>('all');
 
+  // Team filter state
+  const [teamFilter, setTeamFilter] = useState<string>('me');
+
   // Date filter state
   const [dateRange, setDateRange] = useState<DateRangeFilter>('this_month');
   const [customStartDate, setCustomStartDate] = useState('');
@@ -62,7 +72,7 @@ function DashboardContent() {
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [teamFilter]); // Refetch when team filter changes
 
   // Recalculate stats when meetings or date filter changes
   useEffect(() => {
@@ -94,8 +104,17 @@ function DashboardContent() {
       if (!authTokens) return;
       const { access_token: token } = JSON.parse(authTokens);
 
+      // Build query string with team filter
+      const params = new URLSearchParams();
+      if (teamFilter && teamFilter !== 'me') {
+        params.append('team_filter', teamFilter);
+      }
+
+      const queryString = params.toString();
+      const url = `${API_BASE_URL}/api/v1/meeting-tracker/meetings${queryString ? `?${queryString}` : ''}`;
+
       // Fetch meetings
-      const meetingsRes = await fetch(`${API_BASE_URL}/api/v1/meeting-tracker/meetings`, {
+      const meetingsRes = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -247,26 +266,39 @@ function DashboardContent() {
             <p className="text-gray-400">Track your meetings and performance</p>
           </div>
 
-          {/* Date Range Filter */}
+          {/* Filters Row: Team Filter + Date Range (side by side for leaders) */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Date Range
-            </label>
-            <select
-              value={dateRange}
-              onChange={(e) => handleDateRangeChange(e.target.value as DateRangeFilter)}
-              className="w-full md:w-auto px-4 py-3 bg-gray-800 border border-gray-700 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="this_month">This Month</option>
-              <option value="last_7_days">Last 7 Days</option>
-              <option value="last_30_days">Last 30 Days</option>
-              <option value="this_week">This Week</option>
-              <option value="last_month">Last Month</option>
-              <option value="this_year">This Year</option>
-              <option value="last_year">Last Year</option>
-              <option value="custom">Custom Range</option>
-              <option value="all_time">All Time</option>
-            </select>
+            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+              {/* Team Filter (only shows for leaders) */}
+              <TeamFilter
+                value={teamFilter}
+                onChange={setTeamFilter}
+                className=""
+              />
+
+              {/* Date Range Filter */}
+              <div className="flex items-center gap-2 md:ml-auto">
+                <label htmlFor="date-range" className="text-sm font-medium text-gray-300">
+                  Date Range:
+                </label>
+                <select
+                  id="date-range"
+                  value={dateRange}
+                  onChange={(e) => handleDateRangeChange(e.target.value as DateRangeFilter)}
+                  className="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="this_month">This Month</option>
+                  <option value="last_7_days">Last 7 Days</option>
+                  <option value="last_30_days">Last 30 Days</option>
+                  <option value="this_week">This Week</option>
+                  <option value="last_month">Last Month</option>
+                  <option value="this_year">This Year</option>
+                  <option value="last_year">Last Year</option>
+                  <option value="custom">Custom Range</option>
+                  <option value="all_time">All Time</option>
+                </select>
+              </div>
+            </div>
 
             {/* Custom date pickers */}
             {dateRange === 'custom' && (
@@ -446,89 +478,154 @@ function DashboardContent() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {categoryMeetings.map((meeting) => (
-                      <div
-                        key={meeting.meeting_id}
-                        className="bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow border border-gray-700 hover:border-gray-600"
-                      >
-                        {/* Meeting Time */}
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-2">
-                            <span className="text-2xl">🕐</span>
-                            <div className="text-sm">
-                              <div className="font-medium">
-                                {format(new Date(meeting.start_time), 'MMM dd, yyyy')}
-                              </div>
-                              <div className="text-gray-400">
-                                {format(new Date(meeting.start_time), 'HH:mm')} -{' '}
-                                {format(new Date(meeting.end_time), 'HH:mm')}
-                              </div>
+                    {categoryMeetings.map((meeting) => {
+                      // Check if we're viewing team data (not 'me')
+                      const isTeamView = teamFilter !== 'me';
+                      const subordinateName = meeting.user
+                        ? `${meeting.user.first_name} ${meeting.user.last_name}`.trim()
+                        : 'Unknown User';
+
+                      return (
+                        <div
+                          key={meeting.meeting_id}
+                          className="bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow border border-gray-700 hover:border-gray-600"
+                        >
+                          {/* Subordinate Name (only in team view) */}
+                          {isTeamView && (
+                            <div className="flex items-center gap-2 mb-3 pb-3 border-b border-gray-700">
+                              <span className="text-lg">👤</span>
+                              <span className="text-sm font-semibold text-blue-400">{subordinateName}</span>
                             </div>
-                          </div>
-                          <span className={`w-3 h-3 rounded-full ${getCategoryColor(meeting.category)}`}></span>
-                        </div>
-
-                        {/* Meeting Title */}
-                        <h3 className="text-lg font-semibold mb-2">{meeting.title}</h3>
-
-                        {/* Description */}
-                        {meeting.description && (
-                          <p className="text-sm text-gray-400 mb-3 line-clamp-2">{meeting.description}</p>
-                        )}
-
-                        {/* Badges */}
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          <span className={`text-xs px-2 py-1 rounded-full ${getCategoryColor(meeting.category)} bg-opacity-20 border border-current`}>
-                            {getCategoryLabel(meeting.category)}
-                          </span>
-                          {!meeting.has_report && (
-                            <span className="text-xs px-2 py-1 rounded-full bg-yellow-500 bg-opacity-20 border border-yellow-500 text-yellow-400">
-                              No Report
-                            </span>
                           )}
-                        </div>
 
-                        {/* Actions */}
-                        {(() => {
-                          const meetingEndTime = new Date(meeting.end_time);
-                          const currentTime = new Date();
-                          const isCompleted = meetingEndTime < currentTime;
-
-                          // Determine button text and color based on report state
-                          // Button Logic:
-                          // - has_report == TRUE → "View Report" (read-only, green)
-                          // - has_report == FALSE && draft_saved == TRUE → "Continue Draft" (editable, yellow)
-                          // - Otherwise → "Fill Report" (new, blue)
-                          let buttonText = 'Fill Report';
-                          let buttonColor = 'bg-blue-600 hover:bg-blue-700';
-
-                          if (meeting.has_report) {
-                            buttonText = 'View Report';
-                            buttonColor = 'bg-green-600 hover:bg-green-700';
-                          } else if (meeting.draft_saved) {
-                            buttonText = 'Continue Draft';
-                            buttonColor = 'bg-yellow-600 hover:bg-yellow-700';
-                          }
-
-                          return isCompleted ? (
-                            <div className="flex gap-2">
-                              <a
-                                href={`/meeting-tracker/form/${meeting.meeting_id}`}
-                                className={`flex-1 text-center px-4 py-2 ${buttonColor} rounded-lg text-sm font-medium transition-colors`}
-                              >
-                                {buttonText}
-                              </a>
-                            </div>
-                          ) : (
-                            <div className="flex gap-2">
-                              <div className="flex-1 text-center px-4 py-2 bg-gray-700 rounded-lg text-sm font-medium text-gray-400 cursor-not-allowed">
-                                Upcoming Meeting
+                          {/* Meeting Time */}
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-2xl">🕐</span>
+                              <div className="text-sm">
+                                <div className="font-medium">
+                                  {format(new Date(meeting.start_time), 'MMM dd, yyyy')}
+                                </div>
+                                <div className="text-gray-400">
+                                  {format(new Date(meeting.start_time), 'HH:mm')} -{' '}
+                                  {format(new Date(meeting.end_time), 'HH:mm')}
+                                </div>
                               </div>
                             </div>
-                          );
-                        })()}
-                      </div>
-                    ))}
+                            <span className={`w-3 h-3 rounded-full ${getCategoryColor(meeting.category)}`}></span>
+                          </div>
+
+                          {/* Meeting Title */}
+                          <h3 className="text-lg font-semibold mb-2">{meeting.title}</h3>
+
+                          {/* Description */}
+                          {meeting.description && (
+                            <p className="text-sm text-gray-400 mb-3 line-clamp-2">{meeting.description}</p>
+                          )}
+
+                          {/* Badges */}
+                          <div className="flex flex-wrap gap-2 mb-4">
+                            <span className={`text-xs px-2 py-1 rounded-full ${getCategoryColor(meeting.category)} bg-opacity-20 border border-current`}>
+                              {getCategoryLabel(meeting.category)}
+                            </span>
+                            {/* Show "Report Pending" badge in team view when no report */}
+                            {isTeamView && !meeting.has_report && (
+                              <span className="text-xs px-2 py-1 rounded-full bg-yellow-500 bg-opacity-20 border border-yellow-500 text-yellow-400">
+                                ⚠️ Report Pending
+                              </span>
+                            )}
+                            {/* Show "No Report" badge in my data view when no report */}
+                            {!isTeamView && !meeting.has_report && (
+                              <span className="text-xs px-2 py-1 rounded-full bg-yellow-500 bg-opacity-20 border border-yellow-500 text-yellow-400">
+                                No Report
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Actions */}
+                          {(() => {
+                            const meetingEndTime = new Date(meeting.end_time);
+                            const currentTime = new Date();
+                            const isCompleted = meetingEndTime < currentTime;
+
+                            // Team View Logic:
+                            // - has_report == TRUE → "View Report" (read-only, green)
+                            // - has_report == FALSE → No button (just show "Report Pending" badge)
+                            //
+                            // My Data View Logic:
+                            // - has_report == TRUE → "View Report" (read-only, green)
+                            // - has_report == FALSE && draft_saved == TRUE → "Continue Draft" (editable, yellow)
+                            // - Otherwise → "Fill Report" (new, blue)
+
+                            if (isTeamView) {
+                              // Team view: only show "View Report" button if report exists
+                              if (meeting.has_report) {
+                                return isCompleted ? (
+                                  <div className="flex gap-2">
+                                    <a
+                                      href={`/meeting-tracker/form/${meeting.meeting_id}`}
+                                      className="flex-1 text-center px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-medium transition-colors"
+                                    >
+                                      View Report
+                                    </a>
+                                  </div>
+                                ) : (
+                                  <div className="flex gap-2">
+                                    <div className="flex-1 text-center px-4 py-2 bg-gray-700 rounded-lg text-sm font-medium text-gray-400 cursor-not-allowed">
+                                      Upcoming Meeting
+                                    </div>
+                                  </div>
+                                );
+                              } else {
+                                // No report yet - don't show button, just the badge above
+                                return isCompleted ? (
+                                  <div className="flex gap-2">
+                                    <div className="flex-1 text-center px-4 py-2 bg-gray-700 rounded-lg text-sm font-medium text-gray-400 cursor-not-allowed">
+                                      Report Not Submitted
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex gap-2">
+                                    <div className="flex-1 text-center px-4 py-2 bg-gray-700 rounded-lg text-sm font-medium text-gray-400 cursor-not-allowed">
+                                      Upcoming Meeting
+                                    </div>
+                                  </div>
+                                );
+                              }
+                            } else {
+                              // My data view: show appropriate button based on report state
+                              let buttonText = 'Fill Report';
+                              let buttonColor = 'bg-blue-600 hover:bg-blue-700';
+
+                              if (meeting.has_report) {
+                                buttonText = 'View Report';
+                                buttonColor = 'bg-green-600 hover:bg-green-700';
+                              } else if (meeting.draft_saved) {
+                                buttonText = 'Continue Draft';
+                                buttonColor = 'bg-yellow-600 hover:bg-yellow-700';
+                              }
+
+                              return isCompleted ? (
+                                <div className="flex gap-2">
+                                  <a
+                                    href={`/meeting-tracker/form/${meeting.meeting_id}`}
+                                    className={`flex-1 text-center px-4 py-2 ${buttonColor} rounded-lg text-sm font-medium transition-colors`}
+                                  >
+                                    {buttonText}
+                                  </a>
+                                </div>
+                              ) : (
+                                <div className="flex gap-2">
+                                  <div className="flex-1 text-center px-4 py-2 bg-gray-700 rounded-lg text-sm font-medium text-gray-400 cursor-not-allowed">
+                                    Upcoming Meeting
+                                  </div>
+                                </div>
+                              );
+                            }
+                          })()}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               );

@@ -24,6 +24,7 @@ interface Meeting {
   end_time: string;
   description?: string;
   category: string;
+  user_id: string;
 }
 
 interface Report {
@@ -48,6 +49,7 @@ function FormContent() {
   const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [existingReport, setExistingReport] = useState<Report | null>(null);
   const [isViewMode, setIsViewMode] = useState(false);
+  const [isLeaderView, setIsLeaderView] = useState(false); // True if viewing subordinate's report
 
   // Form state
   const [meetingOutcome, setMeetingOutcome] = useState('');
@@ -86,6 +88,10 @@ function FormContent() {
       const fetchedMeeting = meetingData.meeting;
       setMeeting(fetchedMeeting);
 
+      // Check if current user is viewing someone else's report (leader view)
+      const isViewingAsLeader = fetchedMeeting.user_id !== user?.user_id;
+      setIsLeaderView(isViewingAsLeader);
+
       // Try to fetch existing report
       try {
         const reportRes = await fetch(`${API_BASE_URL}/api/v1/meeting-tracker/reports/${meetingId}`, {
@@ -112,8 +118,10 @@ function FormContent() {
           setFollowUpEndTime(report.follow_up_end_time || '');
           setFollowUpNotes(report.follow_up_notes || '');
 
-          // Determine view mode: if has_report is true, it's a final report (read-only)
-          if (fetchedMeeting.has_report && !report.is_draft) {
+          // Determine view mode:
+          // 1. If viewing as leader (not the owner), always read-only
+          // 2. If report is finalized (not a draft), read-only for owner too
+          if (isViewingAsLeader || (fetchedMeeting.has_report && !report.is_draft)) {
             setIsViewMode(true);
           }
         }
@@ -262,6 +270,19 @@ function FormContent() {
     <MeetingTrackerSidebar>
       <div className="min-h-screen bg-gray-900">
         <main className="max-w-4xl mx-auto px-6 py-12">
+          {/* Leader View Indicator */}
+          {isLeaderView && (
+            <div className="mb-6 bg-blue-900/30 border border-blue-500/50 rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">👁️</span>
+                <div>
+                  <p className="text-blue-300 font-semibold">Viewing Team Member's Report</p>
+                  <p className="text-blue-400/80 text-sm">You are viewing this report in read-only mode as a team leader.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-4xl font-bold text-white mb-2">

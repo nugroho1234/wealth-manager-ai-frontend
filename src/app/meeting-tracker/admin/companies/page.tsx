@@ -46,6 +46,10 @@ export default function CompaniesListPage() {
   const [addingMember, setAddingMember] = useState(false);
   const [availableManagers, setAvailableManagers] = useState<any[]>([]);
 
+  // Existing user confirmation state
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [existingUserData, setExistingUserData] = useState<any>(null);
+
   // Check admin access
   const isAdmin = user?.role_id === 1 || user?.role_id === 2;
 
@@ -208,6 +212,15 @@ export default function CompaniesListPage() {
         }
       );
 
+      if (response.status === 409) {
+        // User already exists - show confirmation dialog
+        const errorData = await response.json();
+        setExistingUserData(errorData.detail);
+        setShowConfirmation(true);
+        setAddingMember(false);
+        return;
+      }
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.detail || 'Failed to add member');
@@ -219,6 +232,59 @@ export default function CompaniesListPage() {
       await fetchCompanies();
     } catch (err: any) {
       setAddMemberError(err.message);
+    } finally {
+      setAddingMember(false);
+    }
+  };
+
+  const handleConfirmLinkExisting = async () => {
+    if (!selectedCompanyId || !existingUserData) return;
+
+    try {
+      setAddingMember(true);
+      setAddMemberError(null);
+
+      const authTokensStr = localStorage.getItem('auth_tokens');
+      if (!authTokensStr) {
+        throw new Error('No authentication token found');
+      }
+
+      const authTokens = JSON.parse(authTokensStr);
+      const token = authTokens.access_token;
+
+      const response = await fetch(
+        'http://localhost:8000/api/v1/admin/meeting-tracker/hierarchy/members/link-existing',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            user_id: existingUserData.user_id,
+            company_id: selectedCompanyId,
+            manager_id: addMemberData.manager_id || null,
+            level: addMemberData.level,
+            team_name: addMemberData.team_name || null,
+            position_title: addMemberData.position_title || null,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to link existing user');
+      }
+
+      // Success - close all modals and refresh companies
+      setShowConfirmation(false);
+      setShowAddMemberModal(false);
+      setSelectedCompanyId(null);
+      setExistingUserData(null);
+      await fetchCompanies();
+    } catch (err: any) {
+      setAddMemberError(err.message);
+      setShowConfirmation(false);
     } finally {
       setAddingMember(false);
     }
@@ -701,6 +767,78 @@ export default function CompaniesListPage() {
                 className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {addingMember ? 'Adding...' : 'Add Member'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal for Existing User */}
+      {showConfirmation && existingUserData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-xl p-8 max-w-md w-full mx-4">
+            <div className="mb-6">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-4xl">⚠️</span>
+                <h2 className="text-2xl font-bold text-white">User Already Exists</h2>
+              </div>
+
+              <div className="bg-blue-900/30 border border-blue-500/50 rounded-lg p-4 mb-4">
+                <p className="text-blue-300 text-sm mb-3">
+                  A user with email <strong>{addMemberData.email}</strong> already exists in the system:
+                </p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Name:</span>
+                    <span className="text-white font-medium">
+                      {existingUserData.first_name} {existingUserData.last_name}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-gray-300 text-sm mb-4">
+                Would you like to add this existing user to the team hierarchy with the following details?
+              </p>
+
+              <div className="bg-gray-700 rounded-lg p-4 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Level:</span>
+                  <span className="text-white">{addMemberData.level}</span>
+                </div>
+                {addMemberData.team_name && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Team:</span>
+                    <span className="text-white">{addMemberData.team_name}</span>
+                  </div>
+                )}
+                {addMemberData.position_title && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Position:</span>
+                    <span className="text-white">{addMemberData.position_title}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowConfirmation(false);
+                  setExistingUserData(null);
+                }}
+                disabled={addingMember}
+                className="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmLinkExisting}
+                disabled={addingMember}
+                className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {addingMember ? 'Linking...' : 'Yes, Link This User'}
               </button>
             </div>
           </div>

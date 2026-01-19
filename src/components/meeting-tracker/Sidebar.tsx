@@ -22,6 +22,8 @@ export default function MeetingTrackerSidebar({ children }: SidebarProps) {
     recruitment: 0,
     new: 0,
   });
+  const [isLeader, setIsLeader] = useState(false);
+  const [subordinatesCount, setSubordinatesCount] = useState(0);
 
   const navigation = [
     {
@@ -62,6 +64,34 @@ export default function MeetingTrackerSidebar({ children }: SidebarProps) {
 
   const isAdmin = user?.role_id === 1 || user?.role_id === 2;
   const isAdminPage = pathname?.startsWith('/meeting-tracker/admin');
+
+  // Check if user is a leader
+  useEffect(() => {
+    const checkLeaderStatus = async () => {
+      if (!user || isAdminPage) return;
+
+      try {
+        const authTokens = localStorage.getItem('auth_tokens');
+        if (!authTokens) return;
+        const { access_token: token } = JSON.parse(authTokens);
+
+        const response = await fetch(`${API_BASE_URL}/api/v1/meeting-tracker/hierarchy/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          // The response structure is directly { is_leader: bool, subordinates_count: N, ... }
+          setIsLeader(data.is_leader || false);
+          setSubordinatesCount(data.subordinates_count || 0);
+        }
+      } catch (error) {
+        console.error('Failed to check leader status:', error);
+      }
+    };
+
+    checkLeaderStatus();
+  }, [user, isAdminPage]);
 
   // Fetch category stats for filters
   useEffect(() => {
@@ -181,6 +211,26 @@ export default function MeetingTrackerSidebar({ children }: SidebarProps) {
                 );
               })}
             </div>
+
+            {/* Team - Show on non-admin pages for leaders only */}
+            {!isAdminPage && isLeader && (
+              <div className="mb-6">
+                <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  Team
+                </h3>
+                <div className="px-3 py-2 rounded-lg bg-green-600 bg-opacity-20 border border-green-600 text-green-400">
+                  <div className="flex items-center justify-between text-sm font-medium">
+                    <span className="flex items-center">
+                      <span className="mr-2 text-lg">👥</span>
+                      Team Leader
+                    </span>
+                  </div>
+                  <div className="text-xs text-green-300 mt-1">
+                    {subordinatesCount} team member{subordinatesCount !== 1 ? 's' : ''}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Filters - Show on non-admin pages */}
             {!isAdminPage && (
