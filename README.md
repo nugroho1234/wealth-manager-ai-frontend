@@ -29,6 +29,13 @@ A modern Next.js 15 application for insurance agents to manage documents, compar
 - **Currency Conversion** - Automatic MYR conversion with live exchange rates
 - **PDF Generation** - High-quality landscape proposals via Playwright
 
+### 👥 Client Management (CRM)
+- **Client Database** - Manage client information with multi-tenancy support
+- **Card-Based Interface** - Visual client cards with search and filtering
+- **Policy Tracking** - Link insurance policies to clients with status tracking
+- **Document Management** - Upload and store policy documents securely
+- **Client Statistics** - Track total clients, active policies, and premiums
+
 ### 🎨 Modern UI/UX
 - **Responsive Design** - Mobile-first approach with glass-morphism effects
 - **Collapsible Sidebar** - Persistent navigation state
@@ -246,6 +253,8 @@ wealth-manager-frontend/
 - `/proposals` - Proposal management
 - `/proposals/[id]` - Proposal builder
 - `/proposals/[id]/preview` - Proposal preview
+- `/clients` - Client list with search and filtering
+- `/clients/[id]` - Client detail view with policies
 
 ### Admin Routes (ADMIN, SUPER_ADMIN)
 - `/admin/upload` - Insurance document upload
@@ -349,6 +358,61 @@ This is a proprietary internal application. For questions or issues, contact the
 Proprietary - Internal use only
 
 ## Version History
+
+### Version 1.2.0 (January 2026)
+
+**New Features:**
+
+- **Client Management System** - Complete CRM for advisors
+  - **Client List Page** (`/clients`) - Card-based interface with clients
+    - Search by name, email, or phone with debounce
+    - Filter by policy status (all/with policies/without policies)
+    - Pagination (12 clients per page)
+    - Statistics: Total clients, With policies, Prospects
+    - Add Client button with inline modal
+
+  - **Add Client Modal** - Comprehensive client creation form
+    - Required fields: first name, last name, date of birth
+    - Optional fields: email, phone, address, gender, occupation, national ID, tags, notes
+    - Tag management (add/remove tags)
+    - Form validation with error messages
+
+  - **Client Detail Page** (`/clients/[id]`) - Full client profile view
+    - Client information section with all details
+    - Statistics cards: Total Policies, Active Policies, Monthly Premium, Total Coverage
+    - Edit client functionality with pre-filled modal
+    - Delete client with cascade warning
+
+  - **Policy Management** - Track client insurance policies
+    - List all policies with insurance product details
+    - Add Policy modal with searchable product selection
+    - Policy details: policy number, active date, renewal date, expiry date
+    - Premium and coverage tracking
+    - Policy status badges (Active, Lapsed, Expired, Pending)
+    - Delete policy functionality
+
+  - **Policy Document Upload** - Secure document storage
+    - Upload PDF documents for each policy
+    - Replace existing documents
+    - Visual upload status indicators
+    - Auto-generated filenames: `DDMMYYYY-firstname-lastname-insurance-name.pdf`
+    - Download links for uploaded documents
+
+**Technical Implementation:**
+- TypeScript interfaces for all client and policy types
+- Multi-tenancy support with company_id filtering
+- Integration with backend `/api/v1/clients` endpoints
+- Responsive design with Tailwind CSS
+- Toast notifications for user feedback
+- Loading states and error handling
+
+**UI/UX Improvements:**
+- Modern card-based layout for clients
+- Color-coded policy status badges
+- Clean modal designs for forms
+- Intuitive file upload interface
+- Real-time search with debounce
+- Smooth pagination controls
 
 ### Version 1.1.0 (December 2025)
 

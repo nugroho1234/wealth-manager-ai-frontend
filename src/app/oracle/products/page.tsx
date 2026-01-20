@@ -103,12 +103,13 @@ function ProductsContent() {
       const response = await apiClient.get<{
         success: boolean;
         data: {
+          products: Product[];
           total: number;
           limit: number;
           offset: number;
-          products: Product[];
         };
-      }>(`/api/v1/oracle/products?${params.toString()}`);
+      }>(`/api/v1/products?${params.toString()}`);
+
 
       const productList = response.data.data?.products || [];
       setManualProducts(productList);
@@ -407,13 +408,6 @@ function ProductsContent() {
             >
               {isExpanded ? 'Show Less' : 'Show More'}
             </button>
-          )}
-          {product.matched_content && (
-            <div className="mt-2 p-2 bg-purple-50 rounded-lg">
-              <p className="text-xs text-purple-700">
-                <strong>AI Match:</strong> {product.matched_content}
-              </p>
-            </div>
           )}
         </div>
 

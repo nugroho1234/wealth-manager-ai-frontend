@@ -24,6 +24,7 @@ interface ProductDetails {
   provider_country?: string;
   category?: string;
   key_features?: string;
+  key_features_bullets?: string;
   age_of_entry?: string;
   minimum_premium?: string;
   minimum_sum_assured?: string;
@@ -202,6 +203,7 @@ function EditProductContent() {
     { key: 'provider_country', label: 'Provider Country', type: 'text', section: 'core' },
     { key: 'category', label: 'Category', type: 'text', section: 'core' },
     { key: 'key_features', label: 'Key Features', type: 'textarea', section: 'core' },
+    { key: 'key_features_bullets', label: 'Key Features (Bullets for Comparison)', type: 'textarea', section: 'core', rows: 4 },
     { key: 'document_summary', label: 'Document Summary', type: 'textarea', section: 'core' },
     
     // Financial details
@@ -309,7 +311,7 @@ function EditProductContent() {
                         <textarea
                           value={formData[field.key as keyof ProductDetails] || ''}
                           onChange={(e) => handleInputChange(field.key as keyof ProductDetails, e.target.value)}
-                          rows={4}
+                          rows={(field as any).rows || 4}
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                           placeholder={`Enter ${field.label.toLowerCase()}`}
                         />
@@ -340,7 +342,7 @@ function EditProductContent() {
                         <textarea
                           value={formData[field.key as keyof ProductDetails] || ''}
                           onChange={(e) => handleInputChange(field.key as keyof ProductDetails, e.target.value)}
-                          rows={4}
+                          rows={(field as any).rows || 4}
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                           placeholder={`Enter ${field.label.toLowerCase()}`}
                         />
