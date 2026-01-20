@@ -225,7 +225,7 @@ function ProductsContent() {
 
         // After archiving, navigate to chat with the selected product
         if (productToChat) {
-          router.push(`/chat?product=${productToChat.insurance_id}`);
+          router.push(`/oracle/chat?product=${productToChat.insurance_id}`);
         }
         setShowArchiveModal(false);
         setProductToChat(null);
@@ -248,7 +248,7 @@ function ProductsContent() {
     if (existingSession) {
       // Session already exists - navigate directly (even if we have 5 sessions)
       console.log('✅ Existing session found for product:', product.insurance_name);
-      router.push(`/chat?product=${product.insurance_id}`);
+      router.push(`/oracle/chat?product=${product.insurance_id}`);
       return;
     }
 
@@ -261,7 +261,7 @@ function ProductsContent() {
     } else {
       // Navigate directly to create new session
       console.log('✅ No existing session, but have room. Creating new session.');
-      router.push(`/chat?product=${product.insurance_id}`);
+      router.push(`/oracle/chat?product=${product.insurance_id}`);
     }
   };
 
@@ -295,7 +295,7 @@ function ProductsContent() {
   const handleCompareClick = () => {
     const selectedIds = Array.from(selectedProducts);
     // Open comparison page in new tab
-    const compareUrl = `/products/compare?products=${selectedIds.join(',')}`;
+    const compareUrl = `/oracle/products/compare?products=${selectedIds.join(',')}`;
     window.open(compareUrl, '_blank');
   };
 
