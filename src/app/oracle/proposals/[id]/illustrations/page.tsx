@@ -129,7 +129,7 @@ function IllustrationManagementContent() {
         setProposal(proposalData.data);
       } else {
         toast.error('Failed to load proposal');
-        router.push('/proposals');
+        router.push('/oracle/proposals');
         return;
       }
 
@@ -310,7 +310,7 @@ function IllustrationManagementContent() {
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Proposal not found</h1>
           <p className="text-gray-600 mb-4">The requested proposal could not be found.</p>
           <button
-            onClick={() => router.push('/proposals')}
+            onClick={() => router.push('/oracle/proposals')}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             Back to Proposals

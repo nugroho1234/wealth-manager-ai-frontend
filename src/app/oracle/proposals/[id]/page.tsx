@@ -241,15 +241,15 @@ function ProposalDetailContent() {
       if (error.response?.status === 404) {
         toast.error('Proposal not found');
         setLoading(false);
-        router.push('/proposals');
+        router.push('/oracle/proposals');
       } else if (error.response?.status === 403) {
         toast.error('Access denied to this proposal');
         setLoading(false);
-        router.push('/proposals');
+        router.push('/oracle/proposals');
       } else if (currentRetry >= 3) {
         toast.error('Unable to load proposal. Please check your connection and try again.');
         setLoading(false);
-        router.push('/proposals');
+        router.push('/oracle/proposals');
       }
       // For network errors during retry, keep loading true
     }
@@ -2116,7 +2116,7 @@ function ProposalDetailContent() {
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Proposal not found</h1>
           <p className="text-gray-600 mb-4">The requested proposal could not be found.</p>
           <button
-            onClick={() => router.push('/proposals')}
+            onClick={() => router.push('/oracle/proposals')}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             Back to Proposals
@@ -2136,7 +2136,7 @@ function ProposalDetailContent() {
         <div className="mb-8">
           <div className="flex items-center space-x-4 mb-4">
             <button
-              onClick={() => router.push('/proposals')}
+              onClick={() => router.push('/oracle/proposals')}
               className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

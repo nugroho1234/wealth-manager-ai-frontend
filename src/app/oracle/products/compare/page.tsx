@@ -69,7 +69,7 @@ function CompareContent() {
       fetchComparisonData(ids);
     } else {
       notifyError('Invalid Request', 'No products selected for comparison');
-      router.push('/products');
+      router.push('/oracle/products');
     }
   }, [searchParams]);
 
@@ -89,7 +89,7 @@ function CompareContent() {
       
       if (productData.length === 0) {
         notifyError('No Products Found', 'Could not load product comparison data');
-        router.push('/products');
+        router.push('/oracle/products');
         return;
       }
       
@@ -440,7 +440,7 @@ function CompareContent() {
             <h1 className="text-2xl font-bold text-gray-900 mb-2">No Products to Compare</h1>
             <p className="text-gray-600 mb-4">Please select products from the products page.</p>
             <button
-              onClick={() => router.push('/products')}
+              onClick={() => router.push('/oracle/products')}
               className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
             >
               Back to Products
@@ -473,7 +473,7 @@ function CompareContent() {
                   <span>Download PDF</span>
                 </button>
                 <button
-                  onClick={() => router.push('/products')}
+                  onClick={() => router.push('/oracle/products')}
                   className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                 >
                   ← Back to Products

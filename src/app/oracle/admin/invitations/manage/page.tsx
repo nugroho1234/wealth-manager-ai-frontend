@@ -191,7 +191,7 @@ function ManageInvitationsContent() {
               </div>
               
               <button
-                onClick={() => router.push('/admin/invitations')}
+                onClick={() => router.push('/oracle/admin/invitations')}
                 className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
               >
                 ← Back to Invite User
@@ -205,7 +205,7 @@ function ManageInvitationsContent() {
               {/* Left Side - Action Buttons */}
               <div className="flex space-x-3">
                 <button
-                  onClick={() => router.push('/admin/invitations')}
+                  onClick={() => router.push('/oracle/admin/invitations')}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center"
                 >
                   ➕ New Invitation

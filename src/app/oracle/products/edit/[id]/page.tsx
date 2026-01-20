@@ -138,7 +138,7 @@ function EditProductContent() {
       if (response.data.success) {
         notifySuccess('Success', 'Product updated successfully');
         setProduct({ ...product!, ...updatedFields });
-        router.push('/admin/products');
+        router.push('/oracle/admin/products');
       }
       
     } catch (error: any) {
@@ -151,7 +151,7 @@ function EditProductContent() {
   };
 
   const handleCancel = () => {
-    router.push('/admin/products');
+    router.push('/oracle/admin/products');
   };
 
   if (isLoading) {

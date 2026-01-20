@@ -173,7 +173,7 @@ export default function ProposalPreviewPage() {
           setPages(individualPages);
         } else {
           toast.error('Failed to load proposal data');
-          router.push('/proposals');
+          router.push('/oracle/proposals');
         }
       } catch (error: any) {
         console.error('Error loading proposal:', error);
@@ -185,7 +185,7 @@ export default function ProposalPreviewPage() {
           router.push('/login');
         } else {
           toast.error('Failed to load proposal preview');
-          router.push('/proposals');
+          router.push('/oracle/proposals');
         }
       } finally {
         setLoading(false);

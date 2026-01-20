@@ -214,7 +214,7 @@ function InvitationsContent() {
               </div>
               
               <button
-                onClick={() => router.push('/dashboard')}
+                onClick={() => router.push('/oracle/dashboard')}
                 className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
               >
                 ← Back to Dashboard
@@ -300,7 +300,7 @@ function InvitationsContent() {
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-bold text-gray-900">📋 Recent Invitations</h3>
                   <button
-                    onClick={() => router.push('/admin/invitations/manage')}
+                    onClick={() => router.push('/oracle/admin/invitations/manage')}
                     className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
                   >
                     View All

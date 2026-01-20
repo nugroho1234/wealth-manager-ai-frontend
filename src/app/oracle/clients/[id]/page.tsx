@@ -40,7 +40,7 @@ function ClientDetailContent() {
     } catch (error: any) {
       console.error('Error loading client:', error);
       toast.error('Failed to load client details');
-      router.push('/clients');
+      router.push('/oracle/clients');
     } finally {
       setLoading(false);
     }
@@ -74,7 +74,7 @@ function ClientDetailContent() {
     try {
       await apiClient.delete(`/api/v1/clients/${clientId}`);
       toast.success('Client deleted successfully');
-      router.push('/clients');
+      router.push('/oracle/clients');
     } catch (error: any) {
       console.error('Error deleting client:', error);
       toast.error(error.response?.data?.detail || 'Failed to delete client');
@@ -172,7 +172,7 @@ function ClientDetailContent() {
           {/* Header */}
           <div className="mb-8">
             <button
-              onClick={() => router.push('/clients')}
+              onClick={() => router.push('/oracle/clients')}
               className="text-blue-600 hover:text-blue-800 mb-4 flex items-center space-x-2"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

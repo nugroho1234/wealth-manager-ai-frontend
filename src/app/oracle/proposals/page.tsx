@@ -276,7 +276,7 @@ function ProposalsContent() {
             {filteredProposals.map((proposal) => (
               <div key={proposal.proposal_id} className="relative">
                 <Link
-                  href={`/proposals/${proposal.proposal_id}`}
+                  href={`/oracle/proposals/${proposal.proposal_id}`}
                   className="block"
                 >
                   <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6 hover:shadow-2xl hover:scale-[1.02] transition-all duration-200">
@@ -444,7 +444,7 @@ function ProposalsContent() {
               loadProposals();
               setActiveTab('list');
               // Navigate to the proposal builder
-              router.push(`/proposals/${proposalId}`);
+              router.push(`/oracle/proposals/${proposalId}`);
             }}
           />
         )}
