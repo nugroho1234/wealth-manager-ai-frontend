@@ -1556,7 +1556,7 @@ function ProposalDetailContent() {
         toast.success('Proposal generated successfully!');
 
         // Open proposal preview in new tab so user can review while keeping builder page open
-        const previewUrl = `/proposals/${proposalId}/preview`;
+        const previewUrl = `/oracle/proposals/${proposalId}/preview`;
         window.open(previewUrl, '_blank');
 
         // Re-enable button after successful generation
