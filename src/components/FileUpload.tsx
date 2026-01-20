@@ -233,7 +233,7 @@ export default function FileUpload({
 
     const checkStatus = async (): Promise<void> => {
       try {
-        const response = await apiClient.get<ProcessingStatus>(`/api/v1/admin/upload-status/${uploadId}`);
+        const response = await apiClient.get<ProcessingStatus>(`/api/v1/oracle/admin/upload-status/${uploadId}`);
         const status = response.data;
 
         // Update progress based on processing step
