@@ -77,6 +77,12 @@ export default function Sidebar({ children }: SidebarProps) {
       href: '/oracle/proposals',
       icon: '📊',
     },
+    {
+      name: 'My Clients',
+      href: '/oracle/clients',
+      icon: '👥',
+      requiredRoles: [UserRole.ADVISOR, UserRole.LEADER_1, UserRole.LEADER_2, UserRole.SENIOR_PARTNER, UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MASTER],
+    },
   ];
 
   const bottomNavigationItems: SidebarItem[] = [
