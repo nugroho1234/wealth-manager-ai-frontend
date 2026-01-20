@@ -102,10 +102,15 @@ function ProductsContent() {
       
       const response = await apiClient.get<{
         success: boolean;
-        data: Product[];
+        data: {
+          products: Product[];
+          total: number;
+          limit: number;
+          offset: number;
+        };
       }>(`/api/v1/products?${params.toString()}`);
-      
-      const productList = response.data.data || [];
+
+      const productList = response.data.data?.products || [];
       setManualProducts(productList);
       
       // Extract unique providers for filter
