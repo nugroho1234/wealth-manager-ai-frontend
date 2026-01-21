@@ -32,6 +32,11 @@ export default function MeetingTrackerSidebar({ children }: SidebarProps) {
       icon: '📊',
     },
     {
+      name: 'Meetings',
+      href: '/meeting-tracker/meetings',
+      icon: '📋',
+    },
+    {
       name: 'My Tasks',
       href: '/meeting-tracker/tasks',
       icon: '✅',
@@ -239,7 +244,7 @@ export default function MeetingTrackerSidebar({ children }: SidebarProps) {
                   Filters
                 </h3>
                 <Link
-                  href="/meeting-tracker/dashboard?category=sales"
+                  href="/meeting-tracker/meetings?category=sales"
                   className="flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
                 >
                   <span className="flex items-center">
@@ -251,7 +256,7 @@ export default function MeetingTrackerSidebar({ children }: SidebarProps) {
                   </span>
                 </Link>
                 <Link
-                  href="/meeting-tracker/dashboard?category=recruitment"
+                  href="/meeting-tracker/meetings?category=recruitment"
                   className="flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
                 >
                   <span className="flex items-center">
@@ -263,7 +268,7 @@ export default function MeetingTrackerSidebar({ children }: SidebarProps) {
                   </span>
                 </Link>
                 <Link
-                  href="/meeting-tracker/dashboard?category=new"
+                  href="/meeting-tracker/meetings?category=new"
                   className="flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
                 >
                   <span className="flex items-center">
