@@ -67,16 +67,33 @@ function CompanyManagementContent() {
   // Fetch companies
   useEffect(() => {
     fetchCompanies();
-  }, []);
+  }, [user]);
 
   const fetchCompanies = async () => {
     try {
       setIsLoading(true);
-      const response = await apiClient.get('/api/v1/oracle/companies');
-      setCompanies(response.data.companies || []);
+
+      // MASTER role: View all companies
+      // SUPER_ADMIN/ADMIN: View only their own company
+      if (user?.role === 'MASTER') {
+        const response = await apiClient.get('/api/v1/oracle/companies');
+        setCompanies(response.data.companies || []);
+      } else {
+        // For non-MASTER users, fetch their own company
+        const response = await apiClient.get('/api/v1/oracle/companies/me');
+        // Wrap single company in array for consistent UI handling
+        setCompanies([response.data]);
+        // Don't auto-open modal - let user click Edit button
+      }
     } catch (error: any) {
       console.error('Error fetching companies:', error);
-      notifyError('Fetch Error', error.detail || error.message || 'Failed to fetch companies');
+      // If 404, user has no company yet - allow them to create one
+      if (error.status === 404 && user?.role !== 'MASTER') {
+        notifyError('No Company', 'You have no company profile yet. Please contact your administrator to assign you to a company.');
+        setCompanies([]);
+      } else {
+        notifyError('Fetch Error', error.detail || error.message || 'Failed to fetch companies');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -306,18 +323,26 @@ function CompanyManagementContent() {
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Manage Companies</h1>
-              <p className="text-gray-600 mt-2">Create and manage company profiles for proposals</p>
+              <h1 className="text-3xl font-bold text-gray-900">
+                {user?.role === 'MASTER' ? 'Manage Companies' : 'My Company Profile'}
+              </h1>
+              <p className="text-gray-600 mt-2">
+                {user?.role === 'MASTER'
+                  ? 'Create and manage company profiles for proposals'
+                  : 'View and edit your company information'}
+              </p>
             </div>
-            <button
-              onClick={() => setShowForm(true)}
-              className="bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Add Company
-            </button>
+            {user?.role === 'MASTER' && (
+              <button
+                onClick={() => setShowForm(true)}
+                className="bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center"
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Add Company
+              </button>
+            )}
           </div>
 
           {/* Company Form Modal */}
@@ -760,12 +785,14 @@ function CompanyManagementContent() {
                           >
                             Edit
                           </button>
-                          <button
-                            onClick={() => handleDelete(company.company_id)}
-                            className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-md transition-colors"
-                          >
-                            Delete
-                          </button>
+                          {user?.role === 'MASTER' && (
+                            <button
+                              onClick={() => handleDelete(company.company_id)}
+                              className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-md transition-colors"
+                            >
+                              Delete
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>

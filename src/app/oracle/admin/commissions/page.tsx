@@ -124,7 +124,7 @@ function CommissionsContent() {
   const categories = ['All', ...Array.from(new Set(insurances.map(i => i.category)))];
 
   const handleEditCommissions = (insurance: Insurance) => {
-    router.push(`/admin/commissions/${insurance.insurance_id}?name=${encodeURIComponent(insurance.insurance_name)}&provider=${encodeURIComponent(insurance.provider)}`);
+    router.push(`/oracle/admin/commissions/${insurance.insurance_id}?name=${encodeURIComponent(insurance.insurance_name)}&provider=${encodeURIComponent(insurance.provider)}`);
   };
 
   // Restrict access to SUPER_ADMIN only

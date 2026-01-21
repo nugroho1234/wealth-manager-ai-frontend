@@ -17,8 +17,10 @@ interface User {
   role: string;
   company_id: string | null;
   is_profile_complete: boolean;
+  is_active: boolean;
   created_at: string;
   updated_at: string | null;
+  deactivated_at: string | null;
 }
 
 interface EditUserData {
@@ -56,33 +58,51 @@ function UsersContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showInactive, setShowInactive] = useState(false);
   const pageSize = 20;
 
   useEffect(() => {
     fetchUsers();
-  }, [currentPage]);
+  }, [currentPage, searchQuery, showInactive]);
 
   const fetchUsers = async () => {
     try {
       setIsLoading(true);
+
+      // Calculate offset from page number (backend uses limit/offset pagination)
+      const offset = (currentPage - 1) * pageSize;
+
+      // Build query parameters
+      const params = new URLSearchParams({
+        limit: pageSize.toString(),
+        offset: offset.toString(),
+      });
+
+      if (searchQuery.trim()) {
+        params.append('search', searchQuery.trim());
+      }
+
+      if (showInactive) {
+        params.append('include_inactive', 'true');
+      }
+
       const response = await apiClient.get<{
         success: boolean;
         message: string;
         data: {
           users: User[];
-          pagination: {
-            page: number;
-            size: number;
-            total: number;
-            pages: number;
-          };
+          total: number;
+          limit: number;
+          offset: number;
         };
-      }>(`/api/v1/oracle/users?page=${currentPage}&size=${pageSize}`);
+      }>(`/api/v1/oracle/admin/users?${params.toString()}`);
 
       if (response.data.success) {
         setUsers(response.data.data.users);
-        setTotalPages(response.data.data.pagination.pages);
-        setTotalUsers(response.data.data.pagination.total);
+        setTotalUsers(response.data.data.total);
+        // Calculate total pages from total count
+        setTotalPages(Math.ceil(response.data.data.total / pageSize));
       }
     } catch (error: any) {
       console.error('Error fetching users:', error);
@@ -111,7 +131,7 @@ function UsersContent() {
       setIsSubmitting(true);
 
       const response = await apiClient.put(
-        `/api/v1/oracle/users/${selectedUser.user_id}`,
+        `/api/v1/oracle/admin/users/${selectedUser.user_id}`,
         editData
       );
 
@@ -126,6 +146,48 @@ function UsersContent() {
       notifyError('Error', errorMessage);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDeactivateUser = async (userId: string, userEmail: string) => {
+    if (!confirm(`Are you sure you want to deactivate the user ${userEmail}? They will not be able to log in.`)) {
+      return;
+    }
+
+    try {
+      const response = await apiClient.post(
+        `/api/v1/oracle/admin/users/${userId}/deactivate`
+      );
+
+      if (response.data.success) {
+        notifySuccess('Success', 'User deactivated successfully');
+        fetchUsers(); // Refresh the user list
+      }
+    } catch (error: any) {
+      console.error('Error deactivating user:', error);
+      const errorMessage = error.response?.data?.detail || 'Failed to deactivate user';
+      notifyError('Error', errorMessage);
+    }
+  };
+
+  const handleActivateUser = async (userId: string, userEmail: string) => {
+    if (!confirm(`Are you sure you want to reactivate the user ${userEmail}?`)) {
+      return;
+    }
+
+    try {
+      const response = await apiClient.post(
+        `/api/v1/oracle/admin/users/${userId}/activate`
+      );
+
+      if (response.data.success) {
+        notifySuccess('Success', 'User activated successfully');
+        fetchUsers(); // Refresh the user list
+      }
+    } catch (error: any) {
+      console.error('Error activating user:', error);
+      const errorMessage = error.response?.data?.detail || 'Failed to activate user';
+      notifyError('Error', errorMessage);
     }
   };
 
@@ -221,6 +283,52 @@ function UsersContent() {
           </div>
         </div>
 
+        {/* Search and Filters */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 mb-6">
+          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+            {/* Search Bar */}
+            <div className="flex-1 w-full md:max-w-md">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search by name, email, or phone..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setCurrentPage(1); // Reset to first page on search
+                  }}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+                <svg
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Show Inactive Checkbox */}
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="showInactive"
+                checked={showInactive}
+                onChange={(e) => {
+                  setShowInactive(e.target.checked);
+                  setCurrentPage(1); // Reset to first page on filter change
+                }}
+                className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500 focus:ring-2"
+              />
+              <label htmlFor="showInactive" className="text-sm font-medium text-gray-700 cursor-pointer select-none">
+                Show inactive users
+              </label>
+            </div>
+          </div>
+        </div>
+
         {/* Users Table */}
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 overflow-hidden">
           <div className="p-6 border-b border-gray-200">
@@ -278,13 +386,13 @@ function UsersContent() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {u.is_profile_complete ? (
+                        {u.is_active ? (
                           <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-700 border border-green-300">
-                            Complete
+                            Active
                           </span>
                         ) : (
-                          <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-700 border border-yellow-300">
-                            Incomplete
+                          <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-700 border border-red-300">
+                            Inactive
                           </span>
                         )}
                       </td>
@@ -292,12 +400,29 @@ function UsersContent() {
                         {formatDate(u.created_at)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button
-                          onClick={() => handleEditClick(u)}
-                          className="text-primary-600 hover:text-primary-800 transition-colors"
-                        >
-                          Edit
-                        </button>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => handleEditClick(u)}
+                            className="text-primary-600 hover:text-primary-800 transition-colors"
+                          >
+                            Edit
+                          </button>
+                          {u.is_active ? (
+                            <button
+                              onClick={() => handleDeactivateUser(u.user_id, u.email)}
+                              className="text-red-600 hover:text-red-800 transition-colors"
+                            >
+                              Deactivate
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleActivateUser(u.user_id, u.email)}
+                              className="text-green-600 hover:text-green-800 transition-colors"
+                            >
+                              Activate
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

@@ -359,6 +359,47 @@ Proprietary - Internal use only
 
 ## Version History
 
+### Version 1.3.0 (January 2026)
+
+**New Features:**
+
+- **Multi-Application Navigation** - Seamless switching between Oracle and Meeting Tracker
+  - Added "Switch to Meeting Tracker" button in sidebar
+  - Direct navigation to `/meeting-tracker/dashboard`
+  - Unified navigation experience across both applications
+
+- **Dashboard Enhancements**
+  - "Under Construction" badges for features in development
+  - Visual indicators for incomplete features (User Performance, Manage Promotions, Financial Reports, Analytics)
+  - Greyed out, unclickable state for features under construction
+  - Improved user expectations management
+
+- **Company Profile Management**
+  - Role-based company access (MASTER sees all, SUPER_ADMIN/ADMIN sees own company)
+  - Updated company profile page at `/oracle/admin/companies`
+  - Edit company information for SUPER_ADMIN/ADMIN users
+  - View all companies for MASTER role
+  - Removed auto-open modal behavior for better UX
+
+- **User Management Improvements**
+  - Enhanced user list with search functionality
+  - Search by name, email, or phone number
+  - Filter to show/hide inactive users
+  - Activate/deactivate user accounts
+  - Pagination controls (20 users per page)
+  - Real-time user statistics
+
+**UI/UX Improvements:**
+- Cleaner dashboard with construction indicators
+- Better modal behaviors (no auto-open)
+- Enhanced company profile interface
+- Improved sidebar navigation with app switcher
+
+**Bug Fixes:**
+- Fixed company page 404 error (corrected URL from `/oracle/admin/company` to `/oracle/admin/companies`)
+- Removed persistent modal auto-open issue
+- Fixed role-based company access control
+
 ### Version 1.2.0 (January 2026)
 
 **New Features:**

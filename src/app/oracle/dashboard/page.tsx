@@ -117,49 +117,57 @@ function DashboardContent() {
             title: 'System Administration',
             href: '/oracle/master/system',
             icon: '🏛️',
-            description: 'Cross-company system management'
+            description: 'Cross-company system management',
+            underConstruction: false
           },
           {
             title: 'Manage Companies',
             href: '/oracle/master/companies',
             icon: '🏢',
-            description: 'Create and manage all companies'
+            description: 'Create and manage all companies',
+            underConstruction: false
           },
           {
             title: 'Global User Management',
             href: '/oracle/master/users',
             icon: '👥',
-            description: 'Manage users across all companies'
+            description: 'Manage users across all companies',
+            underConstruction: false
           },
           {
             title: 'Cross-Company Analytics',
             href: '/oracle/master/analytics',
             icon: '📊',
-            description: 'Platform-wide analytics and insights'
+            description: 'Platform-wide analytics and insights',
+            underConstruction: false
           },
           {
             title: 'Upload Insurance',
             href: '/oracle/admin/documents',
             icon: '📤',
-            description: 'Upload insurance documents'
+            description: 'Upload insurance documents',
+            underConstruction: false
           },
           {
             title: 'Manage Products',
             href: '/oracle/admin/products',
             icon: '📋',
-            description: 'Edit and manage insurance products'
+            description: 'Edit and manage insurance products',
+            underConstruction: false
           },
           {
             title: 'Invite User',
             href: '/oracle/admin/invitations',
             icon: '📧',
-            description: 'Send invitation to new team members'
+            description: 'Send invitation to new team members',
+            underConstruction: false
           },
           {
             title: 'Manage Commissions',
             href: '/oracle/admin/commissions',
             icon: '💰',
-            description: 'Create and configure commission rates'
+            description: 'Create and configure commission rates',
+            underConstruction: false
           },
         ];
       case UserRole.SUPER_ADMIN:
@@ -168,61 +176,71 @@ function DashboardContent() {
             title: 'Upload Insurance',
             href: '/oracle/admin/documents',
             icon: '📤',
-            description: 'Upload insurance documents'
+            description: 'Upload insurance documents',
+            underConstruction: false
           },
           {
             title: 'Manage Products',
             href: '/oracle/admin/products',
             icon: '📋',
-            description: 'Edit and manage insurance products'
+            description: 'Edit and manage insurance products',
+            underConstruction: false
           },
           {
             title: 'Edit User',
             href: '/oracle/admin/users',
             icon: '👤',
-            description: 'Manage user accounts'
+            description: 'Manage user accounts',
+            underConstruction: false
           },
           {
             title: 'Invite User',
             href: '/oracle/admin/invitations',
             icon: '📧',
-            description: 'Send invitation to new team members'
+            description: 'Send invitation to new team members',
+            underConstruction: false
           },
           {
             title: 'User Performance',
             href: '/oracle/admin/performance',
             icon: '📈',
-            description: 'Track user performance'
+            description: 'Track user performance',
+            underConstruction: true
           },
           {
             title: 'Manage Commissions',
             href: '/oracle/admin/commissions',
             icon: '💰',
-            description: 'Create and configure commission rates'
+            description: 'Create and configure commission rates',
+            underConstruction: false
           },
           {
             title: 'Manage Promotions',
             href: '/oracle/admin/promotions',
             icon: '🎯',
-            description: 'Create and manage promotions'
+            description: 'Create and manage promotions',
+            underConstruction: true
           },
           {
             title: 'Company Profile',
-            href: '/oracle/admin/company',
+            href: '/oracle/admin/companies',
             icon: '🏢',
-            description: 'Manage company profile and branding'
+            description: 'Manage company profile and branding',
+            underConstruction: false
           },
           {
             title: 'Financial Reports',
             href: '/oracle/admin/financial-reports',
             icon: '💳',
-            description: 'View financial analytics and reports'
+            description: 'View financial analytics and reports',
+            underConstruction: true
           },
           {
             title: 'Analytics',
             href: '/oracle/admin/analytics',
             icon: '📊',
-            description: 'View company analytics'
+            description: 'View company analytics',
+            underConstruction: true
           },
         ];
       case UserRole.ADMIN:
@@ -231,31 +249,36 @@ function DashboardContent() {
             title: 'Upload Insurance',
             href: '/oracle/admin/documents',
             icon: '📤',
-            description: 'Upload insurance documents'
+            description: 'Upload insurance documents',
+            underConstruction: false
           },
           {
             title: 'Manage Products',
             href: '/oracle/admin/products',
             icon: '📋',
-            description: 'Edit and manage insurance products'
+            description: 'Edit and manage insurance products',
+            underConstruction: false
           },
           {
             title: 'Edit User',
             href: '/oracle/admin/users',
             icon: '👤',
-            description: 'Manage user accounts'
+            description: 'Manage user accounts',
+            underConstruction: false
           },
           {
             title: 'Invite User',
             href: '/oracle/admin/invitations',
             icon: '📧',
-            description: 'Send invitation to new team members'
+            description: 'Send invitation to new team members',
+            underConstruction: false
           },
           {
             title: 'Manage Commissions',
             href: '/oracle/admin/commissions',
             icon: '💰',
-            description: 'Create and configure commission rates'
+            description: 'Create and configure commission rates',
+            underConstruction: false
           },
         ];
       // ADVISOR, LEADER_1, LEADER_2, SENIOR_PARTNER get NO admin actions
@@ -442,24 +465,41 @@ function DashboardContent() {
             </div>
 
             <div className={`grid gap-6 mb-16 ${
-              user.role === UserRole.SUPER_ADMIN 
-                ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4' 
+              user.role === UserRole.SUPER_ADMIN
+                ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'
                 : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'
             }`}>
               {adminActions.map((action, index) => (
                 <div
                   key={index}
-                  className="group bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20 hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
-                  onClick={() => router.push(action.href)}
+                  className={`group rounded-2xl p-6 shadow-lg border transition-all duration-300 relative ${
+                    action.underConstruction
+                      ? 'bg-gray-100/80 backdrop-blur-sm border-gray-200 cursor-not-allowed opacity-60'
+                      : 'bg-white/60 backdrop-blur-sm border-white/20 hover:shadow-xl hover:scale-105 cursor-pointer'
+                  }`}
+                  onClick={() => !action.underConstruction && router.push(action.href)}
                 >
+                  {action.underConstruction && (
+                    <div className="absolute top-2 right-2">
+                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
+                        Under Construction
+                      </span>
+                    </div>
+                  )}
                   <div className="text-center">
-                    <div className="text-4xl mb-4 group-hover:scale-110 transition-transform duration-300">
+                    <div className={`text-4xl mb-4 transition-transform duration-300 ${
+                      action.underConstruction ? 'opacity-50' : 'group-hover:scale-110'
+                    }`}>
                       {action.icon}
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    <h3 className={`text-lg font-semibold mb-2 ${
+                      action.underConstruction ? 'text-gray-500' : 'text-gray-900'
+                    }`}>
                       {action.title}
                     </h3>
-                    <p className="text-sm text-gray-600">
+                    <p className={`text-sm ${
+                      action.underConstruction ? 'text-gray-400' : 'text-gray-600'
+                    }`}>
                       {action.description}
                     </p>
                   </div>

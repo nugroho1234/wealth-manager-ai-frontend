@@ -102,6 +102,11 @@ export default function Sidebar({ children }: SidebarProps) {
       icon: '👤',
     },
     {
+      name: 'Switch to Meeting Tracker',
+      href: '/meeting-tracker/dashboard',
+      icon: '📅',
+    },
+    {
       name: 'Logout',
       href: '#',
       icon: '🚪',
