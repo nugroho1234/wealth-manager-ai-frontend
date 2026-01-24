@@ -4,7 +4,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import MeetingTrackerSidebar from '@/components/meeting-tracker/Sidebar';
 import TeamFilter from '@/components/meeting-tracker/TeamFilter';
+import { MeetingDetailModal, type MeetingForModal } from '@/components/meeting-tracker/MeetingDetailModal';
+import ViewContextBanner from '@/components/meeting-tracker/ViewContextBanner';
+import FloatingActionButton from '@/components/meeting-tracker/FloatingActionButton';
+import QuickCreateModal from '@/components/meeting-tracker/QuickCreateModal';
 import { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, subMonths, subYears } from 'date-fns';
 
 // API Base URL
@@ -42,6 +47,8 @@ type DateRangeFilter = 'this_month' | 'last_7_days' | 'last_30_days' | 'this_wee
 
 function DashboardContent() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [stats, setStats] = useState<DashboardStats>({
     total_meetings: 0,
@@ -53,14 +60,30 @@ function DashboardContent() {
   });
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'R' | 'N' | 'S'>('all');
+  const [selectedMeeting, setSelectedMeeting] = useState<MeetingForModal | null>(null);
 
-  // Team filter state
+  // Team filter state - always default to 'me' on page reload
   const [teamFilter, setTeamFilter] = useState<string>('me');
 
   // Date filter state
   const [dateRange, setDateRange] = useState<DateRangeFilter>('this_month');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
+
+  // Quick Create Modal state
+  const [isQuickCreateModalOpen, setIsQuickCreateModalOpen] = useState(false);
+
+  // Clear URL parameters on initial mount to ensure clean state
+  useEffect(() => {
+    const viewParam = searchParams.get('view');
+    if (viewParam) {
+      console.log('🔍 [MEETINGS] Initial mount - clearing URL param to match default "me" state');
+      router.replace('/meeting-tracker/meetings', { scroll: false });
+    }
+    // Note: We intentionally do NOT sync URL params to teamFilter state
+    // teamFilter is only updated via handleTeamFilterChange when user selects from dropdown
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Load date filter preference from localStorage on mount
   useEffect(() => {
@@ -157,6 +180,34 @@ function DashboardContent() {
     }
   };
 
+  // Adapter function: Convert Meeting to MeetingForModal
+  const adaptMeetingForModal = (meeting: Meeting): MeetingForModal => {
+    // Format times for display (e.g., "14:00" from ISO string)
+    const formatTime = (isoString: string) => format(new Date(isoString), 'MMM dd, yyyy HH:mm');
+
+    // Determine status based on meeting state
+    let status = 'scheduled';
+    const now = new Date();
+    const endTime = new Date(meeting.end_time);
+    if (endTime < now) {
+      status = 'completed';
+    }
+
+    // Get user_id from meeting.user or fallback to current user
+    const userId = meeting.user?.user_id || user?.user_id || '';
+
+    return {
+      id: meeting.meeting_id,
+      meeting_type: meeting.category,
+      person_name: meeting.user ? `${meeting.user.first_name} ${meeting.user.last_name}`.trim() : undefined,
+      meeting_title: meeting.title,
+      start_time: formatTime(meeting.start_time),
+      end_time: formatTime(meeting.end_time),
+      status,
+      user_id: userId,
+    };
+  };
+
   // Get date range based on selected filter
   const getDateRange = (): { start: Date | null; end: Date | null } => {
     const now = new Date();
@@ -216,6 +267,20 @@ function DashboardContent() {
     }
   };
 
+  // Handle team filter change and update URL
+  const handleTeamFilterChange = (newFilter: string) => {
+    setTeamFilter(newFilter);
+
+    // Update URL query parameter
+    const params = new URLSearchParams(searchParams.toString());
+    if (newFilter && newFilter !== 'me') {
+      params.set('view', newFilter);
+    } else {
+      params.delete('view');
+    }
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
+
   // Handle date range change
   const handleDateRangeChange = (range: DateRangeFilter) => {
     setDateRange(range);
@@ -266,13 +331,16 @@ function DashboardContent() {
             <p className="text-gray-400">Track your meetings and performance</p>
           </div>
 
+          {/* View Context Banner */}
+          <ViewContextBanner userId={teamFilter !== 'me' && teamFilter !== 'team' ? teamFilter : null} />
+
           {/* Filters Row: Team Filter + Date Range (side by side for leaders) */}
           <div className="mb-6">
             <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
               {/* Team Filter (only shows for leaders) */}
               <TeamFilter
                 value={teamFilter}
-                onChange={setTeamFilter}
+                onChange={handleTeamFilterChange}
                 className=""
               />
 
@@ -488,7 +556,8 @@ function DashboardContent() {
                       return (
                         <div
                           key={meeting.meeting_id}
-                          className="bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow border border-gray-700 hover:border-gray-600"
+                          className="bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow border border-gray-700 hover:border-gray-600 cursor-pointer"
+                          onClick={() => setSelectedMeeting(adaptMeetingForModal(meeting))}
                         >
                           {/* Subordinate Name (only in team view) */}
                           {isTeamView && (
@@ -564,6 +633,7 @@ function DashboardContent() {
                                   <div className="flex gap-2">
                                     <a
                                       href={`/meeting-tracker/form/${meeting.meeting_id}`}
+                                      onClick={(e) => e.stopPropagation()}
                                       className="flex-1 text-center px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-medium transition-colors"
                                     >
                                       View Report
@@ -609,6 +679,7 @@ function DashboardContent() {
                                 <div className="flex gap-2">
                                   <a
                                     href={`/meeting-tracker/form/${meeting.meeting_id}`}
+                                    onClick={(e) => e.stopPropagation()}
                                     className={`flex-1 text-center px-4 py-2 ${buttonColor} rounded-lg text-sm font-medium transition-colors`}
                                   >
                                     {buttonText}
@@ -650,6 +721,24 @@ function DashboardContent() {
           )}
         </main>
       </div>
+
+      {/* Meeting Detail Modal */}
+      {selectedMeeting && (
+        <MeetingDetailModal
+          meeting={selectedMeeting}
+          onClose={() => setSelectedMeeting(null)}
+          onRefresh={fetchDashboardData}
+        />
+      )}
+
+      {/* Floating Action Button */}
+      <FloatingActionButton onOpenModal={() => setIsQuickCreateModalOpen(true)} />
+
+      {/* Quick Create Modal */}
+      <QuickCreateModal
+        isOpen={isQuickCreateModalOpen}
+        onClose={() => setIsQuickCreateModalOpen(false)}
+      />
     </MeetingTrackerSidebar>
   );
 }

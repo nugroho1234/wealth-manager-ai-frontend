@@ -5,8 +5,12 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import MeetingTrackerSidebar from '@/components/meeting-tracker/Sidebar';
 import TeamFilter from '@/components/meeting-tracker/TeamFilter';
 import UpcomingEvents from '@/components/meeting-tracker/UpcomingEvents';
-import { useState, useEffect } from 'react';
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, subMonths, subYears } from 'date-fns';
+import ViewContextBanner from '@/components/meeting-tracker/ViewContextBanner';
+import FloatingActionButton from '@/components/meeting-tracker/FloatingActionButton';
+import QuickCreateModal from '@/components/meeting-tracker/QuickCreateModal';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, subMonths, subYears, addDays } from 'date-fns';
 
 // API Base URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
@@ -21,7 +25,7 @@ interface DashboardStats {
   new_count: number;
 }
 
-type DateRangeFilter = 'this_month' | 'last_7_days' | 'last_30_days' | 'this_week' | 'last_month' | 'this_year' | 'last_year' | 'custom' | 'all_time';
+type DateRangeFilter = 'next_7_days' | 'this_month' | 'last_7_days' | 'last_30_days' | 'this_week' | 'last_month' | 'this_year' | 'last_year' | 'custom' | 'all_time';
 
 interface Meeting {
   meeting_id: string;
@@ -34,7 +38,14 @@ interface Meeting {
 
 function DashboardContent() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  // Always default to 'me' on initial render and page reload
   const [teamFilter, setTeamFilter] = useState<string>('me');
+  // Track if this is the initial mount to prevent URL param sync on reload
+  const isInitialMount = useRef(true);
+  // Track if we've already handled the initial URL clear to prevent loops
+  const hasHandledInitialURL = useRef(false);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [stats, setStats] = useState<DashboardStats>({
     total_meetings: 0,
@@ -47,9 +58,12 @@ function DashboardContent() {
   const [loading, setLoading] = useState(true);
 
   // Date filter state
-  const [dateRange, setDateRange] = useState<DateRangeFilter>('this_month');
+  const [dateRange, setDateRange] = useState<DateRangeFilter>('next_7_days');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
+
+  // Quick Create Modal state
+  const [isQuickCreateModalOpen, setIsQuickCreateModalOpen] = useState(false);
 
   // Load date filter preference from localStorage on mount
   useEffect(() => {
@@ -59,9 +73,78 @@ function DashboardContent() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchDashboardData();
+  // Define fetchDashboardData BEFORE useEffects that depend on it
+  const fetchDashboardData = useCallback(async () => {
+    setLoading(true);
+
+    try {
+      const authTokens = localStorage.getItem('auth_tokens');
+      if (!authTokens) return;
+      const { access_token: token } = JSON.parse(authTokens);
+
+      // Build query string with team filter
+      const params = new URLSearchParams();
+      if (teamFilter && teamFilter !== 'me') {
+        params.append('team_filter', teamFilter);
+      }
+
+      const queryString = params.toString();
+      const url = `${API_BASE_URL}/api/v1/meeting-tracker/meetings${queryString ? `?${queryString}` : ''}`;
+
+      console.log('🔍 [DASHBOARD] Fetching meetings:', {
+        teamFilter,
+        url,
+        queryString
+      });
+
+      // Fetch meetings
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const meetingsList = data.meetings || [];
+        console.log('🔍 [DASHBOARD] Received data:', {
+          teamFilter,
+          count: meetingsList.length,
+          firstMeetingUser: meetingsList[0]?.user_id,
+          response: data
+        });
+        setMeetings(meetingsList);
+      }
+    } catch (error) {
+      console.error('Failed to fetch dashboard stats:', error);
+    } finally {
+      setLoading(false);
+    }
   }, [teamFilter]);
+
+  // Clear URL parameters on initial mount to ensure clean state
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      const viewParam = searchParams.get('view');
+
+      if (viewParam) {
+        console.log('🔍 [DASHBOARD] Initial mount - clearing URL param to match default "me" state');
+        router.replace('/meeting-tracker/dashboard', { scroll: false });
+      } else {
+        console.log('🔍 [DASHBOARD] Initial mount - no URL param');
+      }
+    }
+    // Note: We intentionally do NOT sync URL params to teamFilter state
+    // teamFilter is only updated via handleTeamFilterChange when user selects from dropdown
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    console.log('🔍 [DASHBOARD] Fetching data for teamFilter:', teamFilter);
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   // Recalculate stats when meetings or date filter changes
   useEffect(() => {
@@ -87,48 +170,14 @@ function DashboardContent() {
     });
   }, [meetings, dateRange, customStartDate, customEndDate]);
 
-  const fetchDashboardData = async () => {
-    setLoading(true);
-
-    try {
-      const authTokens = localStorage.getItem('auth_tokens');
-      if (!authTokens) return;
-      const { access_token: token } = JSON.parse(authTokens);
-
-      // Build query string with team filter
-      const params = new URLSearchParams();
-      if (teamFilter && teamFilter !== 'me') {
-        params.append('team_filter', teamFilter);
-      }
-
-      const queryString = params.toString();
-      const url = `${API_BASE_URL}/api/v1/meeting-tracker/meetings${queryString ? `?${queryString}` : ''}`;
-
-      // Fetch meetings
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const meetingsList = data.meetings || [];
-        setMeetings(meetingsList);
-      }
-    } catch (error) {
-      console.error('Failed to fetch dashboard stats:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Get date range based on selected filter
   const getDateRange = (): { start: Date | null; end: Date | null } => {
     const now = new Date();
 
     switch (dateRange) {
+      case 'next_7_days':
+        return { start: now, end: addDays(now, 7) };
+
       case 'last_7_days':
         return { start: subDays(now, 7), end: now };
 
@@ -170,6 +219,7 @@ function DashboardContent() {
   // Get label for current date filter
   const getDateRangeLabel = (): string => {
     switch (dateRange) {
+      case 'next_7_days': return 'Next 7 Days';
       case 'last_7_days': return 'Last 7 Days';
       case 'last_30_days': return 'Last 30 Days';
       case 'this_week': return 'This Week';
@@ -179,8 +229,22 @@ function DashboardContent() {
       case 'last_year': return 'Last Year';
       case 'custom': return 'Custom Range';
       case 'all_time': return 'All Time';
-      default: return 'This Month';
+      default: return 'Next 7 Days';
     }
+  };
+
+  // Handle team filter change and update URL
+  const handleTeamFilterChange = (newFilter: string) => {
+    setTeamFilter(newFilter);
+
+    // Update URL query parameter
+    const params = new URLSearchParams(searchParams.toString());
+    if (newFilter && newFilter !== 'me') {
+      params.set('view', newFilter);
+    } else {
+      params.delete('view');
+    }
+    router.push(`?${params.toString()}`, { scroll: false });
   };
 
   // Handle date range change
@@ -205,6 +269,9 @@ function DashboardContent() {
                    teamFilter === 'team' ? 'my_team' :
                    `subordinate_${teamFilter}`;
 
+  // Debug log
+  console.log('🔍 [DASHBOARD] Render - teamFilter:', teamFilter, 'ViewContextBanner userId:', teamFilter !== 'me' && teamFilter !== 'team' ? teamFilter : null);
+
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -216,13 +283,16 @@ function DashboardContent() {
           </p>
         </div>
 
+        {/* View Context Banner */}
+        <ViewContextBanner userId={teamFilter !== 'me' && teamFilter !== 'team' ? teamFilter : null} />
+
         {/* Filters Row: Team Filter + Date Range */}
         <div className="mb-6">
           <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
             {/* Team Filter (only shows for leaders) */}
             <TeamFilter
               value={teamFilter}
-              onChange={setTeamFilter}
+              onChange={handleTeamFilterChange}
               className=""
             />
 
@@ -237,6 +307,7 @@ function DashboardContent() {
                 onChange={(e) => handleDateRangeChange(e.target.value as DateRangeFilter)}
                 className="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
+                <option value="next_7_days">Next 7 Days</option>
                 <option value="this_month">This Month</option>
                 <option value="last_7_days">Last 7 Days</option>
                 <option value="last_30_days">Last 30 Days</option>
@@ -365,11 +436,20 @@ function DashboardContent() {
               </div>
 
               {/* Upcoming Events */}
-              <UpcomingEvents viewType={viewType} />
+              <UpcomingEvents viewType={viewType} onRefresh={fetchDashboardData} />
             </>
           )}
         </div>
       </div>
+
+      {/* Floating Action Button */}
+      <FloatingActionButton onOpenModal={() => setIsQuickCreateModalOpen(true)} />
+
+      {/* Quick Create Modal */}
+      <QuickCreateModal
+        isOpen={isQuickCreateModalOpen}
+        onClose={() => setIsQuickCreateModalOpen(false)}
+      />
     </div>
   );
 }

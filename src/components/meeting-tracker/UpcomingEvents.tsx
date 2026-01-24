@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, memo, useCallback, useMemo } from 'react';
+import { MeetingDetailModal, type MeetingForModal } from '@/components/meeting-tracker/MeetingDetailModal';
 
 // API Base URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
@@ -135,10 +136,20 @@ export default function UpcomingEvents({ viewType, onRefresh }: UpcomingEventsPr
     fetchUpcomingEvents();
   }, [viewType]);
 
+  const handleModalRefresh = useCallback(() => {
+    // If parent provides onRefresh, call it (for Dashboard page)
+    // Otherwise, just refresh the upcoming events (standalone usage)
+    if (onRefresh) {
+      onRefresh();
+    } else {
+      fetchUpcomingEvents();
+    }
+  }, [onRefresh, viewType]);
+
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow p-6" role="region" aria-label="Upcoming Events">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Upcoming Events</h2>
+      <div className="bg-gray-800 rounded-lg shadow p-6" role="region" aria-label="Upcoming Events">
+        <h2 className="text-lg font-semibold text-white mb-4">Upcoming Events</h2>
         <div className="flex items-center justify-center h-64" role="status" aria-live="polite">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600" aria-hidden="true"></div>
           <span className="sr-only">Loading upcoming events...</span>
@@ -149,14 +160,14 @@ export default function UpcomingEvents({ viewType, onRefresh }: UpcomingEventsPr
 
   if (error) {
     return (
-      <div className="bg-white rounded-lg shadow p-6" role="region" aria-label="Upcoming Events">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Upcoming Events</h2>
-        <div className="flex items-center justify-center h-64 bg-red-50 rounded-lg" role="alert">
+      <div className="bg-gray-800 rounded-lg shadow p-6" role="region" aria-label="Upcoming Events">
+        <h2 className="text-lg font-semibold text-white mb-4">Upcoming Events</h2>
+        <div className="flex items-center justify-center h-64 bg-red-900/20 rounded-lg" role="alert">
           <div className="text-center">
-            <p className="text-red-600 mb-2">{error}</p>
+            <p className="text-red-400 mb-2">{error}</p>
             <button
               onClick={handleRetry}
-              className="text-sm text-primary-600 hover:underline focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded"
+              className="text-sm text-primary-400 hover:underline focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded"
               aria-label="Retry loading upcoming events"
             >
               Retry
@@ -271,6 +282,7 @@ export default function UpcomingEvents({ viewType, onRefresh }: UpcomingEventsPr
         <MeetingDetailModal
           meeting={selectedMeeting}
           onClose={closeMeetingDetail}
+          onRefresh={handleModalRefresh}
         />
       )}
     </>
@@ -366,169 +378,3 @@ const CompactMeetingCard = memo(function CompactMeetingCard({ meeting, onClick, 
   );
 });
 
-// Meeting Detail Modal Component
-interface MeetingDetailModalProps {
-  meeting: Meeting;
-  onClose: () => void;
-}
-
-const MeetingDetailModal = memo(function MeetingDetailModal({ meeting, onClose }: MeetingDetailModalProps) {
-  const getMeetingTypeLabel = useCallback((type: string) => {
-    const labels = {
-      'S': 'Sales',
-      'R': 'Recruitment',
-      'N': 'New',
-      'U': 'Unknown',
-    };
-    return labels[type as keyof typeof labels] || 'Unknown';
-  }, []);
-
-  const getMeetingTypeColor = useCallback((type: string) => {
-    const colors = {
-      'S': 'text-blue-600 bg-blue-50',
-      'R': 'text-green-600 bg-green-50',
-      'N': 'text-purple-600 bg-purple-50',
-      'U': 'text-gray-600 bg-gray-50',
-    };
-    return colors[type as keyof typeof colors] || colors['U'];
-  }, []);
-
-  // Close modal on escape key
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleEscape);
-    return () => window.removeEventListener('keydown', handleEscape);
-  }, [onClose]);
-
-  // Trap focus within modal
-  useEffect(() => {
-    const modal = document.getElementById('meeting-detail-modal');
-    if (!modal) return;
-
-    const focusableElements = modal.querySelectorAll(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    );
-    const firstElement = focusableElements[0] as HTMLElement;
-    const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
-
-    const handleTabKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Tab') return;
-
-      if (e.shiftKey && document.activeElement === firstElement) {
-        e.preventDefault();
-        lastElement?.focus();
-      } else if (!e.shiftKey && document.activeElement === lastElement) {
-        e.preventDefault();
-        firstElement?.focus();
-      }
-    };
-
-    modal.addEventListener('keydown', handleTabKey as EventListener);
-    firstElement?.focus();
-
-    return () => {
-      modal.removeEventListener('keydown', handleTabKey as EventListener);
-    };
-  }, []);
-
-  const handleBackdropClick = useCallback((e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  }, [onClose]);
-
-  return (
-    <div
-      className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
-      onClick={handleBackdropClick}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="modal-title"
-    >
-      <div
-        id="meeting-detail-modal"
-        className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 id="modal-title" className="text-xl font-semibold text-gray-900">Meeting Details</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded"
-            aria-label="Close dialog"
-          >
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-6 space-y-4">
-          {/* Meeting Type */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-            <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${getMeetingTypeColor(meeting.meeting_type)}`}>
-              {getMeetingTypeLabel(meeting.meeting_type)}
-            </div>
-          </div>
-
-          {/* Person Name (if available) */}
-          {meeting.person_name && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Person</label>
-              <p className="text-gray-900">{meeting.person_name}</p>
-            </div>
-          )}
-
-          {/* Meeting Title */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-            <p className="text-gray-900">{meeting.meeting_title}</p>
-          </div>
-
-          {/* Time */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
-              <p className="text-gray-900">{meeting.start_time}</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
-              <p className="text-gray-900">{meeting.end_time}</p>
-            </div>
-          </div>
-
-          {/* Status */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-            <p className="text-gray-900 capitalize">{meeting.status}</p>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
-          >
-            Close
-          </button>
-          <button
-            onClick={() => {
-              window.location.href = `/meeting-tracker/meetings`;
-            }}
-            className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
-          >
-            View Full Details
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-});

@@ -17,11 +17,6 @@ export default function MeetingTrackerSidebar({ children }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
-  const [categoryStats, setCategoryStats] = useState({
-    sales: 0,
-    recruitment: 0,
-    new: 0,
-  });
   const [isLeader, setIsLeader] = useState(false);
   const [subordinatesCount, setSubordinatesCount] = useState(0);
 
@@ -96,35 +91,6 @@ export default function MeetingTrackerSidebar({ children }: SidebarProps) {
     };
 
     checkLeaderStatus();
-  }, [user, isAdminPage]);
-
-  // Fetch category stats for filters
-  useEffect(() => {
-    const fetchCategoryStats = async () => {
-      if (!user || isAdminPage) return;
-
-      try {
-        const token = localStorage.getItem('access_token');
-        if (!token) return;
-
-        const response = await fetch(`${API_BASE_URL}/api/v1/meeting-tracker/tasks/stats`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setCategoryStats({
-            sales: data.sales || 0,
-            recruitment: data.recruitment || 0,
-            new: data.new || 0,
-          });
-        }
-      } catch (error) {
-        console.error('Failed to fetch category stats:', error);
-      }
-    };
-
-    fetchCategoryStats();
   }, [user, isAdminPage]);
 
   const handleLogout = async () => {
@@ -223,7 +189,7 @@ export default function MeetingTrackerSidebar({ children }: SidebarProps) {
                 <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                   Team
                 </h3>
-                <div className="px-3 py-2 rounded-lg bg-green-600 bg-opacity-20 border border-green-600 text-green-400">
+                <div className="px-3 py-2 rounded-lg bg-green-600 bg-opacity-20 border border-green-600 text-green-400 mb-2">
                   <div className="flex items-center justify-between text-sm font-medium">
                     <span className="flex items-center">
                       <span className="mr-2 text-lg">👥</span>
@@ -234,69 +200,25 @@ export default function MeetingTrackerSidebar({ children }: SidebarProps) {
                     {subordinatesCount} team member{subordinatesCount !== 1 ? 's' : ''}
                   </div>
                 </div>
-              </div>
-            )}
-
-            {/* Filters - Show on non-admin pages */}
-            {!isAdminPage && (
-              <div className="mb-6">
-                <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                  Filters
-                </h3>
                 <Link
-                  href="/meeting-tracker/meetings?category=sales"
-                  className="flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                  href="/meeting-tracker/team"
+                  className={`
+                    flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors
+                    ${
+                      pathname === '/meeting-tracker/team'
+                        ? 'bg-blue-600 text-white'
+                        : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                    }
+                  `}
                 >
-                  <span className="flex items-center">
-                    <span className="mr-3 text-lg">💼</span>
-                    Sales
-                  </span>
-                  <span className="bg-gray-700 text-gray-300 text-xs font-semibold px-2 py-1 rounded-full">
-                    {categoryStats.sales}
-                  </span>
-                </Link>
-                <Link
-                  href="/meeting-tracker/meetings?category=recruitment"
-                  className="flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
-                >
-                  <span className="flex items-center">
-                    <span className="mr-3 text-lg">👥</span>
-                    Recruitment
-                  </span>
-                  <span className="bg-gray-700 text-gray-300 text-xs font-semibold px-2 py-1 rounded-full">
-                    {categoryStats.recruitment}
-                  </span>
-                </Link>
-                <Link
-                  href="/meeting-tracker/meetings?category=new"
-                  className="flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
-                >
-                  <span className="flex items-center">
-                    <span className="mr-3 text-lg">✨</span>
-                    New
-                  </span>
-                  <span className="bg-gray-700 text-gray-300 text-xs font-semibold px-2 py-1 rounded-full">
-                    {categoryStats.new}
-                  </span>
+                  <span className="mr-3 text-lg">👥</span>
+                  My Team
                 </Link>
               </div>
             )}
 
-            {/* Admin Panel Button - Show on non-admin pages for admins */}
-            {isAdmin && !isAdminPage && (
-              <div className="mb-6">
-                <Link
-                  href="/meeting-tracker/admin/companies"
-                  className="flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 transition-colors"
-                >
-                  <span className="mr-2 text-lg">⚡</span>
-                  Admin Panel
-                </Link>
-              </div>
-            )}
-
-            {/* Admin Navigation - Show on admin pages */}
-            {isAdmin && isAdminPage && (
+            {/* Admin Section - Show for admins only */}
+            {isAdmin && (
               <div className="mb-6">
                 <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                   Admin
@@ -322,16 +244,18 @@ export default function MeetingTrackerSidebar({ children }: SidebarProps) {
                   );
                 })}
 
-                {/* Back to Workspace Button */}
-                <div className="mt-4 pt-4 border-t border-gray-700">
-                  <Link
-                    href="/meeting-tracker/dashboard"
-                    className="flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
-                  >
-                    <span className="mr-2 text-lg">👤</span>
-                    Back to Workspace
-                  </Link>
-                </div>
+                {/* Back to Workspace - Only show when on admin pages */}
+                {isAdminPage && (
+                  <div className="mt-4 pt-4 border-t border-gray-700">
+                    <Link
+                      href="/meeting-tracker/dashboard"
+                      className="flex items-center px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                    >
+                      <span className="mr-3 text-lg">👤</span>
+                      Back to Workspace
+                    </Link>
+                  </div>
+                )}
               </div>
             )}
           </nav>
