@@ -7,6 +7,7 @@ import TeamFilter from '@/components/meeting-tracker/TeamFilter';
 import ViewContextBanner from '@/components/meeting-tracker/ViewContextBanner';
 import FloatingActionButton from '@/components/meeting-tracker/FloatingActionButton';
 import QuickCreateModal from '@/components/meeting-tracker/QuickCreateModal';
+import MeetingTaskGroup from '@/components/meeting-tracker/MeetingTaskGroup';
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { format, isToday, isTomorrow, isPast, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, subMonths, subYears, addDays } from 'date-fns';
@@ -45,12 +46,27 @@ interface Statistics {
   overdue: number;
 }
 
+interface GroupedTasks {
+  meeting: {
+    meeting_id: string;
+    title: string;
+    start_time: string;
+    category: string;
+  };
+  tasks: Task[];
+  pendingCount: number;
+  completedCount: number;
+  overdueCount: number;
+  allCompleted: boolean;
+}
+
 function TasksContent() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [groupedTasks, setGroupedTasks] = useState<GroupedTasks[]>([]);
   const [statistics, setStatistics] = useState<Statistics>({
     total: 0,
     completed: 0,
@@ -69,9 +85,6 @@ function TasksContent() {
   // Filters
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'in_progress' | 'completed' | 'cancelled'>('all');
   const [priorityFilter, setPriorityFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
-
-  // Completed tasks visibility
-  const [showCompleted, setShowCompleted] = useState(false);
 
   // Quick Create Modal state
   const [isQuickCreateModalOpen, setIsQuickCreateModalOpen] = useState(false);
@@ -122,13 +135,87 @@ function TasksContent() {
       if (!res.ok) throw new Error('Failed to fetch tasks');
 
       const data = await res.json();
-      setTasks(data.tasks || []);
+      const fetchedTasks = data.tasks || [];
+
+      setTasks(fetchedTasks);
       setStatistics(data.statistics || { total: 0, completed: 0, pending: 0, overdue: 0 });
+
+      // Group and sort tasks
+      const grouped = groupAndSortTasks(fetchedTasks);
+      setGroupedTasks(grouped);
     } catch (error) {
       console.error('Error fetching tasks:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Group tasks by meeting and sort them according to the plan
+  const groupAndSortTasks = (tasks: Task[]): GroupedTasks[] => {
+    // Filter out tasks without meeting information
+    const tasksWithMeetings = tasks.filter(task => task.meetings);
+
+    // Group by meeting_id
+    const tasksByMeeting: Record<string, Task[]> = {};
+    tasksWithMeetings.forEach(task => {
+      if (task.meetings) {
+        const meetingId = task.meetings.meeting_id;
+        if (!tasksByMeeting[meetingId]) {
+          tasksByMeeting[meetingId] = [];
+        }
+        tasksByMeeting[meetingId].push(task);
+      }
+    });
+
+    // Convert to grouped array and sort tasks within each group
+    const grouped: GroupedTasks[] = Object.keys(tasksByMeeting).map(meetingId => {
+      const meetingTasks = tasksByMeeting[meetingId];
+      const firstTask = meetingTasks[0];
+
+      // Sort tasks within meeting: Priority (high → medium → low) → Due date (earliest first)
+      const sortedTasks = [...meetingTasks].sort((a, b) => {
+        // Priority order
+        const priorityOrder = { high: 0, medium: 1, low: 2 };
+        const aPriority = priorityOrder[a.priority] ?? 3;
+        const bPriority = priorityOrder[b.priority] ?? 3;
+
+        if (aPriority !== bPriority) {
+          return aPriority - bPriority;
+        }
+
+        // Within same priority, sort by due date (earliest first)
+        return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+      });
+
+      // Calculate statistics for this meeting's tasks
+      const pendingTasks = meetingTasks.filter(t => t.status === 'pending' || t.status === 'in_progress');
+      const completedTasks = meetingTasks.filter(t => t.status === 'completed');
+      const overdueTasks = meetingTasks.filter(t => {
+        if (t.status === 'completed' || t.status === 'cancelled') return false;
+        return isPast(parseISO(t.due_date)) && !isToday(parseISO(t.due_date));
+      });
+
+      return {
+        meeting: {
+          meeting_id: firstTask.meetings!.meeting_id,
+          title: firstTask.meetings!.title,
+          start_time: firstTask.meetings!.start_time,
+          category: firstTask.meetings!.category,
+        },
+        tasks: sortedTasks,
+        pendingCount: pendingTasks.length,
+        completedCount: completedTasks.length,
+        overdueCount: overdueTasks.length,
+        allCompleted: completedTasks.length === meetingTasks.length,
+      };
+    });
+
+    // Sort meetings by start_time (earliest first)
+    grouped.sort((a, b) => {
+      return new Date(a.meeting.start_time).getTime() - new Date(b.meeting.start_time).getTime();
+    });
+
+    return grouped;
   };
 
   // Get date range based on selected filter
@@ -196,13 +283,11 @@ function TasksContent() {
     localStorage.setItem('tasks_date_range', range);
   };
 
-  const toggleTaskStatus = async (taskId: string, currentStatus: string) => {
+  const toggleTaskStatus = async (taskId: string, newStatus: 'pending' | 'completed') => {
     try {
       const authTokens = localStorage.getItem('auth_tokens');
       if (!authTokens) return;
       const { access_token: token } = JSON.parse(authTokens);
-
-      const newStatus = currentStatus === 'completed' ? 'in_progress' : 'completed';
 
       const res = await fetch(`${API_BASE_URL}/api/v1/meeting-tracker/tasks/${taskId}`, {
         method: 'PATCH',
@@ -220,6 +305,11 @@ function TasksContent() {
     } catch (error) {
       console.error('Error updating task:', error);
     }
+  };
+
+  const editTask = (task: Task) => {
+    // TODO: Phase 6 - Implement edit modal
+    console.log('Edit task:', task);
   };
 
   const deleteTask = async (taskId: string) => {
@@ -256,32 +346,6 @@ function TasksContent() {
       params.delete('view');
     }
     router.push(`?${params.toString()}`, { scroll: false });
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high':
-        return 'bg-red-500/20 text-red-400 border-red-500/50';
-      case 'medium':
-        return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50';
-      case 'low':
-        return 'bg-green-500/20 text-green-400 border-green-500/50';
-      default:
-        return 'bg-gray-500/20 text-gray-400 border-gray-500/50';
-    }
-  };
-
-  const getDateLabel = (dateString: string) => {
-    const date = parseISO(dateString);
-    if (isToday(date)) return 'Today';
-    if (isTomorrow(date)) return 'Tomorrow';
-    if (isPast(date)) return 'Overdue';
-    return format(date, 'MMM d, yyyy');
-  };
-
-  const isOverdue = (dateString: string, status: string) => {
-    if (status === 'completed' || status === 'cancelled') return false;
-    return isPast(parseISO(dateString)) && !isToday(parseISO(dateString));
   };
 
   if (!user) return null;
@@ -437,10 +501,10 @@ function TasksContent() {
             </div>
           </div>
 
-          {/* Task List */}
-          {tasks.length === 0 ? (
+          {/* Task List - Grouped by Meeting */}
+          {groupedTasks.length === 0 ? (
             <div className="bg-gray-800 rounded-xl p-12 text-center border border-gray-700">
-              <div className="text-6xl mb-4">✅</div>
+              <div className="text-6xl mb-4">📋</div>
               <h2 className="text-2xl font-semibold text-white mb-2">No tasks found</h2>
               <p className="text-gray-400">
                 {statusFilter !== 'all' || priorityFilter !== 'all'
@@ -449,255 +513,22 @@ function TasksContent() {
               </p>
             </div>
           ) : (
-            <div className="space-y-6">
-              {/* Active Tasks */}
-              {(() => {
-                const activeTasks = tasks.filter(t => t.status !== 'completed' && t.status !== 'cancelled');
-                const completedTasks = tasks.filter(t => t.status === 'completed');
-
-                return (
-                  <>
-                    {activeTasks.length > 0 && (
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-semibold text-white">Active Tasks ({activeTasks.length})</h3>
-                        {activeTasks.map((task) => (
-                <div
-                  key={task.task_id}
-                  className={`bg-gray-800 rounded-xl p-6 border transition-all hover:border-gray-600 ${
-                    isOverdue(task.due_date, task.status)
-                      ? 'border-red-500/50 bg-red-900/10'
-                      : 'border-gray-700'
-                  }`}
-                >
-                  <div className="flex items-start gap-4">
-                    {/* Checkbox */}
-                    <button
-                      onClick={() => toggleTaskStatus(task.task_id, task.status)}
-                      className="mt-1 flex-shrink-0"
-                      disabled={isTeamView}
-                      title={isTeamView ? "Cannot toggle subordinate's task status" : "Toggle task status"}
-                    >
-                      {task.status === 'completed' ? (
-                        <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
-                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                      ) : (
-                        <div className={`w-6 h-6 rounded-full border-2 ${isTeamView ? 'border-gray-600 cursor-not-allowed' : 'border-gray-500 hover:border-blue-400'} transition-colors`}></div>
-                      )}
-                    </button>
-
-                    {/* Task Content */}
-                    <div className="flex-1 min-w-0">
-                      {/* User Name (team view only) */}
-                      {isTeamView && task.users && (
-                        <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-700">
-                          <span className="text-lg">👤</span>
-                          <span className="text-sm font-semibold text-blue-400">
-                            {task.users.first_name} {task.users.last_name}
-                          </span>
-                        </div>
-                      )}
-
-                      <div className="flex items-start justify-between gap-4 mb-2">
-                        <h3 className="text-lg font-medium text-white">
-                          {task.task_description || task.title}
-                        </h3>
-                        {!isTeamView && (
-                          <button
-                            onClick={() => deleteTask(task.task_id)}
-                            className="text-red-400 hover:text-red-300 p-1 flex-shrink-0"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                              />
-                            </svg>
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-3 mb-3">
-                        {/* Priority Badge */}
-                        {task.priority && (
-                          <span
-                            className={`px-3 py-1 rounded-full text-xs font-medium border ${getPriorityColor(
-                              task.priority
-                            )}`}
-                          >
-                            {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
-                          </span>
-                        )}
-
-                        {/* Due Date */}
-                        <span
-                          className={`flex items-center gap-1 text-sm ${
-                            isOverdue(task.due_date, task.status)
-                              ? 'text-red-400 font-semibold'
-                              : isToday(parseISO(task.due_date))
-                              ? 'text-yellow-400'
-                              : 'text-gray-400'
-                          }`}
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                            />
-                          </svg>
-                          {getDateLabel(task.due_date)}
-                        </span>
-                      </div>
-
-                      {/* Related Meeting */}
-                      {task.meetings && (
-                        <div className="flex items-center gap-2 text-sm text-gray-400">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                            />
-                          </svg>
-                          <span>From: {task.meetings.title}</span>
-                          {task.meetings.category && (
-                            <span className="px-2 py-0.5 rounded bg-gray-700 text-xs">
-                              {task.meetings.category}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
+            <div className="space-y-4">
+              {groupedTasks.map((group) => (
+                <MeetingTaskGroup
+                  key={group.meeting.meeting_id}
+                  meeting={group.meeting}
+                  tasks={group.tasks}
+                  pendingCount={group.pendingCount}
+                  completedCount={group.completedCount}
+                  overdueCount={group.overdueCount}
+                  allCompleted={group.allCompleted}
+                  onTaskToggle={toggleTaskStatus}
+                  onTaskEdit={editTask}
+                  onTaskDelete={deleteTask}
+                  isTeamView={isTeamView}
+                />
               ))}
-                      </div>
-                    )}
-
-                    {/* Completed Tasks - Collapsible */}
-                    {completedTasks.length > 0 && (
-                      <div className="space-y-4">
-                        <button
-                          onClick={() => setShowCompleted(!showCompleted)}
-                          className="flex items-center gap-2 text-lg font-semibold text-white hover:text-gray-300 transition-colors"
-                        >
-                          <svg
-                            className={`w-5 h-5 transition-transform ${showCompleted ? 'rotate-90' : ''}`}
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                          Completed Tasks ({completedTasks.length})
-                        </button>
-
-                        {showCompleted && (
-                          <div className="space-y-4">
-                            {completedTasks.map((task) => (
-                              <div
-                                key={task.task_id}
-                                className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50"
-                              >
-                                <div className="flex items-start gap-4">
-                                  {/* Checkbox */}
-                                  <button
-                                    onClick={() => toggleTaskStatus(task.task_id, task.status)}
-                                    className="mt-1 flex-shrink-0"
-                                    disabled={isTeamView}
-                                    title={isTeamView ? "Cannot toggle subordinate's task status" : "Toggle task status"}
-                                  >
-                                    <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
-                                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                      </svg>
-                                    </div>
-                                  </button>
-
-                                  {/* Task Content */}
-                                  <div className="flex-1 min-w-0">
-                                    {/* User Name (team view only) */}
-                                    {isTeamView && task.users && (
-                                      <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-700/50">
-                                        <span className="text-lg">👤</span>
-                                        <span className="text-sm font-semibold text-blue-400/70">
-                                          {task.users.first_name} {task.users.last_name}
-                                        </span>
-                                      </div>
-                                    )}
-
-                                    <div className="flex items-start justify-between gap-4 mb-2">
-                                      <h3 className="text-lg font-medium text-gray-400">
-                                        {task.task_description || task.title}
-                                      </h3>
-                                      {!isTeamView && (
-                                        <button
-                                          onClick={() => deleteTask(task.task_id)}
-                                          className="text-red-400 hover:text-red-300 p-1 flex-shrink-0"
-                                        >
-                                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path
-                                              strokeLinecap="round"
-                                              strokeLinejoin="round"
-                                              strokeWidth={2}
-                                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                            />
-                                          </svg>
-                                        </button>
-                                      )}
-                                    </div>
-
-                                    <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
-                                      {/* Priority Badge */}
-                                      {task.priority && (
-                                        <span className="px-2 py-1 rounded bg-gray-700/50 text-xs">
-                                          {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
-                                        </span>
-                                      )}
-
-                                      {/* Completed At */}
-                                      {task.completed_at && (
-                                        <span className="flex items-center gap-1">
-                                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                          </svg>
-                                          Completed at {format(parseISO(task.completed_at), 'MMM d, yyyy h:mm a')}
-                                        </span>
-                                      )}
-                                    </div>
-
-                                    {/* Related Meeting */}
-                                    {task.meetings && (
-                                      <div className="flex items-center gap-2 text-sm text-gray-500 mt-2">
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                          />
-                                        </svg>
-                                        <span>From: {task.meetings.title}</span>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </>
-                );
-              })()}
             </div>
           )}
         </main>
