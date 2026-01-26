@@ -918,6 +918,54 @@ try {
 10. User can click "Sync Now" for manual sync
 11. New meetings appear in Meetings page within minutes
 
+### Flow 6: Using Telegram Bot Commands
+
+**Prerequisites**: User must have connected Telegram account via Settings
+
+#### Command: `/meetings`
+1. User opens Telegram bot
+2. Types `/meetings`
+3. Bot responds with:
+   - Personalized greeting with user's first name
+   - List of upcoming meetings (max 10)
+   - Each meeting shows:
+     - Meeting title
+     - Date and time (Asia/Jakarta timezone)
+     - Category with emoji (👔 Recruitment, ✨ New, 💼 Sales, 📌 Uncategorized)
+   - Link to view all meetings in app
+4. If no meetings: Shows friendly "no meetings" message
+
+#### Command: `/tasks`
+1. User types `/tasks` in Telegram
+2. Bot responds with:
+   - Personalized greeting
+   - Tasks grouped by priority:
+     - 🔴 HIGH PRIORITY
+     - 🟡 MEDIUM PRIORITY
+     - 🟢 LOW PRIORITY
+   - Each task shows:
+     - Task title
+     - Due date
+     - ⚠️ OVERDUE indicator (if past due)
+     - 📌 TODAY indicator (if due today)
+   - Link to manage tasks in app
+3. If no tasks: Shows congratulatory "no pending tasks" message
+
+#### Command: `/help`
+1. User types `/help`
+2. Bot responds with:
+   - List of all available commands
+   - Getting started guide
+   - Notification schedule
+   - Link to app
+
+#### Account Not Linked Flow
+1. User tries any command before linking account
+2. Bot responds with:
+   - "Account Not Linked" message
+   - Instructions to link via Settings page
+   - Direct link to Settings
+
 ---
 
 ## Responsive Design
