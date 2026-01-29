@@ -1,11 +1,14 @@
 'use client';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
+import { useGamification } from '@/contexts/GamificationContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import MeetingTrackerSidebar from '@/components/meeting-tracker/Sidebar';
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
+import toast from 'react-hot-toast';
 
 // API Base URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
@@ -39,6 +42,8 @@ interface Report {
 
 function FormContent() {
   const { user } = useAuth();
+  const { showXPToast, showLevelUpToast, showTierUpToast, showBadgeUnlockToast } = useToast();
+  const { triggerRefresh } = useGamification();
   const params = useParams();
   const router = useRouter();
   const meetingId = params.meeting_id as string;
@@ -89,7 +94,7 @@ function FormContent() {
       setMeeting(fetchedMeeting);
 
       // Check if current user is viewing someone else's report (leader view)
-      const isViewingAsLeader = fetchedMeeting.user_id !== user?.user_id;
+      const isViewingAsLeader = fetchedMeeting.user_id !== user?.id;
       setIsLeaderView(isViewingAsLeader);
 
       // Try to fetch existing report
@@ -223,19 +228,71 @@ function FormContent() {
 
       const data = await res.json();
 
-      // Show success message
+      // Show success message and XP toast
       if (isDraft) {
-        alert('Draft saved successfully! You can continue editing later.');
+        toast.success('Draft saved successfully! You can continue editing later.');
+        // Redirect immediately for drafts
+        router.push('/meeting-tracker/dashboard');
       } else {
-        let message = 'Meeting report submitted successfully!';
-        if (data.follow_up_created) {
-          message += '\n\nFollow-up meeting has been created in your Google Calendar.';
+        // Trigger gamification widget refresh with updated stats
+        if (data.xp_awarded && data.xp_awarded.points > 0) {
+          // Pass the updated stats directly to avoid extra API call
+          triggerRefresh(data.xp_awarded);
+        } else {
+          // No XP awarded, just trigger refresh (will fetch from API)
+          triggerRefresh();
         }
-        alert(message);
-      }
 
-      // Redirect to dashboard
-      router.push('/meeting-tracker/dashboard');
+        // Show gamification toast notifications if points were awarded
+        if (data.xp_awarded && data.xp_awarded.points > 0) {
+          // Show XP toast first
+          showXPToast(data.xp_awarded.points, data.xp_awarded.bonus_message);
+
+          // Show level-up toast if user leveled up
+          if (data.xp_awarded.level_changed) {
+            setTimeout(() => {
+              showLevelUpToast(
+                data.xp_awarded.new_level,
+                data.xp_awarded.level_name,
+                data.xp_awarded.level_icon
+              );
+            }, 500); // Delay to show after XP toast
+          }
+
+          // Show tier-up toast if user tiered up
+          if (data.xp_awarded.tier_changed) {
+            setTimeout(() => {
+              showTierUpToast(
+                data.xp_awarded.new_tier,
+                data.xp_awarded.tier_name,
+                data.xp_awarded.tier_icon
+              );
+            }, data.xp_awarded.level_changed ? 1000 : 500); // Delay more if both level and tier changed
+          }
+
+          // Show badge unlock toasts if any badges were unlocked
+          if (data.xp_awarded.badges_unlocked && data.xp_awarded.badges_unlocked.length > 0) {
+            let badgeDelay = 1500; // Start after XP/level/tier toasts
+            if (data.xp_awarded.level_changed) badgeDelay += 500;
+            if (data.xp_awarded.tier_changed) badgeDelay += 500;
+
+            data.xp_awarded.badges_unlocked.forEach((badge: any, index: number) => {
+              setTimeout(() => {
+                showBadgeUnlockToast(badge.name, badge.icon, badge.rarity);
+              }, badgeDelay + (index * 600)); // Stagger multiple badges
+            });
+          }
+        }
+
+        // Delay redirect to allow toasts to be visible
+        let redirectDelay = data.xp_awarded?.level_changed || data.xp_awarded?.tier_changed ? 3000 : 1500;
+        if (data.xp_awarded?.badges_unlocked && data.xp_awarded.badges_unlocked.length > 0) {
+          redirectDelay += data.xp_awarded.badges_unlocked.length * 1000; // Add time for badge toasts
+        }
+        setTimeout(() => {
+          router.push('/meeting-tracker/dashboard');
+        }, redirectDelay);
+      }
     } catch (error: any) {
       console.error('Error saving report:', error);
       setError(error.message || 'Failed to save report');

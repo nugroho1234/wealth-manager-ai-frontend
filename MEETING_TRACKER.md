@@ -1029,6 +1029,527 @@ Tailwind CSS breakpoints:
 
 ---
 
+## Gamification System
+
+### Overview
+
+The Meeting Tracker frontend includes a comprehensive gamification UI that visualizes user progress, achievements, and competition through a professional, non-intrusive design. The system displays points, levels, tiers, badges, streaks, and leaderboards to encourage consistent engagement.
+
+### Components
+
+#### `<GamificationWidget />`
+**Purpose**: Full gamification dashboard widget
+
+**Location**: Dashboard page (right sidebar on desktop, stacked on mobile)
+
+**Features**:
+- Current level with icon and name (e.g., "🏆 Level 3 Professional")
+- Progress bar to next level
+- Current year tier with icon (e.g., "🥈 Silver 2026")
+- Progress bar to next tier
+- XP displays (lifetime and annual)
+- Current streak with fire icon (🔥)
+- Rank position (#X out of Y participants)
+- Activity stats (reports submitted, tasks completed)
+- "View Leaderboard" button
+- "View Achievements" button
+
+**Props**:
+```typescript
+{
+  refreshTrigger?: number; // Optional trigger to force refresh
+}
+```
+
+**State**:
+```typescript
+{
+  stats: GamificationStats | null;
+  loading: boolean;
+  error: string | null;
+}
+```
+
+**API Call**: `GET /api/v1/gamification/stats`
+
+#### `<GamificationSidebarWidget />`
+**Purpose**: Compact gamification widget for sidebar
+
+**Location**: All Meeting Tracker pages (persistent in layout sidebar)
+
+**Features**:
+- Compact display (less vertical space)
+- Level and tier badges
+- Current XP and rank
+- Streak indicator
+- Latest 3 badges with tooltips
+- Link to achievements page
+
+**Layout**:
+```
+🎮 Gamification
+
+🏆 Lvl 3 Professional | 🥈 Silver
+2,450 lifetime XP | 850 annual XP
+
+Rank: #5 | Streak: 🔥 12 days
+
+Latest Badges:
+[🎖️] [📝] [🔥]  View All →
+```
+
+**Props**:
+```typescript
+{
+  className?: string;
+}
+```
+
+#### Achievements Page (`/meeting-tracker/achievements`)
+**Purpose**: Comprehensive achievements and badge showcase
+
+**Features**:
+- **Stats Summary Card**:
+  - Level progress bar
+  - Tier progress bar
+  - Lifetime and annual XP
+  - Current rank
+  - Streak statistics
+
+- **Badges Section**:
+  - **Earned Badges** (top):
+    - Shows all earned badges with unlock dates
+    - Full opacity
+    - Green checkmark and "Unlocked" text
+    - Organized by rarity (Legendary → Epic → Rare → Common)
+  - **In Progress Badges** (bottom):
+    - Shows unearned badges with progress bars
+    - Grayed out (60% opacity)
+    - Progress percentage and text (e.g., "3/5 reports")
+    - Rarity-colored borders
+
+**Badge Card Layout**:
+```
+┌─────────────────────────────┐
+│ 🎖️ [Icon]                   │ ← Rarity color border
+│                              │
+│ Badge Name (Rarity)          │
+│ Badge description text       │
+│                              │
+│ [Progress bar: 60%]          │ ← Only for unearned
+│ 3/5 reports                  │
+│                              │
+│ ✓ Unlocked Jan 20, 2026      │ ← Only for earned
+└─────────────────────────────┘
+```
+
+**Rarity Colors**:
+- **Legendary** (💎): Yellow border (`border-yellow-400`)
+- **Epic** (🥇): Purple border (`border-purple-500`)
+- **Rare** (🥈): Blue border (`border-blue-500`)
+- **Common** (🥉): Gray border (`border-gray-500`)
+
+**Grid Layout**:
+- Desktop (>1024px): 3 columns
+- Tablet (768-1024px): 2 columns
+- Mobile (<768px): 1 column
+
+**API Calls**:
+- `GET /api/v1/gamification/stats` - Overall stats
+- `GET /api/v1/gamification/badges/progress` - All badges with progress
+
+#### Leaderboard Page (`/meeting-tracker/leaderboard`)
+**Purpose**: Display competitive rankings
+
+**Features**:
+- Period selector:
+  - Annual (default)
+  - All-Time
+  - Monthly (future)
+  - Weekly (future)
+- Top 10 rankings
+- User's own rank highlighted
+- User cards showing:
+  - Rank medal (🥇🥈🥉 for top 3)
+  - Name
+  - XP for selected period
+  - Level icon and tier icon
+- Auto-refresh support
+
+**Leaderboard Entry Layout**:
+```
+┌────────────────────────────────────┐
+│ #1  🥇  John Doe                   │
+│         3,200 XP  🏆 L4 | 💎 Plat  │
+└────────────────────────────────────┘
+```
+
+**Current User Highlight**:
+- Different background color (blue-tinted)
+- Sticky position when scrolling
+- Separator line above/below
+
+**API Call**: `GET /api/v1/gamification/leaderboard?period=annual&limit=100`
+
+#### Toast Notifications
+
+**Badge Unlocked**:
+When a user earns a new badge, a toast notification appears:
+
+```
+╔════════════════════════════════╗
+║ 🎉 Badge Unlocked!              ║
+║ 🎖️ First Steps                  ║
+║ Submit your first meeting report║
+╚════════════════════════════════╝
+```
+
+**Implementation**:
+- Triggered after report submission or task completion
+- Auto-dismiss after 5 seconds
+- Click to view badge details
+- Option to dismiss manually
+
+**XP Gained**:
+After earning points, show subtle notification:
+
+```
+╔════════════════╗
+║ +50 XP         ║
+║ Report Submitted║
+╚════════════════╝
+```
+
+### Data Types
+
+```typescript
+// Gamification Stats
+interface GamificationStats {
+  user_id: string;
+  lifetime_xp: number;
+  level: number;
+  level_name: string;
+  level_icon: string;
+  current_year_xp: number;
+  annual_tier: string;
+  tier_name: string;
+  tier_icon: string;
+  current_rank: number;
+  current_streak: number;
+  longest_streak: number;
+  reports_submitted: number;
+  tasks_completed: number;
+  next_level_xp: number;
+  next_tier_xp: number;
+}
+
+// Badge
+interface Badge {
+  badge_id: string;
+  name: string;
+  description: string;
+  icon: string;
+  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  category: 'reports' | 'tasks' | 'streak' | 'special';
+  unlocked_at?: string; // ISO timestamp, present if earned
+}
+
+// Badge Progress
+interface BadgeProgress extends Badge {
+  earned: boolean;
+  progress: number; // 0-100 percentage
+  progress_text: string; // e.g., "3/5 reports"
+}
+
+// Leaderboard Entry
+interface LeaderboardEntry {
+  rank: number;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  xp: number;
+  level: number;
+  level_icon: string;
+  tier: string;
+  tier_icon: string;
+}
+```
+
+### Styling
+
+#### Color Scheme
+
+**Level Icons & Colors**:
+```typescript
+const LEVEL_COLORS = {
+  1: 'text-green-400',   // 🌱 Beginner
+  2: 'text-yellow-400',  // ⭐ Contributor
+  3: 'text-orange-400',  // 🏆 Professional
+  4: 'text-blue-400',    // 💎 Expert
+  5: 'text-purple-400',  // 👑 Legend
+};
+```
+
+**Tier Colors**:
+```typescript
+const TIER_COLORS = {
+  bronze: 'text-amber-700',
+  silver: 'text-gray-400',
+  gold: 'text-yellow-400',
+  platinum: 'text-cyan-400',
+};
+```
+
+**Progress Bars**:
+- Level progress: Blue (`bg-blue-600`)
+- Tier progress: Gradient matching tier color
+- Badge progress: Blue (`bg-blue-500`)
+
+**Badge Rarity Borders**:
+```typescript
+const RARITY_BORDER = {
+  common: 'border-gray-500',
+  rare: 'border-blue-500',
+  epic: 'border-purple-500',
+  legendary: 'border-yellow-400',
+};
+```
+
+#### Component Classes
+
+```typescript
+// Stats card
+const STATS_CARD = "bg-gray-800 rounded-xl border border-gray-700 p-6";
+
+// Progress bar container
+const PROGRESS_CONTAINER = "w-full bg-gray-700 rounded-full h-2 overflow-hidden";
+
+// Progress bar fill
+const PROGRESS_FILL = "h-full bg-blue-600 transition-all duration-500";
+
+// Badge card
+const BADGE_CARD = "bg-gray-800 rounded-xl border-2 p-4 transition-all hover:scale-105";
+
+// Badge icon (large)
+const BADGE_ICON = "text-6xl mb-3";
+```
+
+### User Flows
+
+#### Flow 1: Viewing Gamification Stats
+
+1. User logs in → Dashboard
+2. Sees GamificationWidget on right sidebar
+3. Views:
+   - Level 3 Professional (🏆)
+   - Silver tier (🥈)
+   - Rank #5 out of 42
+   - Streak: 12 days
+4. Clicks "View Achievements"
+5. Redirected to `/meeting-tracker/achievements`
+6. Sees 3 earned badges and 12 in-progress badges
+7. Scrolls through badges organized by rarity
+8. Views progress bars showing "3/5 reports" for "Getting Started"
+
+#### Flow 2: Earning a Badge
+
+1. User submits 5th meeting report
+2. Backend checks badge criteria
+3. "Getting Started" badge unlocked
+4. Frontend receives badge in API response
+5. Toast notification appears: "🎉 Badge Unlocked! 📝 Getting Started"
+6. Badge appears in sidebar "Latest Badges"
+7. Badge moves to "Earned" section on achievements page
+8. Badge progress shows 100% with green checkmark
+
+#### Flow 3: Checking Leaderboard
+
+1. User clicks "View Leaderboard" from widget
+2. Redirected to `/meeting-tracker/leaderboard`
+3. Default period: Annual 2026
+4. Sees top 10 users:
+   - #1: John Doe (3,200 XP) 🥇
+   - #2: Jane Smith (2,800 XP) 🥈
+   - #3: Bob Johnson (2,400 XP) 🥉
+   - ...
+5. User's rank (#5) highlighted in blue
+6. Switches period to "All-Time"
+7. Leaderboard updates showing lifetime XP rankings
+
+#### Flow 4: Streak Monitoring
+
+1. User completes task on Day 5
+2. Views gamification widget
+3. Sees "Streak: 🔥 5 days"
+4. Next day, completes report
+5. Streak updates to 6 days
+6. After 7 consecutive days:
+   - Streak milestone reached
+   - +100 XP bonus awarded
+   - "7-Day Warrior" badge unlocked
+   - Toast notification appears
+7. User misses activity on Day 8
+8. Next day, streak resets to 0
+9. Longest streak remains at 7
+
+#### Flow 5: Tracking Progress to Next Level
+
+1. User at Level 2 Contributor (850 XP)
+2. Needs 1,500 XP for Level 3
+3. Progress bar shows: 57% (850/1,500)
+4. Submits report: +50 XP → 900 XP
+5. Progress bar animates to 60%
+6. Completes high-priority task: +50 XP → 950 XP
+7. Progress bar updates to 63%
+8. Eventually reaches 1,500 XP
+9. Level up animation
+10. Badge changes to "🏆 Level 3 Professional"
+11. Confetti effect (optional)
+12. Toast: "Level Up! You're now Level 3 Professional"
+
+### Integration with Existing Features
+
+#### Meeting Reports
+When report is submitted:
+1. Backend awards XP
+2. Frontend fetches updated stats
+3. Widget displays new XP value
+4. If badge earned, toast notification appears
+5. Sidebar shows new badge in "Latest Badges"
+
+#### Tasks
+When task is completed:
+1. Backend awards XP based on priority
+2. Frontend refreshes gamification stats
+3. If streak milestone reached, bonus XP shown
+4. Progress bars update smoothly
+
+#### Sidebar Navigation
+- GamificationSidebarWidget always visible in sidebar
+- Provides quick glance at stats
+- Click level/tier to view achievements
+- Click rank to view leaderboard
+
+### Responsive Design
+
+#### Mobile (<768px)
+- Widget stacks vertically
+- Badges in 1-column grid
+- Leaderboard entries full-width
+- Sidebar widget collapses to icon-only mode (optional)
+
+#### Tablet (768-1024px)
+- Widget in 2-column layout
+- Badges in 2-column grid
+- Leaderboard entries with side padding
+
+#### Desktop (>1024px)
+- Widget in right sidebar
+- Badges in 3-column grid
+- Leaderboard in centered column (max 800px wide)
+
+### Performance Optimization
+
+**Caching**:
+- Stats cached in component state
+- Refresh only on explicit trigger (report submit, task complete)
+- Leaderboard cached for 5 minutes
+
+**Lazy Loading**:
+- Badges loaded on achievements page only
+- Leaderboard loaded on leaderboard page only
+- Widget data loaded once on dashboard
+
+**Optimistic UI**:
+- Badge progress updates instantly after action
+- XP gains shown immediately (before backend confirmation)
+- Streak increments optimistically
+
+### Accessibility
+
+**ARIA Labels**:
+```typescript
+<div role="region" aria-label="Gamification Stats">
+<button aria-label="View achievements page">View Achievements</button>
+<progress aria-label="Level progress" value={60} max={100}>60%</progress>
+```
+
+**Keyboard Navigation**:
+- Tab through badge cards
+- Enter to view badge details
+- Arrow keys for leaderboard navigation
+
+**Screen Reader Support**:
+- Announce badge unlocks
+- Describe progress bars with percentage
+- Read rank position in context
+
+### Error Handling
+
+**Failed API Calls**:
+```typescript
+if (error) {
+  return (
+    <div className="bg-gray-800 rounded-xl p-6 text-center">
+      <p className="text-gray-400">Failed to load gamification stats</p>
+      <button onClick={fetchStats}>Retry</button>
+    </div>
+  );
+}
+```
+
+**Empty States**:
+- No badges earned yet: "Start completing tasks to unlock badges!"
+- No leaderboard data: "Be the first on the leaderboard!"
+- Streak broken: "Start a new streak today!"
+
+### Testing
+
+**Manual Testing Checklist**:
+- [ ] Widget loads on dashboard
+- [ ] Stats display correctly (level, tier, XP, rank, streak)
+- [ ] Progress bars animate smoothly
+- [ ] Badge icons display with correct size and alignment
+- [ ] Earned badges show checkmark and unlock date
+- [ ] In-progress badges show progress bar and text
+- [ ] Leaderboard sorts correctly by XP
+- [ ] Current user highlighted in leaderboard
+- [ ] Period selector switches leaderboard data
+- [ ] Toast notifications appear on badge unlock
+- [ ] Mobile responsive layout works
+- [ ] Sidebar widget fits in layout
+- [ ] No console errors
+
+**API Integration Testing**:
+```bash
+# Test stats endpoint
+curl -H "Authorization: Bearer TOKEN" \
+  http://localhost:8000/api/v1/gamification/stats
+
+# Test badges endpoint
+curl -H "Authorization: Bearer TOKEN" \
+  http://localhost:8000/api/v1/gamification/badges/progress
+
+# Test leaderboard endpoint
+curl -H "Authorization: Bearer TOKEN" \
+  http://localhost:8000/api/v1/gamification/leaderboard?period=annual
+```
+
+### Future Enhancements
+
+- [ ] Animated level-up celebrations with confetti
+- [ ] Badge detail modal with full unlock history
+- [ ] Achievements timeline visualization
+- [ ] Compare stats with team members
+- [ ] Gamification settings (hide/show widget)
+- [ ] Custom badge showcase on profile
+- [ ] Achievement sharing to Telegram/social media
+- [ ] Seasonal badges and limited-time events
+- [ ] Team challenges and competitions
+- [ ] Point redemption system (optional)
+
+---
+
 ## Setup & Configuration
 
 ### Environment Variables

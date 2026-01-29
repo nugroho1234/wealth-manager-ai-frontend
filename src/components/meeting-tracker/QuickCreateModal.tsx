@@ -4,9 +4,21 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import UserSelectorDropdown from './UserSelectorDropdown';
 import MeetingForm, { MeetingFormData } from './MeetingForm';
-import TaskForm, { TaskFormData } from './TaskForm';
+import MultiTaskForm from './MultiTaskForm';
+import { TaskFormFieldsData } from './TaskFormFields';
+import { subDays, addDays } from 'date-fns';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+
+// Meeting interface for dropdown
+interface MeetingOption {
+  meeting_id: string;
+  title: string;
+  start_time: string;
+  end_time: string;
+  category: string;
+  has_report: boolean;
+}
 
 interface QuickCreateModalProps {
   isOpen: boolean;
@@ -28,6 +40,11 @@ export default function QuickCreateModal({ isOpen, onClose }: QuickCreateModalPr
   const [checkingLeaderStatus, setCheckingLeaderStatus] = useState(true);
   const [currentView, setCurrentView] = useState<ModalView>('select');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Meeting selection state
+  const [meetings, setMeetings] = useState<MeetingOption[]>([]);
+  const [selectedMeetingId, setSelectedMeetingId] = useState<string>('');
+  const [loadingMeetings, setLoadingMeetings] = useState(false);
 
   // Close modal on ESC key press
   useEffect(() => {
@@ -96,6 +113,52 @@ export default function QuickCreateModal({ isOpen, onClose }: QuickCreateModalPr
     }
   }, [isOpen]);
 
+  // Fetch meetings for user when task form opens or user changes
+  useEffect(() => {
+    if (currentView === 'task-form' && selectedUserId) {
+      fetchMeetingsForUser(selectedUserId);
+      setSelectedMeetingId(''); // Reset meeting selection when user changes
+    }
+  }, [currentView, selectedUserId]);
+
+  // Fetch meetings function
+  const fetchMeetingsForUser = async (userId: string) => {
+    setLoadingMeetings(true);
+    try {
+      const authTokens = localStorage.getItem('auth_tokens');
+      if (!authTokens) return;
+      const { access_token: token } = JSON.parse(authTokens);
+
+      // Calculate date range: last 30 days only (no future meetings since they can't have reports yet)
+      const now = new Date();
+      const dateFrom = subDays(now, 30).toISOString();
+      const dateTo = now.toISOString();
+
+      const response = await fetch(
+        `${API_BASE_URL}/api/v1/meeting-tracker/meetings?user_id=${userId}&date_from=${dateFrom}&date_to=${dateTo}&status=completed`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        // Sort by start_time descending (most recent first)
+        const sortedMeetings = (data.meetings || []).sort((a: MeetingOption, b: MeetingOption) => {
+          return new Date(b.start_time).getTime() - new Date(a.start_time).getTime();
+        });
+        setMeetings(sortedMeetings);
+      }
+    } catch (error) {
+      console.error('Failed to fetch meetings:', error);
+      setMeetings([]);
+    } finally {
+      setLoadingMeetings(false);
+    }
+  };
+
   const handleCreateMeeting = async (meetingData: MeetingFormData) => {
     setIsSubmitting(true);
     try {
@@ -148,7 +211,7 @@ export default function QuickCreateModal({ isOpen, onClose }: QuickCreateModalPr
     }
   };
 
-  const handleCreateTask = async (taskData: TaskFormData) => {
+  const handleCreateTask = async (tasks: TaskFormFieldsData[]) => {
     setIsSubmitting(true);
     try {
       const authTokens = localStorage.getItem('auth_tokens');
@@ -157,39 +220,44 @@ export default function QuickCreateModal({ isOpen, onClose }: QuickCreateModalPr
       }
       const { access_token: token } = JSON.parse(authTokens);
 
-      const response = await fetch(`${API_BASE_URL}/api/v1/meeting-tracker/tasks`, {
+      // Phase 5: Use bulk endpoint for creating multiple tasks in one request
+      const response = await fetch(`${API_BASE_URL}/api/v1/meeting-tracker/tasks/bulk`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          task_description: taskData.task_description,
-          priority: taskData.priority,
-          due_date: taskData.due_date,
-          assigned_to: taskData.assigned_to || null,
-          meeting_id: null, // Manual task, not linked to a meeting
+          meeting_id: selectedMeetingId,
           target_user_id: selectedUserId !== user?.id ? selectedUserId : null,
+          tasks: tasks.map(task => ({
+            task_description: task.task_description,
+            priority: task.priority,
+            due_date: task.due_date,
+            assigned_to: task.assigned_to || null,
+          })),
         }),
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.detail || 'Failed to create task');
+        throw new Error(error.detail || 'Failed to create tasks');
       }
 
       const result = await response.json();
 
       // Success! Close modal and show success message
       const forWhom = selectedUserId === user?.id ? 'yourself' : 'your team member';
-      alert(`Task created successfully for ${forWhom}!`);
+      const taskCount = result.statistics?.total_created || tasks.length;
+      const taskWord = taskCount === 1 ? 'task' : 'tasks';
+      alert(`${taskCount} ${taskWord} created successfully for ${forWhom}!`);
       onClose();
 
-      // Refresh the page to show the new task
+      // Refresh the page to show the new tasks
       window.location.reload();
     } catch (error) {
-      console.error('Failed to create task:', error);
-      alert(error instanceof Error ? error.message : 'Failed to create task. Please try again.');
+      console.error('Failed to create tasks:', error);
+      alert(error instanceof Error ? error.message : 'Failed to create tasks. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -374,11 +442,148 @@ export default function QuickCreateModal({ isOpen, onClose }: QuickCreateModalPr
           )}
 
           {currentView === 'task-form' && (
-            <TaskForm
-              selectedUserId={selectedUserId || user?.id || ''}
-              onSubmit={handleCreateTask}
-              onCancel={handleBack}
-            />
+            <div className="space-y-4">
+              {/* Meeting Selection Dropdown */}
+              <div>
+                <label htmlFor="meeting_select" className="block text-sm font-medium text-gray-300 mb-1">
+                  Select Meeting <span className="text-red-500">*</span>
+                </label>
+                {loadingMeetings ? (
+                  <div className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-400 text-sm flex items-center gap-2">
+                    <svg
+                      className="animate-spin h-4 w-4 text-gray-400"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Loading meetings...
+                  </div>
+                ) : (
+                  <select
+                    id="meeting_select"
+                    value={selectedMeetingId}
+                    onChange={(e) => setSelectedMeetingId(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="">-- Select a meeting --</option>
+                    {meetings.map((meeting) => {
+                      // Format: "Jan 24, 2026 10:00 AM - Meeting Title (Category)"
+                      const startDate = new Date(meeting.start_time);
+                      const dateFormatted = startDate.toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      });
+                      const timeFormatted = startDate.toLocaleTimeString('en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true,
+                      });
+                      const categoryLabels: { [key: string]: string } = {
+                        S: 'Sales',
+                        R: 'Recruitment',
+                        N: 'New',
+                        U: 'Unknown',
+                      };
+                      const categoryLabel = categoryLabels[meeting.category] || 'Unknown';
+
+                      return (
+                        <option key={meeting.meeting_id} value={meeting.meeting_id}>
+                          {`${dateFormatted} ${timeFormatted} - ${meeting.title} (${categoryLabel})`}
+                        </option>
+                      );
+                    })}
+                  </select>
+                )}
+                {!loadingMeetings && meetings.length === 0 && (
+                  <p className="mt-1 text-xs text-gray-400">
+                    No meetings found in the last 30 days
+                  </p>
+                )}
+              </div>
+
+              {/* Report Validation Warning - Show when meeting selected but has no report */}
+              {selectedMeetingId && !meetings.find(m => m.meeting_id === selectedMeetingId)?.has_report && (
+                <div className="bg-yellow-900/30 border-2 border-yellow-600 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <svg
+                      className="w-6 h-6 text-yellow-500 flex-shrink-0 mt-0.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                      />
+                    </svg>
+                    <div className="flex-1">
+                      <h4 className="text-sm font-semibold text-yellow-400 mb-1">
+                        Meeting Report Required
+                      </h4>
+                      <p className="text-sm text-yellow-200 mb-3">
+                        This meeting doesn't have a report yet. Please fill out the meeting report first to create tasks.
+                        You can also create tasks directly from the report page.
+                      </p>
+                      <button
+                        onClick={() => {
+                          // Navigate to meeting report form page
+                          window.location.href = `/meeting-tracker/form/${selectedMeetingId}`;
+                        }}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                      >
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
+                        </svg>
+                        Fill Meeting Report
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Multi-Task Form - Only show if meeting is selected AND has report */}
+              {selectedMeetingId && meetings.find(m => m.meeting_id === selectedMeetingId)?.has_report && (
+                <MultiTaskForm
+                  selectedUserId={selectedUserId || user?.id || ''}
+                  onSubmit={handleCreateTask}
+                  onCancel={handleBack}
+                />
+              )}
+
+              {/* Show message if no meeting selected */}
+              {!selectedMeetingId && !loadingMeetings && meetings.length > 0 && (
+                <div className="p-4 bg-gray-700 rounded-lg text-center text-gray-400 text-sm">
+                  Please select a meeting to create tasks
+                </div>
+              )}
+            </div>
           )}
         </div>
 

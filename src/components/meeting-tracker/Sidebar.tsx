@@ -4,6 +4,7 @@ import { useState, ReactNode, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import GamificationSidebarWidget from './GamificationSidebarWidget';
 
 interface SidebarProps {
   children: ReactNode;
@@ -259,6 +260,9 @@ export default function MeetingTrackerSidebar({ children }: SidebarProps) {
               </div>
             )}
           </nav>
+
+          {/* Gamification Widget - Only show on non-admin pages */}
+          {!isAdminPage && <GamificationSidebarWidget />}
 
           {/* App Switcher */}
           <div className="p-4 border-t border-gray-700">

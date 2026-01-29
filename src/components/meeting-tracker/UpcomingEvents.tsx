@@ -15,6 +15,8 @@ interface Meeting {
   start_time: string;
   end_time: string;
   status: string;
+  user_id: string;
+  has_report?: boolean;
 }
 
 interface DateData {

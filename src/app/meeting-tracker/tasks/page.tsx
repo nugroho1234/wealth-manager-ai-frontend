@@ -1,6 +1,8 @@
 'use client';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
+import { useGamification } from '@/contexts/GamificationContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import MeetingTrackerSidebar from '@/components/meeting-tracker/Sidebar';
 import TeamFilter from '@/components/meeting-tracker/TeamFilter';
@@ -62,6 +64,8 @@ interface GroupedTasks {
 
 function TasksContent() {
   const { user } = useAuth();
+  const { showXPToast, showLevelUpToast, showTierUpToast } = useToast();
+  const { triggerRefresh } = useGamification();
   const searchParams = useSearchParams();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -299,6 +303,50 @@ function TasksContent() {
       });
 
       if (!res.ok) throw new Error('Failed to update task');
+
+      const data = await res.json();
+      console.log('[TasksPage] Task update response:', data);
+      console.log('[TasksPage] xp_awarded object:', data.xp_awarded);
+
+      // Trigger gamification widget refresh with updated stats
+      // Check if xp_awarded exists and has the expected structure
+      if (data.xp_awarded && data.xp_awarded.user_id) {
+        console.log('[TasksPage] XP awarded, passing stats to triggerRefresh:', data.xp_awarded);
+        // Pass the updated stats directly to avoid extra API call
+        triggerRefresh(data.xp_awarded);
+      } else {
+        console.log('[TasksPage] No XP awarded, triggering refresh without stats');
+        // No XP awarded, just trigger refresh (will fetch from API)
+        triggerRefresh();
+      }
+
+      // Show gamification toast notifications if points were awarded
+      if (data.xp_awarded && data.xp_awarded.points > 0) {
+        // Show XP toast first
+        showXPToast(data.xp_awarded.points, data.xp_awarded.bonus_message);
+
+        // Show level-up toast if user leveled up
+        if (data.xp_awarded.level_changed) {
+          setTimeout(() => {
+            showLevelUpToast(
+              data.xp_awarded.new_level,
+              data.xp_awarded.level_name,
+              data.xp_awarded.level_icon
+            );
+          }, 500); // Delay to show after XP toast
+        }
+
+        // Show tier-up toast if user tiered up
+        if (data.xp_awarded.tier_changed) {
+          setTimeout(() => {
+            showTierUpToast(
+              data.xp_awarded.new_tier,
+              data.xp_awarded.tier_name,
+              data.xp_awarded.tier_icon
+            );
+          }, data.xp_awarded.level_changed ? 1000 : 500); // Delay more if both level and tier changed
+        }
+      }
 
       // Refresh tasks
       await fetchTasks();

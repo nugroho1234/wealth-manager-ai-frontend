@@ -15,6 +15,7 @@ export interface MeetingForModal {
   end_time: string;
   status: string;
   user_id: string;
+  has_report?: boolean;
 }
 
 export interface MeetingDetailModalProps {
@@ -518,7 +519,7 @@ export const MeetingDetailModal = memo(function MeetingDetailModal({
               disabled={!isMeetingCompleted || loading}
               className="w-full px-4 py-3 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
-              Fill Report
+              {meeting.has_report ? 'View Report' : 'Fill Report'}
             </button>
             <button
               onClick={() => setShowFollowUp(true)}

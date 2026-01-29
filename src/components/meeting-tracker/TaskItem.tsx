@@ -78,10 +78,19 @@ export default function TaskItem({
 
       {/* Task Content */}
       <div className="flex-1 min-w-0">
-        {/* Task Title/Description */}
-        <p className={`text-sm font-medium ${isCompleted ? 'line-through text-gray-500' : 'text-white'}`}>
-          {task.task_description || task.title}
-        </p>
+        {/* Task Title/Description with XP Badge */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className={`text-sm font-medium ${isCompleted ? 'line-through text-gray-500' : 'text-white'}`}>
+            {task.task_description || task.title}
+          </p>
+
+          {/* XP Badge - Show only for non-completed tasks */}
+          {!isCompleted && (
+            <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-600 text-gray-300 whitespace-nowrap">
+              ✅ +{task.priority === 'high' ? '50' : task.priority === 'medium' ? '30' : '20'} XP
+            </span>
+          )}
+        </div>
 
         {/* Team View: Show assigned user */}
         {isTeamView && task.users && (

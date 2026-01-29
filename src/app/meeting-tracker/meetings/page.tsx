@@ -8,7 +8,9 @@ import { MeetingDetailModal, type MeetingForModal } from '@/components/meeting-t
 import ViewContextBanner from '@/components/meeting-tracker/ViewContextBanner';
 import FloatingActionButton from '@/components/meeting-tracker/FloatingActionButton';
 import QuickCreateModal from '@/components/meeting-tracker/QuickCreateModal';
-import { useState, useEffect } from 'react';
+import MeetingsCategoryChart from '@/components/meeting-tracker/MeetingsCategoryChart';
+import MeetingsCompactList from '@/components/meeting-tracker/MeetingsCompactList';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, subMonths, subYears } from 'date-fns';
 
@@ -205,6 +207,7 @@ function DashboardContent() {
       end_time: formatTime(meeting.end_time),
       status,
       user_id: userId,
+      has_report: meeting.has_report,
     };
   };
 
@@ -406,301 +409,50 @@ function DashboardContent() {
             <div className="font-medium text-blue-400">{filteredMeetings.length} meetings</div>
           </div>
 
-          {/* Performance Funnel */}
-          <div className="bg-gray-800 rounded-xl p-6 mb-8 shadow-lg">
-            <h2 className="text-xl font-semibold mb-6">Performance Funnel</h2>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <div className="text-center">
-                <div className="bg-blue-600 rounded-lg p-4 mb-2">
-                  <div className="text-3xl font-bold">{stats.total_meetings}</div>
-                </div>
-                <div className="text-sm text-gray-400">Total Meetings</div>
-              </div>
-              <div className="flex items-center justify-center text-gray-600">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-              <div className="text-center">
-                <div className="bg-yellow-600 rounded-lg p-4 mb-2">
-                  <div className="text-3xl font-bold">{stats.pending_reports}</div>
-                </div>
-                <div className="text-sm text-gray-400">Pending Forms</div>
-              </div>
-              <div className="flex items-center justify-center text-gray-600">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-              <div className="text-center">
-                <div className="bg-green-600 rounded-lg p-4 mb-2">
-                  <div className="text-3xl font-bold">
-                    {stats.completed_count || 0}
-                  </div>
-                </div>
-                <div className="text-sm text-gray-400">Completed</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Category Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div className="bg-blue-600 rounded-xl p-6 shadow-lg">
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-sm font-medium">Sales</div>
-                <div className="text-2xl">💼</div>
-              </div>
-              <div className="text-3xl font-bold mb-1">{stats.sales_count}</div>
-              <div className="text-sm text-blue-200">meetings</div>
+          {/* New 3-Panel Layout: Chart + Meetings List */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Middle Panel - Category Chart (33% width on desktop) */}
+            <div className="lg:col-span-4">
+              <MeetingsCategoryChart
+                meetings={dateFilteredMeetings.map(meeting => ({
+                  id: meeting.meeting_id,
+                  meeting_type: meeting.category,
+                  person_name: meeting.user ? `${meeting.user.first_name} ${meeting.user.last_name}`.trim() : undefined,
+                  meeting_title: meeting.title,
+                  start_time: meeting.start_time,
+                  end_time: meeting.end_time,
+                  status: 'scheduled',
+                }))}
+                selectedCategory={selectedCategory}
+                onCategorySelect={(category) => setSelectedCategory(category)}
+                loading={loading}
+              />
             </div>
 
-            <div className="bg-green-600 rounded-xl p-6 shadow-lg">
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-sm font-medium">Recruitment</div>
-                <div className="text-2xl">👥</div>
-              </div>
-              <div className="text-3xl font-bold mb-1">{stats.recruitment_count}</div>
-              <div className="text-sm text-green-200">meetings</div>
+            {/* Right Panel - Meetings List (67% width on desktop) */}
+            <div className="lg:col-span-8">
+              <MeetingsCompactList
+                meetings={filteredMeetings.map(meeting => ({
+                  id: meeting.meeting_id,
+                  meeting_type: meeting.category,
+                  person_name: meeting.user ? `${meeting.user.first_name} ${meeting.user.last_name}`.trim() : undefined,
+                  meeting_title: meeting.title,
+                  start_time: meeting.start_time,
+                  end_time: meeting.end_time,
+                  status: 'scheduled',
+                  has_report: meeting.has_report,
+                }))}
+                viewType={teamFilter === 'me' ? 'my_data' : 'my_team'}
+                onMeetingClick={(meeting) => {
+                  // Find the original meeting from the meetings array
+                  const originalMeeting = meetings.find(m => m.meeting_id === meeting.id);
+                  if (originalMeeting) {
+                    setSelectedMeeting(adaptMeetingForModal(originalMeeting));
+                  }
+                }}
+                loading={loading}
+              />
             </div>
-
-            <div className="bg-purple-600 rounded-xl p-6 shadow-lg">
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-sm font-medium">New</div>
-                <div className="text-2xl">✨</div>
-              </div>
-              <div className="text-3xl font-bold mb-1">{stats.new_count}</div>
-              <div className="text-sm text-purple-200">meetings</div>
-            </div>
-          </div>
-
-          {/* Category Filter */}
-          <div className="mb-6 flex gap-2">
-            <button
-              onClick={() => setSelectedCategory('all')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                selectedCategory === 'all'
-                  ? 'bg-white text-gray-900'
-                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-              }`}
-            >
-              All Meetings
-            </button>
-            <button
-              onClick={() => setSelectedCategory('S')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                selectedCategory === 'S'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-              }`}
-            >
-              Sales ({stats.sales_count})
-            </button>
-            <button
-              onClick={() => setSelectedCategory('R')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                selectedCategory === 'R'
-                  ? 'bg-green-600 text-white'
-                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-              }`}
-            >
-              Recruitment ({stats.recruitment_count})
-            </button>
-            <button
-              onClick={() => setSelectedCategory('N')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                selectedCategory === 'N'
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-              }`}
-            >
-              New ({stats.new_count})
-            </button>
-          </div>
-
-          {/* Meetings List by Category */}
-          <div className="space-y-8">
-            {(['S', 'R', 'N'] as const).map((category) => {
-              const categoryMeetings = groupedMeetings[category];
-
-              // When filtering by specific category, only show that category
-              if (selectedCategory !== 'all' && category !== selectedCategory) return null;
-
-              // Don't show empty categories when viewing all
-              if (categoryMeetings.length === 0 && selectedCategory === 'all') return null;
-
-              // Show empty state only for the filtered category
-              if (categoryMeetings.length === 0 && selectedCategory !== 'all') {
-                return (
-                  <div key={category} className="bg-gray-800 rounded-xl p-8 text-center">
-                    <div className="text-gray-400">No {getCategoryLabel(category)} meetings found</div>
-                  </div>
-                );
-              }
-
-              return (
-                <div key={category}>
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold uppercase tracking-wide">
-                      {getCategoryLabel(category)} Meetings ({categoryMeetings.length})
-                    </h2>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {categoryMeetings.map((meeting) => {
-                      // Check if we're viewing team data (not 'me')
-                      const isTeamView = teamFilter !== 'me';
-                      const subordinateName = meeting.user
-                        ? `${meeting.user.first_name} ${meeting.user.last_name}`.trim()
-                        : 'Unknown User';
-
-                      return (
-                        <div
-                          key={meeting.meeting_id}
-                          className="bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow border border-gray-700 hover:border-gray-600 cursor-pointer"
-                          onClick={() => setSelectedMeeting(adaptMeetingForModal(meeting))}
-                        >
-                          {/* Subordinate Name (only in team view) */}
-                          {isTeamView && (
-                            <div className="flex items-center gap-2 mb-3 pb-3 border-b border-gray-700">
-                              <span className="text-lg">👤</span>
-                              <span className="text-sm font-semibold text-blue-400">{subordinateName}</span>
-                            </div>
-                          )}
-
-                          {/* Meeting Time */}
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-2">
-                              <span className="text-2xl">🕐</span>
-                              <div className="text-sm">
-                                <div className="font-medium">
-                                  {format(new Date(meeting.start_time), 'MMM dd, yyyy')}
-                                </div>
-                                <div className="text-gray-400">
-                                  {format(new Date(meeting.start_time), 'HH:mm')} -{' '}
-                                  {format(new Date(meeting.end_time), 'HH:mm')}
-                                </div>
-                              </div>
-                            </div>
-                            <span className={`w-3 h-3 rounded-full ${getCategoryColor(meeting.category)}`}></span>
-                          </div>
-
-                          {/* Meeting Title */}
-                          <h3 className="text-lg font-semibold mb-2">{meeting.title}</h3>
-
-                          {/* Description */}
-                          {meeting.description && (
-                            <p className="text-sm text-gray-400 mb-3 line-clamp-2">{meeting.description}</p>
-                          )}
-
-                          {/* Badges */}
-                          <div className="flex flex-wrap gap-2 mb-4">
-                            <span className={`text-xs px-2 py-1 rounded-full ${getCategoryColor(meeting.category)} bg-opacity-20 border border-current`}>
-                              {getCategoryLabel(meeting.category)}
-                            </span>
-                            {/* Show "Report Pending" badge in team view when no report */}
-                            {isTeamView && !meeting.has_report && (
-                              <span className="text-xs px-2 py-1 rounded-full bg-yellow-500 bg-opacity-20 border border-yellow-500 text-yellow-400">
-                                ⚠️ Report Pending
-                              </span>
-                            )}
-                            {/* Show "No Report" badge in my data view when no report */}
-                            {!isTeamView && !meeting.has_report && (
-                              <span className="text-xs px-2 py-1 rounded-full bg-yellow-500 bg-opacity-20 border border-yellow-500 text-yellow-400">
-                                No Report
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Actions */}
-                          {(() => {
-                            const meetingEndTime = new Date(meeting.end_time);
-                            const currentTime = new Date();
-                            const isCompleted = meetingEndTime < currentTime;
-
-                            // Team View Logic:
-                            // - has_report == TRUE → "View Report" (read-only, green)
-                            // - has_report == FALSE → No button (just show "Report Pending" badge)
-                            //
-                            // My Data View Logic:
-                            // - has_report == TRUE → "View Report" (read-only, green)
-                            // - has_report == FALSE && draft_saved == TRUE → "Continue Draft" (editable, yellow)
-                            // - Otherwise → "Fill Report" (new, blue)
-
-                            if (isTeamView) {
-                              // Team view: only show "View Report" button if report exists
-                              if (meeting.has_report) {
-                                return isCompleted ? (
-                                  <div className="flex gap-2">
-                                    <a
-                                      href={`/meeting-tracker/form/${meeting.meeting_id}`}
-                                      onClick={(e) => e.stopPropagation()}
-                                      className="flex-1 text-center px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-medium transition-colors"
-                                    >
-                                      View Report
-                                    </a>
-                                  </div>
-                                ) : (
-                                  <div className="flex gap-2">
-                                    <div className="flex-1 text-center px-4 py-2 bg-gray-700 rounded-lg text-sm font-medium text-gray-400 cursor-not-allowed">
-                                      Upcoming Meeting
-                                    </div>
-                                  </div>
-                                );
-                              } else {
-                                // No report yet - don't show button, just the badge above
-                                return isCompleted ? (
-                                  <div className="flex gap-2">
-                                    <div className="flex-1 text-center px-4 py-2 bg-gray-700 rounded-lg text-sm font-medium text-gray-400 cursor-not-allowed">
-                                      Report Not Submitted
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div className="flex gap-2">
-                                    <div className="flex-1 text-center px-4 py-2 bg-gray-700 rounded-lg text-sm font-medium text-gray-400 cursor-not-allowed">
-                                      Upcoming Meeting
-                                    </div>
-                                  </div>
-                                );
-                              }
-                            } else {
-                              // My data view: show appropriate button based on report state
-                              let buttonText = 'Fill Report';
-                              let buttonColor = 'bg-blue-600 hover:bg-blue-700';
-
-                              if (meeting.has_report) {
-                                buttonText = 'View Report';
-                                buttonColor = 'bg-green-600 hover:bg-green-700';
-                              } else if (meeting.draft_saved) {
-                                buttonText = 'Continue Draft';
-                                buttonColor = 'bg-yellow-600 hover:bg-yellow-700';
-                              }
-
-                              return isCompleted ? (
-                                <div className="flex gap-2">
-                                  <a
-                                    href={`/meeting-tracker/form/${meeting.meeting_id}`}
-                                    onClick={(e) => e.stopPropagation()}
-                                    className={`flex-1 text-center px-4 py-2 ${buttonColor} rounded-lg text-sm font-medium transition-colors`}
-                                  >
-                                    {buttonText}
-                                  </a>
-                                </div>
-                              ) : (
-                                <div className="flex gap-2">
-                                  <div className="flex-1 text-center px-4 py-2 bg-gray-700 rounded-lg text-sm font-medium text-gray-400 cursor-not-allowed">
-                                    Upcoming Meeting
-                                  </div>
-                                </div>
-                              );
-                            }
-                          })()}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
           </div>
 
           {/* Empty State */}

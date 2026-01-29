@@ -172,18 +172,28 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const verifyOTP = async (email: string, otpCode: string): Promise<void> => {
     try {
+      console.log('[AUTH] 🔐 Starting OTP verification for:', email);
       dispatch({ type: 'SET_LOADING', payload: true });
-      
+
       const otpVerification: OTPVerification = { email, otp_code: otpCode };
+      console.log('[AUTH] 📤 Sending verify-otp request');
       const authResponse = await authService.verifyOTP(otpVerification);
-      
+
+      console.log('[AUTH] 📥 Received response from backend');
+      console.log('[AUTH] User data:', authResponse.user);
+      console.log('[AUTH] User ID:', authResponse.user?.id);
+      console.log('[AUTH] Company ID:', authResponse.user?.company_id);
+      console.log('[AUTH] Access token length:', authResponse.access_token?.length);
+
       // Set tokens in API client
       setAuthTokens({
         access_token: authResponse.access_token,
         token_type: authResponse.token_type,
         expires_in: authResponse.expires_in,
       });
-      
+
+      console.log('[AUTH] ✅ Tokens saved, dispatching LOGIN_SUCCESS');
+
       // Update state
       dispatch({
         type: 'LOGIN_SUCCESS',
@@ -196,7 +206,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
           },
         },
       });
+
+      console.log('[AUTH] ✅ Login successful');
     } catch (error) {
+      console.error('[AUTH] ❌ Login failed:', error);
       dispatch({ type: 'SET_LOADING', payload: false });
       throw error;
     }

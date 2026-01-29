@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import TaskFormFields, { TaskFormFieldsData } from './TaskFormFields';
 
 interface TaskFormProps {
   selectedUserId: string;
@@ -78,76 +79,14 @@ export default function TaskForm({ selectedUserId, onSubmit, onCancel }: TaskFor
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* Task Description */}
-      <div>
-        <label htmlFor="task_description" className="block text-sm font-medium text-gray-300 mb-1">
-          Task Description <span className="text-red-500">*</span>
-        </label>
-        <textarea
-          id="task_description"
-          value={formData.task_description}
-          onChange={(e) => setFormData({ ...formData, task_description: e.target.value })}
-          rows={3}
-          className={`w-full px-3 py-2 bg-gray-700 border ${
-            errors.task_description ? 'border-red-500' : 'border-gray-600'
-          } rounded-lg text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none`}
-          placeholder="Enter task description or action item"
-          disabled={loading}
-        />
-        {errors.task_description && <p className="mt-1 text-xs text-red-500">{errors.task_description}</p>}
-      </div>
-
-      {/* Priority */}
-      <div>
-        <label htmlFor="priority" className="block text-sm font-medium text-gray-300 mb-1">
-          Priority <span className="text-red-500">*</span>
-        </label>
-        <select
-          id="priority"
-          value={formData.priority}
-          onChange={(e) => setFormData({ ...formData, priority: e.target.value as 'High' | 'Medium' | 'Low' })}
-          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-          disabled={loading}
-        >
-          <option value="High">High Priority</option>
-          <option value="Medium">Medium Priority</option>
-          <option value="Low">Low Priority</option>
-        </select>
-      </div>
-
-      {/* Due Date */}
-      <div>
-        <label htmlFor="due_date" className="block text-sm font-medium text-gray-300 mb-1">
-          Due Date <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="date"
-          id="due_date"
-          value={formData.due_date}
-          onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-          className={`w-full px-3 py-2 bg-gray-700 border ${
-            errors.due_date ? 'border-red-500' : 'border-gray-600'
-          } rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500`}
-          disabled={loading}
-        />
-        {errors.due_date && <p className="mt-1 text-xs text-red-500">{errors.due_date}</p>}
-      </div>
-
-      {/* Assigned To */}
-      <div>
-        <label htmlFor="assigned_to" className="block text-sm font-medium text-gray-300 mb-1">
-          Assigned To (Optional)
-        </label>
-        <input
-          type="text"
-          id="assigned_to"
-          value={formData.assigned_to}
-          onChange={(e) => setFormData({ ...formData, assigned_to: e.target.value })}
-          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
-          placeholder="Enter person's name"
-          disabled={loading}
-        />
-      </div>
+      {/* Reusable Task Form Fields */}
+      <TaskFormFields
+        formData={formData}
+        onChange={setFormData}
+        errors={errors}
+        disabled={loading}
+        showLabels={true}
+      />
 
       {/* Action Buttons */}
       <div className="flex gap-3 pt-2">
