@@ -373,11 +373,6 @@ function ProductsContent() {
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(product.category)}`}>
                 {product.category}
               </span>
-              {product.similarity_score && (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                  {Math.round(product.similarity_score * 100)}% match
-                </span>
-              )}
             </div>
           </div>
           
