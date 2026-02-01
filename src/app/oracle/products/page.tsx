@@ -11,14 +11,29 @@ import { apiClient } from '@/lib/api';
 interface Product {
   insurance_id: string;
   insurance_name: string;
-  provider: string;
+  provider?: string;
+  company_name?: string;
   category: string;
-  key_features: string;
-  created_at: string;
-  processing_status: string;
+  key_features?: string;
+  created_at?: string;
+  processing_status?: string;
   pdf_url?: string;
   similarity_score?: number;
   matched_content?: string;
+  // New RAG fields
+  summary?: string;
+  evidences?: Array<{
+    text: string;
+    chunk_index: number;
+    page_number?: number;
+  }>;
+  confidence_score?: number;
+  status?: 'approved' | 'partial_match' | 'rejected' | 'uncertain';
+  // Partial match fields
+  gaps?: string[];
+  upsell_reasoning?: string;
+  // Summary-based fallback flag
+  is_summary_based?: boolean;
 }
 
 interface SearchResult {
@@ -45,6 +60,11 @@ function ProductsContent() {
   const [isAiSearching, setIsAiSearching] = useState(false);
   const [categoryFallback, setCategoryFallback] = useState(false);
   const [requestedCategory, setRequestedCategory] = useState<string | null>(null);
+
+  // Streaming search state
+  const [searchProgress, setSearchProgress] = useState<{ current: number; total: number } | null>(null);
+  const [pendingResults, setPendingResults] = useState<number>(0);
+  const [showRejected, setShowRejected] = useState<boolean>(false);
   
   // Manual Search state
   const [manualProducts, setManualProducts] = useState<Product[]>([]);
@@ -132,7 +152,7 @@ function ProductsContent() {
 
   const handleAiSearch = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    
+
     if (!aiQuery.trim()) {
       notifyError('Search Error', 'Please enter a search query');
       return;
@@ -140,36 +160,101 @@ function ProductsContent() {
 
     try {
       setIsAiSearching(true);
-      
+      setAiResults([]); // Clear previous results
+      setSearchProgress(null);
+      setPendingResults(0);
+
       const params = new URLSearchParams({
         query: aiQuery.trim(),
-        category: aiCategory,
-        limit: '50', // Show top 50 most relevant results
-        similarity_threshold: '0.0'
+        max_results: '5'
       });
-      
-      const response = await apiClient.post<{
-        success: boolean;
-        data: SearchResult;
-      }>(`/api/v1/oracle/products/search-ai?${params.toString()}`);
-      
-      if (response.data.success) {
-        setAiResults(response.data.data.results);
-        setCategoryFallback(response.data.data.category_fallback || false);
-        setRequestedCategory(response.data.data.requested_category || null);
 
-        if (response.data.data.category_fallback) {
-          notifySuccess('Search Complete', `No products in '${response.data.data.requested_category}'. Showing ${response.data.data.total} from all categories.`);
-        } else {
-          notifySuccess('Search Complete', `Found ${response.data.data.total} relevant products`);
+      // Use streaming endpoint
+      const authTokensStr = localStorage.getItem('auth_tokens');
+      const authTokens = authTokensStr ? JSON.parse(authTokensStr) : null;
+      const token = authTokens?.access_token;
+
+      if (!token) {
+        throw new Error('No authentication token found. Please log in again.');
+      }
+
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+      const response = await fetch(
+        `${apiBaseUrl}/api/v1/products/search-ai-stream?${params.toString()}`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'text/event-stream',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Search request failed:', response.status, errorText);
+        throw new Error(`Search request failed: ${response.status} ${errorText}`);
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (!reader) {
+        throw new Error('Response body is not readable');
+      }
+
+      let totalResults = 0;
+
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+
+              if (data.type === 'init') {
+                // Initialize progress with total count
+                setSearchProgress({ current: 0, total: data.total });
+                setPendingResults(data.total);
+              } else if (data.type === 'progress') {
+                // Update progress
+                setSearchProgress({ current: data.current, total: data.total });
+              } else if (data.type === 'result') {
+                // Add result immediately
+                setAiResults(prev => [...prev, data.data]);
+                setPendingResults(prev => Math.max(0, prev - 1));
+                totalResults++;
+              } else if (data.type === 'complete') {
+                // Search complete
+                setSearchProgress(null);
+                setPendingResults(0);
+                notifySuccess('Search Complete', `Found ${data.total_results} matching products`);
+              } else if (data.type === 'error') {
+                // Error occurred
+                notifyError('Search Error', data.message);
+                setSearchProgress(null);
+                setPendingResults(0);
+              }
+            } catch (parseError) {
+              console.error('Error parsing SSE data:', parseError);
+            }
+          }
         }
       }
-      
+
     } catch (error: any) {
       console.error('Error in AI search:', error);
       const errorMessage = error.detail || error.message || 'AI search failed';
       notifyError('Search Error', errorMessage);
       setAiResults([]);
+      setSearchProgress(null);
+      setPendingResults(0);
     } finally {
       setIsAiSearching(false);
     }
@@ -347,41 +432,45 @@ function ProductsContent() {
   const renderProductCard = (product: Product) => {
     const isExpanded = expandedCards.has(product.insurance_id);
     const isSelected = selectedProducts.has(product.insurance_id);
-    const description = product.key_features || 'No description available';
-    
+
+    // For AI search results, use summary from Gemini (Phase 3)
+    // For manual search, fallback to key_features
+    const description = product.summary || product.key_features || 'No description available';
+    const companyName = product.company_name || product.provider || 'Unknown Provider';
+
     return (
       <div
         key={product.insurance_id}
         className={`backdrop-blur-sm rounded-2xl p-6 shadow-lg border transition-all duration-300 hover:shadow-xl ${
-          isSelected 
-            ? 'bg-green-50/90 border-green-300 ring-2 ring-green-200' 
+          isSelected
+            ? 'bg-green-50/90 border-green-300 ring-2 ring-green-200'
             : 'bg-white/80 border-white/20'
         }`}
       >
         {/* Card Header */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1 pr-3">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
               {product.insurance_name}
             </h3>
             <div className="flex items-center space-x-2 mb-2">
               <span className="text-sm text-gray-600">🏢</span>
               <span className="text-sm font-medium text-gray-700">
-                {product.provider}
+                {companyName}
               </span>
             </div>
-            <div className="flex items-center space-x-2 mb-2">
+            <div className="flex items-center flex-wrap gap-2 mb-2">
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(product.category)}`}>
                 {product.category}
               </span>
-              {product.similarity_score && (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                  {Math.round(product.similarity_score * 100)}% match
+              {product.is_summary_based && (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
+                  📝 Summary-Based
                 </span>
               )}
             </div>
           </div>
-          
+
           {/* View Document Button */}
           {product.pdf_url && (
             <button
@@ -396,12 +485,12 @@ function ProductsContent() {
           )}
         </div>
 
-        {/* Description */}
+        {/* AI Summary/Description */}
         <div className="mb-4">
-          <p className="text-sm text-gray-600 leading-relaxed">
-            {isExpanded ? description : truncateText(description)}
+          <p className="text-sm text-gray-700 leading-relaxed">
+            {isExpanded ? description : truncateText(description, 200)}
           </p>
-          {description.length > 150 && (
+          {description.length > 200 && (
             <button
               onClick={() => toggleDescription(product.insurance_id)}
               className="text-primary-600 hover:text-primary-700 text-sm font-medium mt-2 focus:outline-none"
@@ -411,13 +500,74 @@ function ProductsContent() {
           )}
         </div>
 
+        {/* Evidence from AI Verification (if available) */}
+        {product.evidences && product.evidences.length > 0 && (
+          <div className="mb-4 space-y-2">
+            <p className="text-xs font-medium text-gray-700">Relevant excerpts from document:</p>
+            {product.evidences.map((evidence, idx) => (
+              <div key={idx} className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-start space-x-2">
+                  <span className="text-blue-600 mt-0.5">📄</span>
+                  <div className="flex-1">
+                    <p className="text-sm text-blue-800 italic">
+                      "{evidence.text}"
+                    </p>
+                    {evidence.page_number && product.pdf_url && (
+                      <a
+                        href={`https://storage.googleapis.com/wealth-manager-public/${product.pdf_url}#page=${evidence.page_number}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-600 hover:text-blue-800 hover:underline mt-1 inline-block"
+                      >
+                        📖 Page {evidence.page_number}
+                      </a>
+                    )}
+                    {evidence.page_number && !product.pdf_url && (
+                      <p className="text-xs text-blue-600 mt-1">
+                        Page {evidence.page_number}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Gaps and Upsell Reasoning for Partial Match */}
+        {product.status === 'partial_match' && (
+          <div className="mb-4 space-y-3">
+            {/* Gaps Section */}
+            {product.gaps && product.gaps.length > 0 && (
+              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-xs font-medium text-yellow-900 mb-2">⚠️ Gaps:</p>
+                <ul className="list-disc list-inside space-y-1">
+                  {product.gaps.map((gap, idx) => (
+                    <li key={idx} className="text-sm text-yellow-800">{gap}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Upsell Reasoning */}
+            {product.upsell_reasoning && (
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-xs font-medium text-blue-900 mb-1">💡 Why Consider:</p>
+                <p className="text-sm text-blue-800">{product.upsell_reasoning}</p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Footer */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-          <div className="text-xs text-gray-500">
-            Added {formatDate(product.created_at)}
-          </div>
-          
-          <div className="flex items-center space-x-3">
+          {product.created_at && (
+            <div className="text-xs text-gray-500">
+              Added {formatDate(product.created_at)}
+            </div>
+          )}
+
+          <div className={`flex items-center space-x-3 ${!product.created_at ? 'ml-auto' : ''}`}>
             {/* Chat Button */}
             <button
               onClick={() => handleChatClick(product)}
@@ -585,20 +735,156 @@ function ProductsContent() {
                 </div>
               )}
 
-              {/* AI Search Results */}
-              {aiResults.length > 0 ? (
-                <div>
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-xl font-semibold text-gray-900">
-                      AI Search Results ({aiResults.length})
-                    </h3>
-                    <span className="text-sm text-gray-600">
-                      Query: "{aiQuery}"
+              {/* Progress Banner */}
+              {searchProgress && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center space-x-2">
+                      <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span className="text-sm font-medium text-blue-900">
+                        Searching for products...
+                      </span>
+                    </div>
+                    <span className="text-sm text-blue-700">
+                      Processing: {searchProgress.current} of {searchProgress.total} documents
                     </span>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {aiResults.map(renderProductCard)}
+                  <div className="w-full bg-blue-200 rounded-full h-2">
+                    <div
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${(searchProgress.current / searchProgress.total) * 100}%` }}
+                    />
                   </div>
+                </div>
+              )}
+
+              {/* AI Search Results */}
+              {aiResults.length > 0 || pendingResults > 0 ? (
+                <div>
+                  <div className="mb-6">
+                    <h3 className="text-xl font-semibold text-gray-900">
+                      AI Search Results
+                    </h3>
+                  </div>
+
+                  {/* Summary-Based Search Banner */}
+                  {aiResults.length > 0 && aiResults.some(p => p.is_summary_based) && (
+                    <div className="mb-6 p-4 bg-amber-50 border-l-4 border-amber-400 rounded-lg">
+                      <div className="flex items-start">
+                        <div className="flex-shrink-0">
+                          <svg className="h-5 w-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div className="ml-3">
+                          <h4 className="text-sm font-medium text-amber-800">
+                            Summary-Based Matches
+                          </h4>
+                          <p className="text-sm text-amber-700 mt-1">
+                            These results are based on high-level product summaries rather than detailed document analysis. While they may match your needs, specific details should be verified in the full product documentation.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Perfect Matches Section */}
+                  {(() => {
+                    const approvedResults = aiResults.filter(p => p.status === 'approved');
+                    return approvedResults.length > 0 ? (
+                      <div className="mb-8">
+                        <h4 className="text-lg font-semibold text-green-800 mb-4 flex items-center">
+                          <span className="text-2xl mr-2">✅</span>
+                          Perfect Matches ({approvedResults.length})
+                        </h4>
+                        <div className="flex flex-col gap-4 max-w-4xl mx-auto">
+                          {approvedResults.map(renderProductCard)}
+                        </div>
+                      </div>
+                    ) : null;
+                  })()}
+
+                  {/* Also Consider Section */}
+                  {(() => {
+                    const partialResults = aiResults.filter(p => p.status === 'partial_match');
+                    return partialResults.length > 0 ? (
+                      <div className="mb-8">
+                        <h4 className="text-lg font-semibold text-yellow-800 mb-4 flex items-center">
+                          <span className="text-2xl mr-2">⚠️</span>
+                          Also Consider ({partialResults.length})
+                        </h4>
+                        <div className="flex flex-col gap-4 max-w-4xl mx-auto">
+                          {partialResults.map(renderProductCard)}
+                        </div>
+                      </div>
+                    ) : null;
+                  })()}
+
+                  {/* Not Recommended Section (Collapsible) */}
+                  {(() => {
+                    const rejectedResults = aiResults.filter(p => p.status === 'rejected');
+                    return rejectedResults.length > 0 ? (
+                      <div className="mb-8">
+                        <button
+                          onClick={() => setShowRejected(!showRejected)}
+                          className="w-full text-left flex items-center justify-between p-4 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                        >
+                          <h4 className="text-lg font-semibold text-red-800 flex items-center">
+                            <span className="text-2xl mr-2">❌</span>
+                            Not Recommended ({rejectedResults.length})
+                          </h4>
+                          <span className="text-gray-600">
+                            {showRejected ? '▲ Hide' : '▼ Show'}
+                          </span>
+                        </button>
+                        {showRejected && (
+                          <div className="flex flex-col gap-4 max-w-4xl mx-auto mt-4">
+                            {rejectedResults.map(renderProductCard)}
+                          </div>
+                        )}
+                      </div>
+                    ) : null;
+                  })()}
+
+                  {/* Skeleton Cards for Pending Results */}
+                  {pendingResults > 0 && (
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-600 mb-4 flex items-center">
+                        <svg className="animate-spin h-5 w-5 text-gray-600 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Verifying ({pendingResults})
+                      </h4>
+                      <div className="flex flex-col gap-4 max-w-4xl mx-auto">
+                        {Array.from({ length: pendingResults }).map((_, idx) => (
+                          <div key={`skeleton-${idx}`} className="bg-white rounded-xl shadow-md border border-gray-200 p-6 animate-pulse">
+                            <div className="flex items-start justify-between mb-4">
+                              <div className="flex-1">
+                                <div className="h-6 bg-gray-300 rounded w-3/4 mb-2"></div>
+                                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                              </div>
+                            </div>
+                            <div className="space-y-3">
+                              <div className="h-4 bg-gray-200 rounded w-full"></div>
+                              <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+                              <div className="h-4 bg-gray-200 rounded w-4/6"></div>
+                            </div>
+                            <div className="mt-4 flex items-center space-x-2">
+                              <svg className="animate-spin h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              <span className="text-sm text-gray-500">Verifying product...</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : aiQuery && !isAiSearching ? (
                 <div className="text-center py-12">
