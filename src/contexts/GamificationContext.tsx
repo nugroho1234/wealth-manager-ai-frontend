@@ -43,13 +43,13 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   const [latestStats, setLatestStats] = useState<GamificationStats | null>(null);
 
   const triggerRefresh = useCallback((newStats?: GamificationStats) => {
-    console.log('[GamificationContext] triggerRefresh called with newStats:', newStats);
+    // console.log('[GamificationContext] triggerRefresh called with newStats:', newStats);
     if (newStats) {
-      console.log('[GamificationContext] Setting latestStats:', newStats);
+      // console.log('[GamificationContext] Setting latestStats:', newStats);
       setLatestStats(newStats);
     }
     setRefreshTrigger(prev => {
-      console.log('[GamificationContext] Incrementing refreshTrigger from', prev, 'to', prev + 1);
+      // console.log('[GamificationContext] Incrementing refreshTrigger from', prev, 'to', prev + 1);
       return prev + 1;
     });
   }, []);

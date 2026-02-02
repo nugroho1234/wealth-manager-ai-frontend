@@ -19,14 +19,14 @@ export default function GamificationWidget() {
   const { refreshTrigger, latestStats } = useGamification();
 
   useEffect(() => {
-    console.log('[GamificationWidget] useEffect triggered. refreshTrigger:', refreshTrigger, 'latestStats:', latestStats);
+    // console.log('[GamificationWidget] useEffect triggered. refreshTrigger:', refreshTrigger, 'latestStats:', latestStats);
     // If we have latestStats from context, use them immediately (no API call)
     if (latestStats) {
-      console.log('[GamificationWidget] Using latestStats from context:', latestStats);
+      // console.log('[GamificationWidget] Using latestStats from context:', latestStats);
       setStats(latestStats);
       setLoading(false);
     } else {
-      console.log('[GamificationWidget] No latestStats, fetching from API');
+      // console.log('[GamificationWidget] No latestStats, fetching from API');
       // Otherwise fetch from API
       fetchGamificationStats();
     }

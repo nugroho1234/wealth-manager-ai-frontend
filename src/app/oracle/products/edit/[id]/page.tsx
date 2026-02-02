@@ -126,8 +126,8 @@ function EditProductContent() {
         return;
       }
 
-      console.log('Updating product with:', updatedFields);
-      console.log('PUT URL:', `/api/v1/oracle/products/${productId}`);
+      // console.log('Updating product with:', updatedFields);
+      // console.log('PUT URL:', `/api/v1/oracle/products/${productId}`);
       
       const response = await apiClient.put<{
         success: boolean;

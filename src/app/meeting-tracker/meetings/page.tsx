@@ -79,7 +79,7 @@ function DashboardContent() {
   useEffect(() => {
     const viewParam = searchParams.get('view');
     if (viewParam) {
-      console.log('🔍 [MEETINGS] Initial mount - clearing URL param to match default "me" state');
+      // console.log('🔍 [MEETINGS] Initial mount - clearing URL param to match default "me" state');
       router.replace('/meeting-tracker/meetings', { scroll: false });
     }
     // Note: We intentionally do NOT sync URL params to teamFilter state

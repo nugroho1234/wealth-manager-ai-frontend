@@ -714,7 +714,7 @@ function CommissionEditContent() {
     try {
       const changes = Object.values(pendingChanges);
 
-      console.log('💾 Saving changes:', changes);
+      // console.log('💾 Saving changes:', changes);
 
       let successCount = 0;
       let errorCount = 0;
@@ -731,7 +731,7 @@ function CommissionEditContent() {
           let response;
           if (existing) {
             // Update existing commission
-            console.log(`Updating commission ${existing.commission_id}:`, change);
+            // console.log(`Updating commission ${existing.commission_id}:`, change);
             response = await fetch(`${API_BASE_URL}/api/v1/oracle/commissions/${existing.commission_id}`, {
               method: 'PUT',
               headers: {
@@ -744,7 +744,7 @@ function CommissionEditContent() {
             });
           } else {
             // Create new commission
-            console.log('Creating new commission:', { ...change, insurance_id });
+            // console.log('Creating new commission:', { ...change, insurance_id });
             response = await fetch(`${API_BASE_URL}/api/v1/oracle/commissions`, {
               method: 'POST',
               headers: {

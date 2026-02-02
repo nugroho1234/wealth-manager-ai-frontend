@@ -155,12 +155,12 @@ function SettingsContent() {
       }
       const { access_token: token } = JSON.parse(authTokens);
 
-      console.log('Connecting to Google Calendar...');
+      // console.log('Connecting to Google Calendar...');
       const res = await fetch(`${API_BASE_URL}/api/v1/meeting-tracker/google/auth-url`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      console.log('Response status:', res.status);
+      // console.log('Response status:', res.status);
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ detail: 'Unknown error' }));
         console.error('Error response:', errorData);
@@ -168,7 +168,7 @@ function SettingsContent() {
       }
 
       const data = await res.json();
-      console.log('Auth URL received:', data);
+      // console.log('Auth URL received:', data);
       window.location.href = data.authorization_url;
     } catch (error) {
       console.error('Google Calendar connection error:', error);

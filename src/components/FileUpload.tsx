@@ -112,7 +112,7 @@ export default function FileUpload({
 
   const uploadFiles = async (filesToUpload: File[]): Promise<void> => {
     try {
-      console.log(`🚀 Starting upload for ${filesToUpload.length} files`);
+      // console.log(`🚀 Starting upload for ${filesToUpload.length} files`);
       
       // Update all files to uploading status
       filesToUpload.forEach(file => {
@@ -124,20 +124,20 @@ export default function FileUpload({
       
       // Add all files under the same 'files' key (FastAPI expects List[UploadFile])
       filesToUpload.forEach((file, index) => {
-        console.log(`📎 Adding file ${index + 1}: ${file.name} (${file.size} bytes)`);
+        // console.log(`📎 Adding file ${index + 1}: ${file.name} (${file.size} bytes)`);
         formData.append('files', file);
       });
       
       // No metadata needed - backend extracts everything from PDF
 
       // Debug FormData contents
-      console.log('📤 FormData contents:');
+      // console.log('📤 FormData contents:');
       const entries = Array.from(formData.entries());
       entries.forEach(([key, value]) => {
         if (value instanceof File) {
-          console.log(`  ${key}: File(${value.name}, ${value.size} bytes, ${value.type})`);
+          // console.log(`  ${key}: File(${value.name}, ${value.size} bytes, ${value.type})`);
         } else {
-          console.log(`  ${key}: ${value}`);
+          // console.log(`  ${key}: ${value}`);
         }
       });
 
@@ -159,7 +159,7 @@ export default function FileUpload({
         },
       });
 
-      console.log('✅ Upload response received:', response.data);
+      // console.log('✅ Upload response received:', response.data);
 
       if (!response.data.success) {
         throw new Error(response.data.message || 'Upload failed');
@@ -170,7 +170,7 @@ export default function FileUpload({
         response.data.uploads.forEach((uploadResponse, index) => {
           const file = filesToUpload[index];
           if (file) {
-            console.log(`✅ File ${file.name} uploaded successfully with ID: ${uploadResponse.upload_id}`);
+            // console.log(`✅ File ${file.name} uploaded successfully with ID: ${uploadResponse.upload_id}`);
             // Update status to processing
             updateFileProgress(file, { 
               status: 'processing', 

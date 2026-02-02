@@ -91,11 +91,11 @@ function DashboardContent() {
       const queryString = params.toString();
       const url = `${API_BASE_URL}/api/v1/meeting-tracker/meetings${queryString ? `?${queryString}` : ''}`;
 
-      console.log('🔍 [DASHBOARD] Fetching meetings:', {
-        teamFilter,
-        url,
-        queryString
-      });
+      // console.log('🔍 [DASHBOARD] Fetching meetings:', {
+      //   teamFilter,
+      //   url,
+      //   queryString
+      // });
 
       // Fetch meetings
       const response = await fetch(url, {
@@ -108,12 +108,12 @@ function DashboardContent() {
       if (response.ok) {
         const data = await response.json();
         const meetingsList = data.meetings || [];
-        console.log('🔍 [DASHBOARD] Received data:', {
-          teamFilter,
-          count: meetingsList.length,
-          firstMeetingUser: meetingsList[0]?.user_id,
-          response: data
-        });
+        // console.log('🔍 [DASHBOARD] Received data:', {
+          // teamFilter,
+          // count: meetingsList.length,
+          // firstMeetingUser: meetingsList[0]?.user_id,
+          // response: data
+        // });
         setMeetings(meetingsList);
       }
     } catch (error) {
@@ -130,10 +130,10 @@ function DashboardContent() {
       const viewParam = searchParams.get('view');
 
       if (viewParam) {
-        console.log('🔍 [DASHBOARD] Initial mount - clearing URL param to match default "me" state');
+        // console.log('🔍 [DASHBOARD] Initial mount - clearing URL param to match default "me" state');
         router.replace('/meeting-tracker/dashboard', { scroll: false });
       } else {
-        console.log('🔍 [DASHBOARD] Initial mount - no URL param');
+        // console.log('🔍 [DASHBOARD] Initial mount - no URL param');
       }
     }
     // Note: We intentionally do NOT sync URL params to teamFilter state
@@ -142,7 +142,7 @@ function DashboardContent() {
   }, []);
 
   useEffect(() => {
-    console.log('🔍 [DASHBOARD] Fetching data for teamFilter:', teamFilter);
+    // console.log('🔍 [DASHBOARD] Fetching data for teamFilter:', teamFilter);
     fetchDashboardData();
   }, [fetchDashboardData]);
 
@@ -270,7 +270,7 @@ function DashboardContent() {
                    `subordinate_${teamFilter}`;
 
   // Debug log
-  console.log('🔍 [DASHBOARD] Render - teamFilter:', teamFilter, 'ViewContextBanner userId:', teamFilter !== 'me' && teamFilter !== 'team' ? teamFilter : null);
+  // console.log('🔍 [DASHBOARD] Render - teamFilter:', teamFilter, 'ViewContextBanner userId:', teamFilter !== 'me' && teamFilter !== 'team' ? teamFilter : null);
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">

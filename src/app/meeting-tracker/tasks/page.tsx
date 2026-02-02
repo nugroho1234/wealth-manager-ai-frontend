@@ -305,17 +305,17 @@ function TasksContent() {
       if (!res.ok) throw new Error('Failed to update task');
 
       const data = await res.json();
-      console.log('[TasksPage] Task update response:', data);
-      console.log('[TasksPage] xp_awarded object:', data.xp_awarded);
+      // console.log('[TasksPage] Task update response:', data);
+      // console.log('[TasksPage] xp_awarded object:', data.xp_awarded);
 
       // Trigger gamification widget refresh with updated stats
       // Check if xp_awarded exists and has the expected structure
       if (data.xp_awarded && data.xp_awarded.user_id) {
-        console.log('[TasksPage] XP awarded, passing stats to triggerRefresh:', data.xp_awarded);
+        // console.log('[TasksPage] XP awarded, passing stats to triggerRefresh:', data.xp_awarded);
         // Pass the updated stats directly to avoid extra API call
         triggerRefresh(data.xp_awarded);
       } else {
-        console.log('[TasksPage] No XP awarded, triggering refresh without stats');
+        // console.log('[TasksPage] No XP awarded, triggering refresh without stats');
         // No XP awarded, just trigger refresh (will fetch from API)
         triggerRefresh();
       }
@@ -357,7 +357,7 @@ function TasksContent() {
 
   const editTask = (task: Task) => {
     // TODO: Phase 6 - Implement edit modal
-    console.log('Edit task:', task);
+    // console.log('Edit task:', task);
   };
 
   const deleteTask = async (taskId: string) => {

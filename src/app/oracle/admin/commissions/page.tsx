@@ -91,13 +91,13 @@ function CommissionsContent() {
 
       if (response.ok) {
         const result = await response.json();
-        console.log('Optimized Products API response:', result); // Debug log
+        // console.log('Optimized Products API response:', result); // Debug log
         
         // Extract data from BaseResponse format
-        const insurancesData = result.success && result.data ? result.data : [];
+        // const insurancesData = result.success && result.data ? result.data : [];
         
         // Data already includes commission_count and role_commission - no additional processing needed!
-        setInsurances(insurancesData);
+        // setInsurances(insurancesData);
       } else {
         const errorResult = await response.text();
         console.error('Failed to fetch insurances:', {

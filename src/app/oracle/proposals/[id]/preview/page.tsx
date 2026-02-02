@@ -41,7 +41,7 @@ export default function ProposalPreviewPage() {
           // Special handling for Page 3 - check intelligent analysis status first
           if (pageNumber === 3) {
             try {
-              console.log('🤖 Checking intelligent analysis status for Page 3...');
+              // console.log('🤖 Checking intelligent analysis status for Page 3...');
               const statusResponse = await apiClient.get(`/api/v1/oracle/proposals/${proposalId}/intelligent-analysis-status`);
               const status = statusResponse.data?.data?.status;
 
@@ -90,7 +90,7 @@ export default function ProposalPreviewPage() {
                     </html>
                   `
                 });
-                console.log('⏳ Page 3 showing loading state (intelligent analysis pending)');
+                // console.log('⏳ Page 3 showing loading state (intelligent analysis pending)');
                 continue;
               }
             } catch (statusError) {
@@ -105,7 +105,7 @@ export default function ProposalPreviewPage() {
               title: pageNames[pageNumber - 1],
               content: response.data
             });
-            console.log(`✅ Successfully loaded ${pageNames[pageNumber - 1]}`);
+            // console.log(`✅ Successfully loaded ${pageNames[pageNumber - 1]}`);
           } else {
             // Fallback for missing page
             pages.push({
@@ -152,12 +152,12 @@ export default function ProposalPreviewPage() {
 
         // Check if user is authenticated before making API calls
         if (!user) {
-          console.log('❌ User not authenticated, redirecting to login');
+          // console.log('❌ User not authenticated, redirecting to login');
           router.push('/login');
           return;
         }
 
-        console.log('✅ User authenticated:', user.email);
+        // console.log('✅ User authenticated:', user.email);
 
         // Get proposal basic data
         const response = await apiClient.get(`/api/v1/oracle/proposals/${proposalId}`);
@@ -167,9 +167,9 @@ export default function ProposalPreviewPage() {
           setProposalData(data);
 
           // Fetch individual pages from backend
-          console.log('🔄 Fetching individual pages...');
+          // console.log('🔄 Fetching individual pages...');
           const individualPages = await fetchIndividualPages(proposalId as string);
-          console.log(`✅ Loaded ${individualPages.length} individual pages:`, individualPages.map(p => p.title));
+          // console.log(`✅ Loaded ${individualPages.length} individual pages:`, individualPages.map(p => p.title));
           setPages(individualPages);
         } else {
           toast.error('Failed to load proposal data');
@@ -210,7 +210,7 @@ export default function ProposalPreviewPage() {
 
           // If analysis completed and Page 3 currently shows loading, refresh it
           if (status === 'completed' && pages[2].content.includes('Analyzing Cash Surrender Values')) {
-            console.log('🎉 Intelligent analysis completed! Refreshing Page 3...');
+            // console.log('🎉 Intelligent analysis completed! Refreshing Page 3...');
 
             try {
               const page3Response = await apiClient.get(`/api/v1/oracle/proposals/${proposalId}/page/3`);
@@ -237,7 +237,7 @@ export default function ProposalPreviewPage() {
 
     // Start checking every 5 seconds if Page 3 is in loading state
     if (pages.length >= 3 && pages[2].content.includes('Analyzing Cash Surrender Values')) {
-      console.log('⏰ Starting intelligent analysis status checks...');
+      // console.log('⏰ Starting intelligent analysis status checks...');
       intervalId = setInterval(checkAndRefreshPage3, 5000);
     }
 

@@ -45,7 +45,7 @@ export default function TeamFilter({ value, onChange, className = '' }: TeamFilt
     try {
       const authTokens = localStorage.getItem('auth_tokens');
       if (!authTokens) {
-        console.log('[TeamFilter] No auth tokens found');
+        // console.log('[TeamFilter] No auth tokens found');
         setLoading(false);
         return;
       }
@@ -57,23 +57,23 @@ export default function TeamFilter({ value, onChange, className = '' }: TeamFilt
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      console.log('[TeamFilter] Hierarchy check response status:', hierarchyRes.status);
+      // console.log('[TeamFilter] Hierarchy check response status:', hierarchyRes.status);
 
       if (!hierarchyRes.ok) {
         const errorText = await hierarchyRes.text();
-        console.log('[TeamFilter] Hierarchy check failed:', errorText);
+        // console.log('[TeamFilter] Hierarchy check failed:', errorText);
         setLoading(false);
         return;
       }
 
       const hierarchyData = await hierarchyRes.json();
-      console.log('[TeamFilter] Hierarchy data:', hierarchyData);
+      // console.log('[TeamFilter] Hierarchy data:', hierarchyData);
 
       // Check if user is in hierarchy and is a leader
       const isInHierarchy = hierarchyData.is_in_hierarchy || false;
       const isUserLeader = hierarchyData.is_leader || false;
 
-      console.log('[TeamFilter] Is in hierarchy?', isInHierarchy, 'Is leader?', isUserLeader);
+      // console.log('[TeamFilter] Is in hierarchy?', isInHierarchy, 'Is leader?', isUserLeader);
       setIsLeader(isUserLeader);
 
       // If user is a leader, fetch subordinates
@@ -82,11 +82,11 @@ export default function TeamFilter({ value, onChange, className = '' }: TeamFilt
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        console.log('[TeamFilter] Subordinates response status:', subRes.status);
+        // console.log('[TeamFilter] Subordinates response status:', subRes.status);
 
         if (subRes.ok) {
           const subData = await subRes.json();
-          console.log('[TeamFilter] Subordinates data:', subData);
+          // console.log('[TeamFilter] Subordinates data:', subData);
           // The response structure is { subordinates: [...], total_count: N }
           setSubordinates(subData.subordinates || []);
         }

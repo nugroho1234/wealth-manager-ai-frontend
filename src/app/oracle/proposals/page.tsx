@@ -50,11 +50,11 @@ function ProposalsContent() {
       // Handle different error cases
       if (error.status_code === 401) {
         // Authentication error - don't show error toast, just set empty proposals
-        console.log('Authentication error when loading proposals:', error.status_code);
+        // console.log('Authentication error when loading proposals:', error.status_code);
         setProposals([]);
       } else if (error.status_code === 404) {
         // No proposals found - this is normal, don't show error
-        console.log('No proposals found for user');
+        // console.log('No proposals found for user');
         setProposals([]);
       } else {
         // Only show error toast for actual server errors (500, etc.)

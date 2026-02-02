@@ -28,14 +28,14 @@ export default function GamificationSidebarWidget() {
   const { refreshTrigger, latestStats } = useGamification();
 
   useEffect(() => {
-    console.log('[GamificationSidebarWidget] useEffect triggered. refreshTrigger:', refreshTrigger, 'latestStats:', latestStats);
+    // console.log('[GamificationSidebarWidget] useEffect triggered. refreshTrigger:', refreshTrigger, 'latestStats:', latestStats);
     // If we have latestStats from context, use them immediately (no API call)
     if (latestStats) {
-      console.log('[GamificationSidebarWidget] Using latestStats from context:', latestStats);
+      // console.log('[GamificationSidebarWidget] Using latestStats from context:', latestStats);
       setStats(latestStats);
       setLoading(false);
     } else {
-      console.log('[GamificationSidebarWidget] No latestStats, fetching from API');
+      // console.log('[GamificationSidebarWidget] No latestStats, fetching from API');
       // Otherwise fetch from API
       fetchGamificationStats();
     }

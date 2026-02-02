@@ -227,12 +227,12 @@ function ProductsContent() {
                 setSearchProgress({ current: data.current, total: data.total });
               } else if (data.type === 'result') {
                 // Add result immediately
-                console.log('🔍 DEBUG: Received result data:', {
-                  insurance_name: data.data.insurance_name,
-                  is_summary_based: data.data.is_summary_based,
-                  pdf_url: data.data.pdf_url,
-                  has_pdf_url: !!data.data.pdf_url
-                });
+                // console.log('🔍 DEBUG: Received result data:', {
+                  // insurance_name: data.data.insurance_name,
+                  // is_summary_based: data.data.is_summary_based,
+                  // pdf_url: data.data.pdf_url,
+                  // has_pdf_url: !!data.data.pdf_url
+                // });
                 setAiResults(prev => [...prev, data.data]);
                 setPendingResults(prev => Math.max(0, prev - 1));
                 totalResults++;
@@ -338,7 +338,7 @@ function ProductsContent() {
 
     if (existingSession) {
       // Session already exists - navigate directly (even if we have 5 sessions)
-      console.log('✅ Existing session found for product:', product.insurance_name);
+      // console.log('✅ Existing session found for product:', product.insurance_name);
       router.push(`/oracle/chat?product=${product.insurance_id}`);
       return;
     }
@@ -346,12 +346,12 @@ function ProductsContent() {
     // No existing session - check if we're at the limit
     if (sessions.length >= 5) {
       // Show archive modal to make room for new session
-      console.log('⚠️ No existing session, and at 5 session limit. Showing archive modal.');
+      // console.log('⚠️ No existing session, and at 5 session limit. Showing archive modal.');
       setProductToChat(product);
       setShowArchiveModal(true);
     } else {
       // Navigate directly to create new session
-      console.log('✅ No existing session, but have room. Creating new session.');
+      // console.log('✅ No existing session, but have room. Creating new session.');
       router.push(`/oracle/chat?product=${product.insurance_id}`);
     }
   };
@@ -392,7 +392,7 @@ function ProductsContent() {
 
   const handleViewDocument = (product: Product) => {
     if (!product.pdf_url) {
-      console.log('No PDF document available for:', product.insurance_name);
+      // console.log('No PDF document available for:', product.insurance_name);
       return;
     }
     

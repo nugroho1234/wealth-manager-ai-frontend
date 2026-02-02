@@ -132,7 +132,7 @@ function FormContent() {
         }
       } catch (reportError) {
         // No existing report, that's fine
-        console.log('No existing report found');
+        // console.log('No existing report found');
       }
     } catch (error) {
       console.error('Error fetching data:', error);

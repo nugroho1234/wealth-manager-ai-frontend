@@ -166,7 +166,7 @@ function CompareContent() {
                   }
                 } catch (termError) {
                   // This term doesn't exist for this product, continue to next
-                  console.log(`Term "${term}" not found for product ${id}`);
+                  // console.log(`Term "${term}" not found for product ${id}`);
                 }
               }
               
@@ -376,10 +376,10 @@ function CompareContent() {
           windowHeight: clonedElement.scrollHeight
         });
 
-        console.log('Canvas created:', {
-          width: canvas.width,
-          height: canvas.height
-        });
+        // console.log('Canvas created:', {
+          // width: canvas.width,
+          // height: canvas.height
+        // });
 
         if (canvas.width === 0 || canvas.height === 0) {
           throw new Error('Canvas has no content');

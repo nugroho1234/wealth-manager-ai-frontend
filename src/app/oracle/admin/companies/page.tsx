@@ -137,11 +137,11 @@ function CompanyManagementContent() {
       }
 
       // Upload logo if provided
-      console.log('🔍 Debug - Logo upload check:', {
-        hasLogoFile: !!logoFile,
-        responseStructure: Object.keys(response || {}),
-        response: response
-      });
+      // console.log('🔍 Debug - Logo upload check:', {
+      //   hasLogoFile: !!logoFile,
+      //   responseStructure: Object.keys(response || {}),
+      //   response: response
+      // });
       
       if (logoFile) {
         // Handle different response structures
@@ -158,7 +158,7 @@ function CompanyManagementContent() {
         }
 
         if (companyId) {
-          console.log('🚀 Starting logo upload for company:', companyId);
+          // console.log('🚀 Starting logo upload for company:', companyId);
           const logoUrl = await handleLogoUpload(companyId);
           if (logoUrl) {
             notifySuccess('Logo Upload', 'Logo uploaded successfully');
@@ -234,16 +234,16 @@ function CompanyManagementContent() {
 
   const handleLogoUpload = async (companyId: string) => {
     if (!logoFile) {
-      console.log('❌ No logo file to upload');
+      // console.log('❌ No logo file to upload');
       return null;
     }
 
-    console.log('📤 Starting logo upload:', {
-      companyId,
-      fileName: logoFile.name,
-      fileSize: logoFile.size,
-      fileType: logoFile.type
-    });
+    // console.log('📤 Starting logo upload:', {
+      // companyId,
+      // fileName: logoFile.name,
+      // fileSize: logoFile.size,
+      // fileType: logoFile.type
+    // });
 
     try {
       setIsUploadingLogo(true);
@@ -251,7 +251,7 @@ function CompanyManagementContent() {
       const formData = new FormData();
       formData.append('logo_file', logoFile);
 
-      console.log('📡 Sending logo upload request...');
+      // console.log('📡 Sending logo upload request...');
       const response = await apiClient.post(
         `/api/v1/oracle/companies/${companyId}/upload-logo`,
         formData,
@@ -262,7 +262,7 @@ function CompanyManagementContent() {
         }
       );
 
-      console.log('✅ Logo upload response:', response);
+      // console.log('✅ Logo upload response:', response);
       return response.logo_url;
     } catch (error: any) {
       console.error('❌ Logo upload error:', error);

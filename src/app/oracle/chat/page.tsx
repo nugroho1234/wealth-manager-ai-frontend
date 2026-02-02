@@ -9,6 +9,7 @@ import Sidebar from '@/components/Sidebar';
 import { apiClient } from '@/lib/api';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import PageBadge from '@/components/PageBadge';
 
 interface Product {
   insurance_id: string;
@@ -138,10 +139,10 @@ function ChatContent() {
     if (productId && products.length > 0 && !selectedProduct) {
       const product = products.find(p => p.insurance_id === productId);
       if (product) {
-        console.log('🔗 Product from URL:', product);
+        // console.log('🔗 Product from URL:', product);
         // Call handleProductSelect and clean URL after it completes
         handleProductSelect(product).then(() => {
-          console.log('✅ Product selection completed, clearing URL parameter');
+          // console.log('✅ Product selection completed, clearing URL parameter');
           router.replace('/chat', { scroll: false });
         });
       }
@@ -175,7 +176,7 @@ function ChatContent() {
 
     const handleClickOutside = (event: MouseEvent) => {
       if (productSelectorRef.current && !productSelectorRef.current.contains(event.target as Node)) {
-        console.log('🔴 Click outside detected, closing product selector');
+        // console.log('🔴 Click outside detected, closing product selector');
         setShowProductSelector(false);
       }
     };
@@ -194,7 +195,7 @@ function ChatContent() {
 
     const handleClickOutside = (event: MouseEvent) => {
       if (sessionActionsRef.current && !sessionActionsRef.current.contains(event.target as Node)) {
-        console.log('🔴 Click outside detected, closing session actions');
+        // console.log('🔴 Click outside detected, closing session actions');
         setShowSessionActions(null);
       }
     };
@@ -223,8 +224,8 @@ function ChatContent() {
       }>('/api/v1/oracle/products?limit=100'); // Fetch products for chat selector (max allowed)
 
       const productList = response.data.data.products || [];
-      console.log('📦 Products loaded:', productList.length, 'products');
-      console.log('📦 First product:', productList[0]);
+      // console.log('📦 Products loaded:', productList.length, 'products');
+      // console.log('📦 First product:', productList[0]);
       setProducts(productList);
 
     } catch (error: any) {
@@ -240,8 +241,8 @@ function ChatContent() {
   const fetchSessions = async () => {
     try {
       setIsLoadingSessions(true);
-      console.log('Current user:', user);
-      console.log('Auth headers:', apiClient.defaults.headers.common['Authorization']);
+      // console.log('Current user:', user);
+      // console.log('Auth headers:', apiClient.defaults.headers.common['Authorization']);
 
       const response = await apiClient.get<ListSessionsResponse>('/api/v1/oracle/chat/sessions', {
         params: {
@@ -299,7 +300,7 @@ function ChatContent() {
   
   const fetchMessages = async (sessionId: string) => {
     try {
-      console.log('🔄 fetchMessages called for session:', sessionId);
+      // console.log('🔄 fetchMessages called for session:', sessionId);
       setIsLoadingMessages(true);
       
       const response = await apiClient.get<GetMessagesResponse>(
@@ -313,7 +314,7 @@ function ChatContent() {
       );
       
       if (response.data.success) {
-        console.log('✅ Messages loaded:', response.data.messages.length, 'messages');
+        // console.log('✅ Messages loaded:', response.data.messages.length, 'messages');
         setMessages(response.data.messages);
       }
       
@@ -333,13 +334,13 @@ function ChatContent() {
 
   const handleProductSelect = async (product: Product) => {
     try {
-      console.log('🎯 Product selected:', product);
+      // console.log('🎯 Product selected:', product);
       setSelectedProduct(product);
       setShowProductSelector(false);
       setSearchQuery('');
       
       // First, get fresh sessions data directly from API
-      console.log('🔄 Product Select: Fetching fresh sessions from API...');
+      // console.log('🔄 Product Select: Fetching fresh sessions from API...');
       const response = await apiClient.get<ListSessionsResponse>('/api/v1/oracle/chat/sessions', {
         params: {
           status: 'active',
@@ -351,13 +352,13 @@ function ChatContent() {
       
       if (response.data.success) {
         const freshSessions = response.data.sessions;
-        console.log('🔄 Fresh sessions loaded:', freshSessions.length);
+        // console.log('🔄 Fresh sessions loaded:', freshSessions.length);
         
         // Check if there's already an active session for this insurance product
         const existingSession = freshSessions.find(s => s.insurance_id === product.insurance_id);
         
         if (existingSession) {
-          console.log('📋 Product Select: Found existing session in fresh data:', existingSession);
+          // console.log('📋 Product Select: Found existing session in fresh data:', existingSession);
           // Update local sessions state and switch to existing session
           setSessions(freshSessions);
           setCurrentSession(existingSession);
@@ -366,7 +367,7 @@ function ChatContent() {
         }
       }
       
-      console.log('📞 Product Select: No existing session found, creating new session for insurance_id:', product.insurance_id);
+      // console.log('📞 Product Select: No existing session found, creating new session for insurance_id:', product.insurance_id);
       // Create a new chat session for this product
       await createNewSession(product.insurance_id);
       
@@ -386,49 +387,49 @@ function ChatContent() {
     };
 
     try {
-      console.log('🚀 createNewSession called with:', { insuranceId, firstMessage, currentSessionsCount: sessions.length });
+      // console.log('🚀 createNewSession called with:', { insuranceId, firstMessage, currentSessionsCount: sessions.length });
 
       // Check if we're at the session limit (5 max)
       if (sessions.length >= 5) {
-        console.log('⚠️ Session limit reached - showing archive modal');
+        // console.log('⚠️ Session limit reached - showing archive modal');
         setPendingProductId(insuranceId);
         setShowArchiveModal(true);
         return;
       }
 
-      console.log('📡 Making API request to create session...');
-      console.log('📋 Request payload:', requestPayload);
+      // console.log('📡 Making API request to create session...');
+      // console.log('📋 Request payload:', requestPayload);
       const response = await apiClient.post<CreateSessionResponse>('/api/v1/oracle/chat/sessions', requestPayload);
       
-      console.log('📥 API response received:', response);
-      console.log('📥 Response data:', response.data);
+      // console.log('📥 API response received:', response);
+      // console.log('📥 Response data:', response.data);
       
       if (response.data.success) {
         const newSession = response.data.session;
-        console.log('✅ Session created successfully:', newSession);
+        // console.log('✅ Session created successfully:', newSession);
         
         // Update sessions list
         setSessions(prev => {
           const updated = [newSession, ...prev];
-          console.log('📝 Updated sessions list:', updated);
+          // console.log('📝 Updated sessions list:', updated);
           return updated;
         });
         setCurrentSession(newSession);
-        console.log('🎯 Set current session:', newSession);
+        // console.log('🎯 Set current session:', newSession);
         
         // If there was a first message, add it to messages
         if (response.data.first_message) {
           setMessages([response.data.first_message]);
-          console.log('💬 Set first message:', response.data.first_message);
+          // console.log('💬 Set first message:', response.data.first_message);
         } else {
           setMessages([]);
-          console.log('💬 No first message, cleared messages');
+          // console.log('💬 No first message, cleared messages');
         }
         
         notifySuccess('Session Created', `Started new chat: ${newSession.session_name}`);
-        console.log('🎉 Session creation completed successfully');
+        // console.log('🎉 Session creation completed successfully');
       } else {
-        console.log('❌ Session creation failed - success: false');
+        // console.log('❌ Session creation failed - success: false');
       }
       
     } catch (error: any) {
@@ -468,20 +469,20 @@ function ChatContent() {
   const handleSessionSelect = async (session: ChatSessionWithDetails) => {
     if (currentSession?.session_id === session.session_id) return;
 
-    console.log('🔍 Session Select - Session clicked:', session.session_name);
-    console.log('🔍 Session Select - Looking for insurance_id:', session.insurance_id);
-    console.log('🔍 Session Select - Products available:', products.length);
-    console.log('🔍 Session Select - Products array:', products.map(p => ({ id: p.insurance_id, name: p.insurance_name })));
+    // console.log('🔍 Session Select - Session clicked:', session.session_name);
+    // console.log('🔍 Session Select - Looking for insurance_id:', session.insurance_id);
+    // console.log('🔍 Session Select - Products available:', products.length);
+    // console.log('🔍 Session Select - Products array:', products.map(p => ({ id: p.insurance_id, name: p.insurance_name })));
 
     setCurrentSession(session);
 
     // Find the associated product
     const associatedProduct = products.find(p => p.insurance_id === session.insurance_id);
-    console.log('🔍 Session Select - Found product:', associatedProduct ? associatedProduct.insurance_name : 'NOT FOUND');
+    // console.log('🔍 Session Select - Found product:', associatedProduct ? associatedProduct.insurance_name : 'NOT FOUND');
 
     if (associatedProduct) {
       setSelectedProduct(associatedProduct);
-      console.log('✅ Session Select - Product set successfully:', associatedProduct.insurance_name);
+      // console.log('✅ Session Select - Product set successfully:', associatedProduct.insurance_name);
     } else {
       console.warn('⚠️ Session Select - No matching product found for insurance_id:', session.insurance_id);
     }
@@ -510,25 +511,16 @@ function ChatContent() {
       );
       
       if (response.data.success) {
-        console.log('💬 Message sent successfully, updating UI...');
-        console.log('📥 User message:', response.data.user_message);
-        console.log('🤖 Assistant message:', response.data.assistant_message);
-        
         // Add both user and assistant messages
         const newMessages = [response.data.user_message];
         if (response.data.assistant_message) {
           newMessages.push(response.data.assistant_message);
         }
         
-        setMessages(prev => {
-          const updated = [...prev, ...newMessages];
-          console.log('💬 Updated messages array:', updated.length, 'total messages');
-          return updated;
-        });
+        setMessages(prev => [...prev, ...newMessages]);
         
         // Update current session with new message count (this should NOT trigger message refetch now)
         if (response.data.session) {
-          console.log('📊 Updating session metadata (should not refetch messages)');
           setCurrentSession(response.data.session);
           // Update session in the sessions list
           setSessions(prev => prev.map(s => 
@@ -668,7 +660,7 @@ function ChatContent() {
     
     try {
       // First, get fresh sessions data directly from API
-      console.log('🔄 New Chat: Fetching fresh sessions from API...');
+      // console.log('🔄 New Chat: Fetching fresh sessions from API...');
       const response = await apiClient.get<ListSessionsResponse>('/api/v1/oracle/chat/sessions', {
         params: {
           status: 'active',
@@ -680,13 +672,13 @@ function ChatContent() {
       
       if (response.data.success) {
         const freshSessions = response.data.sessions;
-        console.log('🔄 Fresh sessions loaded:', freshSessions.length);
+        // console.log('🔄 Fresh sessions loaded:', freshSessions.length);
         
         // Check if there's already an active session for the selected product
         const existingSession = freshSessions.find(s => s.insurance_id === selectedProduct.insurance_id);
         
         if (existingSession) {
-          console.log('📋 New Chat: Found existing session in fresh data:', existingSession);
+          // console.log('📋 New Chat: Found existing session in fresh data:', existingSession);
           // Update local sessions state and switch to existing session
           setSessions(freshSessions);
           setCurrentSession(existingSession);
@@ -695,7 +687,7 @@ function ChatContent() {
         }
       }
       
-      console.log('📞 New Chat: No existing session found, creating new one');
+      // console.log('📞 New Chat: No existing session found, creating new one');
       // Create new session
       await createNewSession(selectedProduct.insurance_id);
       
@@ -814,12 +806,12 @@ function ChatContent() {
                         🧪 Click Test (If you see this log, div clicks work)
                       </div>
                       {(() => {
-                        console.log('🔍 Rendering products list:', {
-                          isLoadingProducts,
-                          productsCount: products.length,
-                          filteredProductsCount: filteredProducts.length,
-                          showProductSelector
-                        });
+                        // console.log('🔍 Rendering products list:', {
+                          // isLoadingProducts,
+                          // productsCount: products.length,
+                          // filteredProductsCount: filteredProducts.length,
+                          // showProductSelector
+                        // });
                         return null;
                       })()}
                       {isLoadingProducts ? (
@@ -838,7 +830,7 @@ function ChatContent() {
                             onMouseDown={() => console.log('🖱️ Mouse down on:', product.insurance_name)}
                             onMouseUp={() => console.log('🖱️ Mouse up on:', product.insurance_name)}
                             onClick={(e) => {
-                              console.log('🖱️ Product button clicked!', product.insurance_name);
+                              // console.log('🖱️ Product button clicked!', product.insurance_name);
                               e.preventDefault();
                               e.stopPropagation();
                               handleProductSelect(product);
@@ -937,7 +929,7 @@ function ChatContent() {
                                 onMouseDown={() => console.log('🖱️ Rename button mouse down')}
                                 onMouseUp={() => console.log('🖱️ Rename button mouse up')}
                                 onClick={(e) => {
-                                  console.log('🖱️ Rename button clicked!');
+                                  // console.log('🖱️ Rename button clicked!');
                                   e.preventDefault();
                                   e.stopPropagation();
                                   setRenameSessionId(session.session_id);
@@ -956,7 +948,7 @@ function ChatContent() {
                                 onMouseDown={() => console.log('🖱️ Archive button mouse down')}
                                 onMouseUp={() => console.log('🖱️ Archive button mouse up')}
                                 onClick={(e) => {
-                                  console.log('🖱️ Archive button clicked!');
+                                  // console.log('🖱️ Archive button clicked!');
                                   e.preventDefault();
                                   e.stopPropagation();
                                   handleArchiveSession(session.session_id);
@@ -1125,26 +1117,69 @@ function ChatContent() {
                         }`}
                       >
                         {message.role === 'assistant' ? (
-                          <div className="text-sm prose prose-sm max-w-none prose-headings:text-gray-900 prose-p:text-gray-900 prose-strong:text-gray-900 prose-ul:text-gray-900 prose-ol:text-gray-900 prose-table:text-gray-900 prose-thead:text-gray-900 prose-tbody:text-gray-900 prose-tr:border-gray-200 prose-td:border-gray-200 prose-th:border-gray-200">
-                            <ReactMarkdown 
-                              remarkPlugins={[remarkGfm]}
-                              components={{
-                                table: ({node, ...props}) => (
-                                  <div className="overflow-x-auto my-4">
-                                    <table className="min-w-full border-collapse border border-gray-300" {...props} />
+                          <>
+                            <div className="text-sm prose prose-sm max-w-none prose-headings:text-gray-900 prose-p:text-gray-900 prose-strong:text-gray-900 prose-ul:text-gray-900 prose-ol:text-gray-900 prose-table:text-gray-900 prose-thead:text-gray-900 prose-tbody:text-gray-900 prose-tr:border-gray-200 prose-td:border-gray-200 prose-th:border-gray-200">
+                              <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                components={{
+                                  table: ({node, ...props}) => (
+                                    <div className="overflow-x-auto my-4">
+                                      <table className="min-w-full border-collapse border border-gray-300" {...props} />
+                                    </div>
+                                  ),
+                                  th: ({node, ...props}) => (
+                                    <th className="border border-gray-300 px-3 py-2 bg-gray-100 text-left font-semibold" {...props} />
+                                  ),
+                                  td: ({node, ...props}) => (
+                                    <td className="border border-gray-300 px-3 py-2" {...props} />
+                                  ),
+                                }}
+                              >
+                                {message.content}
+                              </ReactMarkdown>
+                            </div>
+
+                            {/* Citations Section */}
+                            {message.metadata && (
+                              <div className="mt-3 pt-3 border-t border-gray-200">
+                                {/* Show page references for Tier 1 and Tier 2 */}
+                                {message.metadata.source_tier === 'tier1_chunks' || message.metadata.source_tier === 'tier2_document' ? (
+                                  message.metadata.references && message.metadata.references.length > 0 && selectedProduct?.pdf_url ? (
+                                    <div className="space-y-2">
+                                      <p className="text-xs font-medium text-gray-600">Sources:</p>
+                                      <div className="flex flex-wrap gap-2">
+                                        {message.metadata.references.map((ref: any, idx: number) => (
+                                          <PageBadge
+                                            key={idx}
+                                            page={ref.page}
+                                            section={ref.section}
+                                            pdfUrl={selectedProduct.pdf_url}
+                                          />
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-start space-x-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
+                                      <span className="text-blue-600 mt-0.5 text-sm">📄</span>
+                                      <p className="text-xs text-blue-700 leading-relaxed">
+                                        Answer sourced from document analysis (specific page references unavailable)
+                                      </p>
+                                    </div>
+                                  )
+                                ) : null}
+
+                                {/* Show disclaimer for Tier 3 (General Knowledge) */}
+                                {message.metadata.source_tier === 'tier3_knowledge' && (
+                                  <div className="flex items-start space-x-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
+                                    <span className="text-gray-500 mt-0.5 text-sm">ℹ️</span>
+                                    <p className="text-xs text-gray-600 leading-relaxed">
+                                      No citations available - answer based on AI's general insurance knowledge
+                                    </p>
                                   </div>
-                                ),
-                                th: ({node, ...props}) => (
-                                  <th className="border border-gray-300 px-3 py-2 bg-gray-100 text-left font-semibold" {...props} />
-                                ),
-                                td: ({node, ...props}) => (
-                                  <td className="border border-gray-300 px-3 py-2" {...props} />
-                                ),
-                              }}
-                            >
-                              {message.content}
-                            </ReactMarkdown>
-                          </div>
+                                )}
+                              </div>
+                            )}
+                          </>
                         ) : (
                           <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                         )}

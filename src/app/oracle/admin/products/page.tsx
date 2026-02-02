@@ -93,7 +93,7 @@ function AdminProductsContent() {
       const productList = data.products || [];
       const total = data.total || 0;
 
-      console.log('Products fetched:', productList.length, 'Total:', total);
+      // console.log('Products fetched:', productList.length, 'Total:', total);
 
       setProducts(productList);
       setTotalCount(total);

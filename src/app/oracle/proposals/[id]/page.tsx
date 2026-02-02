@@ -207,9 +207,9 @@ function ProposalDetailContent() {
       const proposalData = response.data.data;
 
       // Debug: Log the illustrations data
-      console.log('📊 [PROPOSAL DATA] Loaded proposal:', proposalId);
-      console.log('📊 [ILLUSTRATIONS] Count:', proposalData.illustrations?.length || 0);
-      console.log('📊 [ILLUSTRATIONS] Data:', JSON.stringify(proposalData.illustrations, null, 2));
+      // console.log('📊 [PROPOSAL DATA] Loaded proposal:', proposalId);
+      // console.log('📊 [ILLUSTRATIONS] Count:', proposalData.illustrations?.length || 0);
+      // console.log('📊 [ILLUSTRATIONS] Data:', JSON.stringify(proposalData.illustrations, null, 2));
 
       setProposal(proposalData);
 
@@ -229,7 +229,7 @@ function ProposalDetailContent() {
       
       // Retry up to 3 times with exponential backoff for network issues
       if (currentRetry < 3 && (error.code === 'NETWORK_ERROR' || error.response?.status >= 500 || !error.response)) {
-        console.log(`Retrying proposal load... attempt ${currentRetry + 1}`);
+        // console.log(`Retrying proposal load... attempt ${currentRetry + 1}`);
         const delay = Math.pow(2, currentRetry) * 1000; // 1s, 2s, 4s delays
         setTimeout(() => {
           loadProposal(currentRetry + 1);
@@ -304,12 +304,12 @@ function ProposalDetailContent() {
   const debouncedSaveProposal = useCallback(
     debounce(async (field: string, value: string) => {
       try {
-        console.log('Auto-saving proposal field:', field, 'value:', value);
+        // console.log('Auto-saving proposal field:', field, 'value:', value);
         const updateData: any = {};
         updateData[field] = value;
 
         await apiClient.put(`/api/v1/oracle/proposals/${proposalId}`, updateData);
-        console.log('Proposal auto-saved successfully');
+        // console.log('Proposal auto-saved successfully');
       } catch (error: any) {
         console.error('Failed to auto-save proposal:', error);
         // Don't show error toast for auto-save failures to avoid annoying the user
@@ -340,18 +340,18 @@ function ProposalDetailContent() {
   // Get calculated age with memoization to ensure it updates when DOB changes
   const calculatedAge = useMemo(() => {
     const age = calculateAge(proposalData.clientDob);
-    console.log('Age calculation debug:', {
-      clientDob: proposalData.clientDob,
-      calculatedAge: age,
-      dateValid: !isNaN(new Date(proposalData.clientDob || '').getTime())
-    });
+    // console.log('Age calculation debug:', {
+    //   clientDob: proposalData.clientDob,
+    //   calculatedAge: age,
+    //   dateValid: !isNaN(new Date(proposalData.clientDob || '').getTime())
+    // });
     return age;
   }, [proposalData.clientDob]);
 
   // Detect the primary currency from insurance data - SIMPLIFIED
   const getInsuranceCurrency = useCallback(() => {
     if (!extractedData || extractedData.length === 0) {
-      console.log('🔄 EXCHANGE RATE DEBUG: No extracted data, defaulting to USD');
+      // console.log('🔄 EXCHANGE RATE DEBUG: No extracted data, defaulting to USD');
       return 'USD';
     }
 
@@ -359,24 +359,24 @@ function ProposalDetailContent() {
     for (const item of extractedData) {
       const currency = item.comprehensive_data?.currency || item.currency;
       if (currency) {
-        console.log('🔄 EXCHANGE RATE DEBUG: Found currency:', currency.toUpperCase());
+        // console.log('🔄 EXCHANGE RATE DEBUG: Found currency:', currency.toUpperCase());
         return currency.toUpperCase();
       }
     }
 
-    console.log('🔄 EXCHANGE RATE DEBUG: No currency found, defaulting to USD');
+    // console.log('🔄 EXCHANGE RATE DEBUG: No currency found, defaulting to USD');
     return 'USD';
   }, [extractedData]);
 
   // Fetch exchange rates
   const fetchExchangeRate = useCallback(async () => {
-    console.log('🔄 EXCHANGE RATE DEBUG: Refresh button clicked!');
-    console.log('🔄 EXCHANGE RATE DEBUG: Current extractedData:', extractedData);
+    // console.log('🔄 EXCHANGE RATE DEBUG: Refresh button clicked!');
+    // console.log('🔄 EXCHANGE RATE DEBUG: Current extractedData:', extractedData);
 
     setLoadingExchangeRate(true);
     try {
       const sourceCurrency = getInsuranceCurrency();
-      console.log('🔄 EXCHANGE RATE DEBUG: Using source currency:', sourceCurrency);
+      // console.log('🔄 EXCHANGE RATE DEBUG: Using source currency:', sourceCurrency);
 
       // Using ExchangeRate-API for live exchange rates
       //
@@ -401,39 +401,39 @@ function ProposalDetailContent() {
 
       if (!apiKey) {
         // Fallback to free tier without API key
-        console.log('🔄 EXCHANGE RATE DEBUG: Using free tier API');
+        // console.log('🔄 EXCHANGE RATE DEBUG: Using free tier API');
         const apiUrl = `https://api.exchangerate-api.com/v4/latest/${sourceCurrency}`;
-        console.log('🔄 EXCHANGE RATE DEBUG: Calling:', apiUrl);
+        // console.log('🔄 EXCHANGE RATE DEBUG: Calling:', apiUrl);
 
         const response = await fetch(apiUrl);
         const data = await response.json();
-        console.log('🔄 EXCHANGE RATE DEBUG: API Response:', data);
+        // console.log('🔄 EXCHANGE RATE DEBUG: API Response:', data);
 
         if (data.rates && data.rates.MYR) {
           const rate = data.rates.MYR;
           const formattedRate = `1 ${sourceCurrency} = ${rate.toFixed(2)} MYR`;
-          console.log('🔄 EXCHANGE RATE DEBUG: Setting exchange rate:', formattedRate);
+          // console.log('🔄 EXCHANGE RATE DEBUG: Setting exchange rate:', formattedRate);
           setExchangeRate(formattedRate);
         } else {
-          console.log('🔄 EXCHANGE RATE DEBUG: No MYR rate found in response');
+          // console.log('🔄 EXCHANGE RATE DEBUG: No MYR rate found in response');
         }
       } else {
         // With API key for higher limits
-        console.log('🔄 EXCHANGE RATE DEBUG: Using premium API with key');
+        // console.log('🔄 EXCHANGE RATE DEBUG: Using premium API with key');
         const apiUrl = `https://v6.exchangerate-api.com/v6/${apiKey}/latest/${sourceCurrency}`;
-        console.log('🔄 EXCHANGE RATE DEBUG: Calling:', apiUrl);
+        // console.log('🔄 EXCHANGE RATE DEBUG: Calling:', apiUrl);
 
         const response = await fetch(apiUrl);
         const data = await response.json();
-        console.log('🔄 EXCHANGE RATE DEBUG: API Response:', data);
+        // console.log('🔄 EXCHANGE RATE DEBUG: API Response:', data);
 
         if (data.conversion_rates && data.conversion_rates.MYR) {
           const rate = data.conversion_rates.MYR;
           const formattedRate = `1 ${sourceCurrency} = ${rate.toFixed(2)} MYR`;
-          console.log('🔄 EXCHANGE RATE DEBUG: Setting exchange rate:', formattedRate);
+          // console.log('🔄 EXCHANGE RATE DEBUG: Setting exchange rate:', formattedRate);
           setExchangeRate(formattedRate);
         } else {
-          console.log('🔄 EXCHANGE RATE DEBUG: No MYR rate found in response');
+          // console.log('🔄 EXCHANGE RATE DEBUG: No MYR rate found in response');
         }
       }
     } catch (error) {
@@ -447,10 +447,10 @@ function ProposalDetailContent() {
 
   // Load commission data for mapped insurances
   const loadCommissionData = useCallback(async (mappedInsurances: any[]) => {
-    console.log('🔍 COMMISSION DEBUG: Starting loadCommissionData with mappedInsurances:', mappedInsurances);
+    // console.log('🔍 COMMISSION DEBUG: Starting loadCommissionData with mappedInsurances:', mappedInsurances);
 
     if (!mappedInsurances.length) {
-      console.log('🔍 COMMISSION DEBUG: No mapped insurances, returning early');
+      // console.log('🔍 COMMISSION DEBUG: No mapped insurances, returning early');
       return;
     }
 
@@ -460,35 +460,35 @@ function ProposalDetailContent() {
         .filter(data => data.matched_insurance_id)
         .map(data => data.matched_insurance_id);
 
-      console.log('🔍 COMMISSION DEBUG: Extracted insurance IDs:', insuranceIds);
+      // console.log('🔍 COMMISSION DEBUG: Extracted insurance IDs:', insuranceIds);
 
       if (insuranceIds.length === 0) {
-        console.log('🔍 COMMISSION DEBUG: No valid insurance IDs found, returning early');
+        // console.log('🔍 COMMISSION DEBUG: No valid insurance IDs found, returning early');
         return;
       }
 
       // Get the appropriate role ID to display for this user
       const displayRoleId = getDisplayRoleId(user?.role || '');
-      console.log('🔍 COMMISSION DEBUG: User role:', user?.role, 'Display role ID:', displayRoleId);
+      // console.log('🔍 COMMISSION DEBUG: User role:', user?.role, 'Display role ID:', displayRoleId);
 
       // Build query string with all insurance IDs and role filter
       const queryParams = [
         ...insuranceIds.map(id => `insurance_ids=${id}`),
         `role_id=${displayRoleId}`
       ].join('&');
-      console.log('🔍 COMMISSION DEBUG: API call URL params:', queryParams);
+      // console.log('🔍 COMMISSION DEBUG: API call URL params:', queryParams);
 
       const response = await apiClient.get(`/api/v1/oracle/commissions/bulk?${queryParams}`);
-      console.log('🔍 COMMISSION DEBUG: API response received:', {
-        status: response.status,
-        dataLength: response.data?.length,
-        data: response.data
-      });
+      // console.log('🔍 COMMISSION DEBUG: API response received:', {
+        // status: response.status,
+        // dataLength: response.data?.length,
+        // data: response.data
+      // });
 
       // Transform response into a grouped lookup object
       const commissionLookup = {};
       response.data.forEach((commission: any) => {
-        console.log('🔍 COMMISSION DEBUG: Processing commission record:', commission);
+        // console.log('🔍 COMMISSION DEBUG: Processing commission record:', commission);
 
         const insuranceId = commission.insurance_id;
         const premiumTerm = commission.premium_term;
@@ -510,13 +510,13 @@ function ProposalDetailContent() {
         commissionLookup[insuranceId].commissions_by_term[premiumTerm].push(commission);
       });
 
-      console.log('🔍 COMMISSION DEBUG: Final commission lookup object:', commissionLookup);
+      // console.log('🔍 COMMISSION DEBUG: Final commission lookup object:', commissionLookup);
       setCommissionData(commissionLookup);
 
       // ✅ Track which insurance IDs were loaded to prevent redundant API calls
       const loadedIds = insuranceIds.sort().join(',');
       setLoadedCommissionIds(loadedIds);
-      console.log('🔍 COMMISSION DEBUG: Marked IDs as loaded:', loadedIds);
+      // console.log('🔍 COMMISSION DEBUG: Marked IDs as loaded:', loadedIds);
     } catch (error) {
       console.error('🔍 COMMISSION DEBUG: Error loading commission data:', error);
       console.error('🔍 COMMISSION DEBUG: Error details:', {
@@ -544,11 +544,11 @@ function ProposalDetailContent() {
   // Initialize proposal data from database when proposal is loaded
   useEffect(() => {
     if (proposal && !proposalData.clientDob) {
-      console.log('Initializing proposal data from database:', {
-        client_name: proposal.client_name,
-        client_dob: proposal.client_dob,
-        current_proposalData: proposalData
-      });
+      // console.log('Initializing proposal data from database:', {
+        // client_name: proposal.client_name,
+        // client_dob: proposal.client_dob,
+        // current_proposalData: proposalData
+      // });
 
       setProposalData(prev => ({
         ...prev,
@@ -560,21 +560,21 @@ function ProposalDetailContent() {
 
   // Auto-load extracted data when proposal has illustrations
   useEffect(() => {
-    console.log('🔍 Auto-load useEffect triggered:', {
-      proposalExists: !!proposal,
-      proposalKeys: proposal ? Object.keys(proposal) : [],
-      hasIllustrations: proposal?.illustrations ? proposal.illustrations.length > 0 : false,
-      illustrationsLength: proposal?.illustrations?.length,
-      extractedDataExists: !!extractedData,
-      extractedDataLength: extractedData?.length,
-      shouldAutoLoad: proposal && proposal.illustrations && proposal.illustrations.length > 0 && !extractedData
-    });
+    // console.log('🔍 Auto-load useEffect triggered:', {
+      // proposalExists: !!proposal,
+      // proposalKeys: proposal ? Object.keys(proposal) : [],
+      // hasIllustrations: proposal?.illustrations ? proposal.illustrations.length > 0 : false,
+      // illustrationsLength: proposal?.illustrations?.length,
+      // extractedDataExists: !!extractedData,
+      // extractedDataLength: extractedData?.length,
+      // shouldAutoLoad: proposal && proposal.illustrations && proposal.illustrations.length > 0 && !extractedData
+    // });
 
     if (proposal && proposal.illustrations && proposal.illustrations.length > 0 && !extractedData) {
-      console.log('🔄 Auto-loading extracted data for', proposal.illustrations.length, 'illustrations');
+      // console.log('🔄 Auto-loading extracted data for', proposal.illustrations.length, 'illustrations');
       handleManageIllustrations(true, true); // forceRefresh=true, autoLoad=true
     } else if (proposal && proposal.illustrations && proposal.illustrations.length > 0 && extractedData) {
-      console.log('✅ ExtractedData already exists, currency conversion available via manual refresh');
+      // console.log('✅ ExtractedData already exists, currency conversion available via manual refresh');
       // Currency conversion available via manual refresh button
     }
   }, [proposal, extractedData]); // Load when proposal is ready and extractedData is not yet loaded
@@ -602,12 +602,12 @@ function ProposalDetailContent() {
         // ✅ Only load if the set of insurance IDs has changed
         // This prevents redundant API calls during polling while still reloading when insurances change
         if (currentInsuranceIds && currentInsuranceIds !== loadedCommissionIds) {
-          console.log('🔍 COMMISSION DEBUG: Insurance IDs changed, loading commissions');
-          console.log('🔍 COMMISSION DEBUG: Previous IDs:', loadedCommissionIds);
-          console.log('🔍 COMMISSION DEBUG: Current IDs:', currentInsuranceIds);
+          // console.log('🔍 COMMISSION DEBUG: Insurance IDs changed, loading commissions');
+          // console.log('🔍 COMMISSION DEBUG: Previous IDs:', loadedCommissionIds);
+          // console.log('🔍 COMMISSION DEBUG: Current IDs:', currentInsuranceIds);
           loadCommissionData(extractedData);
         } else if (currentInsuranceIds === loadedCommissionIds) {
-          console.log('🔍 COMMISSION DEBUG: Insurance IDs unchanged, skipping commission load');
+          // console.log('🔍 COMMISSION DEBUG: Insurance IDs unchanged, skipping commission load');
         }
       }
     }
@@ -619,7 +619,7 @@ function ProposalDetailContent() {
 
     setGeneratingPage4(true);
     try {
-      console.log('🔥 Generating Page 4 content for insurance:', selectedHighlightedInsurance);
+      // console.log('🔥 Generating Page 4 content for insurance:', selectedHighlightedInsurance);
 
       // Call the new generate-page4-content API endpoint with insurance ID in request body
       const response = await apiClient.post(`/api/v1/oracle/proposals/${proposalId}/generate-page4-content`, {
@@ -629,7 +629,7 @@ function ProposalDetailContent() {
       });
 
       const content = response.data.data;
-      console.log('✅ Page 4 content generated:', content);
+      // console.log('✅ Page 4 content generated:', content);
 
       // Map API response to UI structure
       const uiContent = {
@@ -747,7 +747,7 @@ function ProposalDetailContent() {
   // Calculate currency conversions for all illustrations (uses target_currency)
   const calculateMYRValues = useCallback(async () => {
     if (!extractedData || extractedData.length === 0) {
-      console.log('❌ No extracted data for currency conversion');
+      // console.log('❌ No extracted data for currency conversion');
       toast.error('No data available for currency conversion');
       return;
     }
@@ -756,7 +756,7 @@ function ProposalDetailContent() {
 
     // Show unified notification for refresh
     toast.loading(`Refreshing all exchange rates and converting to ${targetCurrency}...`, { id: 'refresh-currencies' });
-    console.log(`💱 Calculating ${targetCurrency} values for`, extractedData.length, 'illustrations');
+    // console.log(`💱 Calculating ${targetCurrency} values for`, extractedData.length, 'illustrations');
     setLoadingConversions(true);
 
     try {
@@ -768,12 +768,12 @@ function ProposalDetailContent() {
       const annualPremium = item.comprehensive_data?.premium_per_year_original || item.premium_per_year;
       const totalPremium = item.comprehensive_data?.total_premium;
 
-      console.log(`💱 Processing ${item.original_filename}:`, {
-        currency,
-        annualPremium,
-        totalPremium,
-        targetCurrency
-      });
+      // console.log(`💱 Processing ${item.original_filename}:`, {
+        // currency,
+        // annualPremium,
+        // totalPremium,
+        // targetCurrency
+      // });
 
       // Convert annual premium
       let annualConversion = { success: false, formatted: `${targetCurrency} 0` };
@@ -801,7 +801,7 @@ function ProposalDetailContent() {
       };
     }
 
-      console.log('✅ Currency conversions calculated:', newConversions);
+      // console.log('✅ Currency conversions calculated:', newConversions);
       setMyConversions(newConversions);
 
       // Show success notification
@@ -822,12 +822,12 @@ function ProposalDetailContent() {
       const noPage2ContentGenerated = Object.keys(page2Content).length === 0;
 
       if (allMapped && noPage1ContentGenerated) {
-        console.log('All insurances mapped, auto-generating Page 1 content...');
+        // console.log('All insurances mapped, auto-generating Page 1 content...');
         generatePage1Content();
       }
 
       if (allMapped && noPage2ContentGenerated && !generatingPage1) {
-        console.log('All insurances mapped, auto-generating Page 2 content...');
+        // console.log('All insurances mapped, auto-generating Page 2 content...');
         // Add a small delay to avoid race conditions with Page 1 generation
         setTimeout(() => {
           generatePage2Content();
@@ -838,29 +838,29 @@ function ProposalDetailContent() {
 
   // Fetch currency conversions when extracted data is available
   useEffect(() => {
-    console.log('Currency conversion useEffect triggered:', {
-      extractedDataExists: !!extractedData,
-      extractedDataLength: extractedData?.length,
-      completedIllustrations: extractedData?.filter((data: any) => data.extraction_status === 'completed').length,
-      extractedData: extractedData
-    });
+    // console.log('Currency conversion useEffect triggered:', {
+      // extractedDataExists: !!extractedData,
+      // extractedDataLength: extractedData?.length,
+      // completedIllustrations: extractedData?.filter((data: any) => data.extraction_status === 'completed').length,
+      // extractedData: extractedData
+    // });
 
     if (extractedData && extractedData.length > 0) {
       const completedIllustrations = extractedData.filter((data: any) => data.extraction_status === 'completed');
-      console.log('Currency conversion check:', {
-        totalIllustrations: extractedData.length,
-        completedIllustrations: completedIllustrations.length,
-        statuses: extractedData.map((d: any) => d.extraction_status)
-      });
+      // console.log('Currency conversion check:', {
+      //   totalIllustrations: extractedData.length,
+      //   completedIllustrations: completedIllustrations.length,
+      //   statuses: extractedData.map((d: any) => d.extraction_status)
+      // });
 
       if (completedIllustrations.length > 0 && !hasCalculatedInitialRates) {
-        console.log('✅ First time illustrations completed - calculating initial currency conversion');
+        // console.log('✅ First time illustrations completed - calculating initial currency conversion');
         setHasCalculatedInitialRates(true);
         setTimeout(() => {
           calculateMYRValues();
         }, 1000);
       } else if (completedIllustrations.length > 0) {
-        console.log('💱 Currency conversion available via manual refresh button (already calculated once)');
+        // console.log('💱 Currency conversion available via manual refresh button (already calculated once)');
       }
     }
   }, [extractedData, hasCalculatedInitialRates, calculateMYRValues]); // Run when extracted data changes
@@ -883,7 +883,7 @@ function ProposalDetailContent() {
         // Auto-save to database
         apiClient.put(`/api/v1/oracle/proposals/${proposalId}`, updateData)
           .then(() => {
-            console.log('Auto-saved highlighted insurance:', updateData);
+            // console.log('Auto-saved highlighted insurance:', updateData);
           })
           .catch(error => {
             console.error('Failed to auto-save highlighted insurance:', error);
@@ -898,33 +898,33 @@ function ProposalDetailContent() {
 
   // Helper function for cash surrender values - INTELLIGENT AGES + VALUES
   const getCashSurrenderAgesAndValues = useCallback((data: any, originalData: any, isEditMode: boolean = false) => {
-    console.log('getCashSurrenderAgesAndValues called - DYNAMIC AGES MODE:', {
-      isEditMode,
-      hasLocalEditState: !!data.cash_surrender_values,
-      hasUserEditedData: !!data.user_edited_data?.cash_surrender_values,
-      proposalStatus: proposal?.status,
-      hasIntelligentAnalysis: !!proposal?.intelligent_cash_analysis
-    });
+    // console.log('getCashSurrenderAgesAndValues called - DYNAMIC AGES MODE:', {
+      // isEditMode,
+      // hasLocalEditState: !!data.cash_surrender_values,
+      // hasUserEditedData: !!data.user_edited_data?.cash_surrender_values,
+      // proposalStatus: proposal?.status,
+      // hasIntelligentAnalysis: !!proposal?.intelligent_cash_analysis
+    // });
 
     // Check if Phase 2 is processing (ready_for_age_analysis status but no intelligent_cash_analysis yet)
     if (proposal?.status === 'ready_for_age_analysis' && !proposal?.intelligent_cash_analysis && !isEditMode) {
-      console.log('🤖 PHASE 2 PROCESSING: Returning loading state for cash surrender values');
+      // console.log('🤖 PHASE 2 PROCESSING: Returning loading state for cash surrender values');
       return 'PHASE_2_LOADING'; // Special return value to indicate loading state
     }
 
     // Helper function to ensure data is a valid array
     const ensureArrayFormat = (rawData: any, source: string): any[] | null => {
-      console.log(`🔧 ensureArrayFormat - ${source}:`, rawData, typeof rawData);
+      // console.log(`🔧 ensureArrayFormat - ${source}:`, rawData, typeof rawData);
 
       // Special debug for string data to see the actual content
       if (typeof rawData === 'string') {
-        console.log(`🔍 STRING DEBUG - ${source} raw string:`, JSON.stringify(rawData));
-        console.log(`🔍 STRING DEBUG - ${source} string length:`, rawData.length);
-        console.log(`🔍 STRING DEBUG - ${source} first 50 chars:`, rawData.substring(0, 50));
+        // console.log(`🔍 STRING DEBUG - ${source} raw string:`, JSON.stringify(rawData));
+        // console.log(`🔍 STRING DEBUG - ${source} string length:`, rawData.length);
+        // console.log(`🔍 STRING DEBUG - ${source} first 50 chars:`, rawData.substring(0, 50));
       }
 
       if (Array.isArray(rawData)) {
-        console.log(`✅ ${source} is already an array`);
+        // console.log(`✅ ${source} is already an array`);
         return rawData;
       }
 
@@ -933,11 +933,11 @@ function ProposalDetailContent() {
           // First attempt: direct JSON parse
           const parsed = JSON.parse(rawData);
           if (Array.isArray(parsed)) {
-            console.log(`✅ ${source} parsed from string to array`);
+            // console.log(`✅ ${source} parsed from string to array`);
             return parsed;
           }
         } catch (e) {
-          console.log(`❌ ${source} failed direct JSON parse:`, e);
+          // console.log(`❌ ${source} failed direct JSON parse:`, e);
 
           // Second attempt: try to fix common JSON issues
           try {
@@ -954,11 +954,11 @@ function ProposalDetailContent() {
 
             const parsed = JSON.parse(fixedData);
             if (Array.isArray(parsed)) {
-              console.log(`✅ ${source} parsed from fixed string to array`);
+              // console.log(`✅ ${source} parsed from fixed string to array`);
               return parsed;
             }
           } catch (e2) {
-            console.log(`❌ ${source} failed fixed JSON parse:`, e2);
+            // console.log(`❌ ${source} failed fixed JSON parse:`, e2);
           }
 
           // Third attempt: Convert Python dictionary format to JSON
@@ -973,50 +973,50 @@ function ProposalDetailContent() {
               .replace(/False/g, 'false')  // Python False -> JSON false
               .replace(/None/g, 'null');  // Python None -> JSON null
 
-            console.log(`🔧 PYTHON->JSON conversion attempt for ${source}:`, pythonToJson);
+            // console.log(`🔧 PYTHON->JSON conversion attempt for ${source}:`, pythonToJson);
 
             const parsed = JSON.parse(pythonToJson);
             if (Array.isArray(parsed)) {
-              console.log(`✅ ${source} converted from Python format to JSON array`);
+              // console.log(`✅ ${source} converted from Python format to JSON array`);
               return parsed;
             }
           } catch (e3) {
-            console.log(`❌ ${source} failed Python->JSON conversion:`, e3);
+            // console.log(`❌ ${source} failed Python->JSON conversion:`, e3);
           }
         }
       }
 
-      console.log(`❌ ${source} is not array-compatible`);
+      // console.log(`❌ ${source} is not array-compatible`);
       return null;
     };
 
     // 1. EDIT MODE: Check for local edit state first (user is typing)
     if (isEditMode && data.cash_surrender_values) {
-      console.log('EDIT MODE: Checking local edit state:', data.cash_surrender_values);
+      // console.log('EDIT MODE: Checking local edit state:', data.cash_surrender_values);
       const localData = ensureArrayFormat(data.cash_surrender_values, 'local edit state');
       if (localData) {
         // Limit to 4 ages for proposal builder display
         const limitedData = localData.slice(0, 4);
-        console.log('EDIT MODE: Returning local edit state (limited to 4 ages):', limitedData);
+        // console.log('EDIT MODE: Returning local edit state (limited to 4 ages):', limitedData);
         return limitedData;
       }
     }
 
     // 2. Check for saved user edits (from database)
-    console.log('🔍 STEP 2 - Checking user_edited_data:', {
-      hasUserEditedData: !!data.user_edited_data,
-      userEditedDataKeys: data.user_edited_data ? Object.keys(data.user_edited_data) : 'none',
-      hasCashSurrenderValues: !!data.user_edited_data?.cash_surrender_values,
-      cashSurrenderValues: data.user_edited_data?.cash_surrender_values
-    });
+    // console.log('🔍 STEP 2 - Checking user_edited_data:', {
+      // hasUserEditedData: !!data.user_edited_data,
+      // userEditedDataKeys: data.user_edited_data ? Object.keys(data.user_edited_data) : 'none',
+      // hasCashSurrenderValues: !!data.user_edited_data?.cash_surrender_values,
+      // cashSurrenderValues: data.user_edited_data?.cash_surrender_values
+    // });
 
     if (data.user_edited_data?.cash_surrender_values) {
-      console.log('Checking saved user_edited_data cash surrender values:', data.user_edited_data.cash_surrender_values);
+      // console.log('Checking saved user_edited_data cash surrender values:', data.user_edited_data.cash_surrender_values);
       const userData = ensureArrayFormat(data.user_edited_data.cash_surrender_values, 'user_edited_data');
       if (userData) {
         // Limit to 4 ages for proposal builder display
         const limitedData = userData.slice(0, 4);
-        console.log('Returning user_edited_data cash surrender values (limited to 4 ages):', limitedData);
+        // console.log('Returning user_edited_data cash surrender values (limited to 4 ages):', limitedData);
         return limitedData;
       }
     }
@@ -1024,15 +1024,15 @@ function ProposalDetailContent() {
     // 3. Use intelligent ages with extracted comprehensive data
     if (proposal?.intelligent_cash_analysis?.selected_ages) {
       const intelligentAges = proposal.intelligent_cash_analysis.selected_ages;
-      console.log('🤖 Using intelligent selected ages:', intelligentAges);
+      // console.log('🤖 Using intelligent selected ages:', intelligentAges);
 
       // Get extracted cash values from comprehensive_data
       const extractedValues = originalData?.comprehensive_data?.cash_surrender_values;
-      console.log('📊 Extracted cash surrender values:', extractedValues);
+      // console.log('📊 Extracted cash surrender values:', extractedValues);
 
       if (extractedValues) {
         const extractedData = ensureArrayFormat(extractedValues, 'comprehensive_data');
-        console.log('📊 Parsed extracted data:', extractedData);
+        // console.log('📊 Parsed extracted data:', extractedData);
 
         if (extractedData && extractedData.length > 0) {
           // Map intelligent ages to their corresponding values
@@ -1044,39 +1044,39 @@ function ProposalDetailContent() {
             });
 
             if (match) {
-              console.log(`✅ Matched age ${selectedAge} with value:`, match.value);
+              // console.log(`✅ Matched age ${selectedAge} with value:`, match.value);
               return { age: selectedAge, value: match.value };
             } else {
-              console.log(`⚠️ No match found for age ${selectedAge}, using '-'`);
+              // console.log(`⚠️ No match found for age ${selectedAge}, using '-'`);
               return { age: selectedAge, value: '-' };
             }
           });
 
-          console.log('🎯 INTELLIGENT AGES + VALUES:', mappedValues);
+          // console.log('🎯 INTELLIGENT AGES + VALUES:', mappedValues);
           return mappedValues;
         }
       }
 
       // If we have intelligent ages but no values, show ages with '-'
-      console.log('🤖 Using intelligent ages without values (will show \'-\')');
+      // console.log('🤖 Using intelligent ages without values (will show \'-\')');
       return intelligentAges.map(age => ({ age, value: '-' }));
     }
 
     // 4. Fallback to extracted data without intelligent ages (legacy behavior)
     if (originalData?.comprehensive_data?.cash_surrender_values && originalData.comprehensive_data.cash_surrender_values.length > 0) {
       const extractedValues = originalData.comprehensive_data.cash_surrender_values;
-      console.log('Using extracted values with dynamic ages (no intelligent analysis):', extractedValues);
+      // console.log('Using extracted values with dynamic ages (no intelligent analysis):', extractedValues);
       const extractedData = ensureArrayFormat(extractedValues, 'comprehensive_data');
       if (extractedData && extractedData.length > 0) {
         // Limit to 4 ages for proposal builder display
         const limitedData = extractedData.slice(0, 4);
-        console.log('Returning comprehensive_data cash surrender values (limited to 4 ages):', limitedData);
+        // console.log('Returning comprehensive_data cash surrender values (limited to 4 ages):', limitedData);
         return limitedData;
       }
     }
 
     // 5. Final fallback: default ages if no data exists (start with common ages but user can edit)
-    console.log('No extracted data or intelligent analysis, using default ages 85, 90, 95, 100 (user can customize)');
+    // console.log('No extracted data or intelligent analysis, using default ages 85, 90, 95, 100 (user can customize)');
     const fallbackResult = [
       { age: 85, value: '-' },
       { age: 90, value: '-' },
@@ -1085,7 +1085,7 @@ function ProposalDetailContent() {
     ];
 
     // Final safety check - ensure we always return an array
-    console.log('PROTOTYPE: Final return value:', fallbackResult);
+    // console.log('PROTOTYPE: Final return value:', fallbackResult);
     return fallbackResult;
   }, [proposal?.status, proposal?.intelligent_cash_analysis]);
 
@@ -1095,7 +1095,7 @@ function ProposalDetailContent() {
     const getSharedClientDetails = () => {
       // CRITICAL FIX: Always use DOB-calculated age as the primary source
       const dobAge = calculatedAge !== null ? String(calculatedAge) : '';
-      console.log('👥 Using DOB-calculated age:', dobAge, 'from calculatedAge:', calculatedAge);
+      // console.log('👥 Using DOB-calculated age:', dobAge, 'from calculatedAge:', calculatedAge);
 
       if (!extractedData || extractedData.length === 0) {
         return {
@@ -1112,7 +1112,7 @@ function ProposalDetailContent() {
 
         // If we find saved client details anywhere, use them BUT always use DOB age
         if (savedGender !== 'Unknown' || savedSmokerStatus !== 'Unknown') {
-          console.log('👥 Using synchronized client details from illustration:', item.id, 'with DOB age:', dobAge);
+          // console.log('👥 Using synchronized client details from illustration:', item.id, 'with DOB age:', dobAge);
           return {
             client_age: dobAge || getFieldValue(currentData, 'client_age', ''),
             gender: savedGender || getFieldValue(currentData, 'gender', 'Unknown'),
@@ -1148,14 +1148,14 @@ function ProposalDetailContent() {
         // Initialize cash surrender values from saved data
         cash_surrender_values: (() => {
           const savedCashValues = getFieldValue(currentData, 'cash_surrender_values');
-          console.log('🔧 ENTER EDIT MODE - Loading cash surrender values:', {
-            illustrationId,
-            savedCashValues,
-            type: typeof savedCashValues,
-            isArray: Array.isArray(savedCashValues),
-            currentDataKeys: currentData ? Object.keys(currentData) : 'no currentData',
-            userEditedDataKeys: currentData?.user_edited_data ? Object.keys(currentData.user_edited_data) : 'no user_edited_data'
-          });
+          // console.log('🔧 ENTER EDIT MODE - Loading cash surrender values:', {
+            // illustrationId,
+            // savedCashValues,
+            // type: typeof savedCashValues,
+            // isArray: Array.isArray(savedCashValues),
+            // currentDataKeys: currentData ? Object.keys(currentData) : 'no currentData',
+            // userEditedDataKeys: currentData?.user_edited_data ? Object.keys(currentData.user_edited_data) : 'no user_edited_data'
+          // });
           return savedCashValues;
         })(),
         // Use synchronized client details
@@ -1198,7 +1198,7 @@ function ProposalDetailContent() {
       const deathBenefit = updateData.death_benefit;
 
       if (currency && (premiumPerYear || totalPremium || deathBenefit)) {
-        console.log('💱 Calculating conversions for user edited values...');
+        // console.log('💱 Calculating conversions for user edited values...');
 
         // Calculate conversions for edited values
         const conversions: any = {};
@@ -1233,7 +1233,7 @@ function ProposalDetailContent() {
 
         // Merge conversions into updateData
         Object.assign(updateData, conversions);
-        console.log('💱 Added converted values to save data:', conversions);
+        // console.log('💱 Added converted values to save data:', conversions);
       }
 
       // CRITICAL FIX: Exclude cash_surrender_values from save operation
@@ -1241,38 +1241,38 @@ function ProposalDetailContent() {
       const { cash_surrender_values, ...updateDataWithoutCashValues } = updateData;
 
       if (cash_surrender_values) {
-        console.log('⚠️ SAVE PROTECTION: Excluding cash_surrender_values from save operation to preserve LLM-selected ages');
+        // console.log('⚠️ SAVE PROTECTION: Excluding cash_surrender_values from save operation to preserve LLM-selected ages');
       }
 
       // Backend expects flat structure (NOT wrapped in user_edited_data)
       // The backend will handle saving to user_edited_data column
-      console.log('🔍 DEBUG: Sending update data to backend:', JSON.stringify(updateDataWithoutCashValues, null, 2));
-      console.log('💾 SAVE DEBUG - Keys being saved:', Object.keys(updateDataWithoutCashValues));
-      console.log('💾 SAVE DEBUG - Cash surrender values excluded:', !!cash_surrender_values);
+      // console.log('🔍 DEBUG: Sending update data to backend:', JSON.stringify(updateDataWithoutCashValues, null, 2));
+      // console.log('💾 SAVE DEBUG - Keys being saved:', Object.keys(updateDataWithoutCashValues));
+      // console.log('💾 SAVE DEBUG - Cash surrender values excluded:', !!cash_surrender_values);
 
       const response = await apiClient.put(`/api/v1/oracle/proposals/${proposalId}/illustrations/${illustrationId}`, updateDataWithoutCashValues);
-      console.log('🔍 DEBUG: Save response:', response.data);
+      // console.log('🔍 DEBUG: Save response:', response.data);
 
       // Check if client details were updated - if so, sync across all illustrations
       const clientDetailFields = ['client_age', 'gender', 'smoker_status'];
       const clientDetailsChanged = clientDetailFields.some(field => updateData.hasOwnProperty(field));
 
-      console.log('🔍 CLIENT SYNC DEBUG - Checking if client details changed:', {
-        clientDetailsChanged,
-        updateDataKeys: Object.keys(updateData),
-        clientDetailFields,
-        hasClientAge: updateData.hasOwnProperty('client_age'),
-        hasGender: updateData.hasOwnProperty('gender'),
-        hasSmokerStatus: updateData.hasOwnProperty('smoker_status'),
-        updateDataValues: {
-          client_age: updateData.client_age,
-          gender: updateData.gender,
-          smoker_status: updateData.smoker_status
-        }
-      });
+      // console.log('🔍 CLIENT SYNC DEBUG - Checking if client details changed:', {
+        // clientDetailsChanged,
+        // updateDataKeys: Object.keys(updateData),
+        // clientDetailFields,
+        // hasClientAge: updateData.hasOwnProperty('client_age'),
+        // hasGender: updateData.hasOwnProperty('gender'),
+        // hasSmokerStatus: updateData.hasOwnProperty('smoker_status'),
+        // updateDataValues: {
+          // client_age: updateData.client_age,
+          // gender: updateData.gender,
+          // smoker_status: updateData.smoker_status
+        // }
+      // });
 
       if (response.data.success && clientDetailsChanged) {
-        console.log('👥 Client details changed - syncing across all illustrations...');
+        // console.log('👥 Client details changed - syncing across all illustrations...');
 
         // Extract only the client detail updates
         const clientDetailsToSync = {};
@@ -1287,15 +1287,15 @@ function ProposalDetailContent() {
           .filter((data: any) => data.id !== illustrationId)
           .map((data: any) => data.id);
 
-        console.log('👥 CLIENT SYNC DEBUG - Syncing client details to illustrations:', otherIllustrationIds, 'with data:', clientDetailsToSync);
+        // console.log('👥 CLIENT SYNC DEBUG - Syncing client details to illustrations:', otherIllustrationIds, 'with data:', clientDetailsToSync);
 
         // Update all other illustrations with the same client details
         const syncPromises = otherIllustrationIds.map(async (otherIllustrationId: string) => {
           try {
             // Send flat structure - backend handles user_edited_data internally
-            console.log(`👥 CLIENT SYNC DEBUG - Sending sync request to illustration ${otherIllustrationId}:`, clientDetailsToSync);
+            // console.log(`👥 CLIENT SYNC DEBUG - Sending sync request to illustration ${otherIllustrationId}:`, clientDetailsToSync);
             const syncResponse = await apiClient.put(`/api/v1/oracle/proposals/${proposalId}/illustrations/${otherIllustrationId}`, clientDetailsToSync);
-            console.log(`✅ CLIENT SYNC DEBUG - Synced client details to illustration ${otherIllustrationId}, response:`, syncResponse.data);
+            // console.log(`✅ CLIENT SYNC DEBUG - Synced client details to illustration ${otherIllustrationId}, response:`, syncResponse.data);
           } catch (syncError) {
             console.error(`❌ CLIENT SYNC DEBUG - Failed to sync client details to illustration ${otherIllustrationId}:`, syncError);
             console.error('Error response:', syncError.response?.data);
@@ -1304,12 +1304,12 @@ function ProposalDetailContent() {
 
         // Wait for all sync operations to complete
         await Promise.all(syncPromises);
-        console.log('👥 CLIENT SYNC DEBUG - All sync operations completed, waiting for database to commit...');
+        // console.log('👥 CLIENT SYNC DEBUG - All sync operations completed, waiting for database to commit...');
 
         // Wait a bit for database to commit all changes
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        console.log('👥 CLIENT SYNC DEBUG - Database commit wait complete');
+        // console.log('👥 CLIENT SYNC DEBUG - Database commit wait complete');
 
         // Show success message for sync
         if (otherIllustrationIds.length > 0) {
@@ -1321,7 +1321,7 @@ function ProposalDetailContent() {
       const cashSurrenderValuesChanged = updateData.hasOwnProperty('cash_surrender_values');
 
       if (response.data.success && cashSurrenderValuesChanged) {
-        console.log('📊 Cash surrender value ages changed - syncing ages across all illustrations...');
+        // console.log('📊 Cash surrender value ages changed - syncing ages across all illustrations...');
 
         // Extract ages from the updated cash surrender values
         const updatedCashValues = updateData.cash_surrender_values;
@@ -1341,7 +1341,7 @@ function ProposalDetailContent() {
                 .filter((age: number | null) => age !== null && age >= 60 && age <= 120)
                 .sort((a: number, b: number) => a - b);
 
-              console.log('📊 Extracted ages for synchronization:', updatedAges);
+              // console.log('📊 Extracted ages for synchronization:', updatedAges);
             }
           } catch (error) {
             console.error('❌ Failed to extract ages from cash surrender values:', error);
@@ -1354,7 +1354,7 @@ function ProposalDetailContent() {
             .filter((data: any) => data.id !== illustrationId)
             .map((data: any) => data.id);
 
-          console.log('📊 Syncing ages to illustrations:', otherIllustrationIds, 'with ages:', updatedAges);
+          // console.log('📊 Syncing ages to illustrations:', otherIllustrationIds, 'with ages:', updatedAges);
 
           // Update all other illustrations with the same ages (but keep their individual values)
           const ageSyncPromises = otherIllustrationIds.map(async (otherIllustrationId: string) => {
@@ -1402,7 +1402,7 @@ function ProposalDetailContent() {
                 };
 
                 await apiClient.put(`/api/v1/oracle/proposals/${proposalId}/illustrations/${otherIllustrationId}`, wrappedAgeSync);
-                console.log(`✅ Synced ages to illustration ${otherIllustrationId}:`, syncedCashValues);
+                // console.log(`✅ Synced ages to illustration ${otherIllustrationId}:`, syncedCashValues);
               }
             } catch (syncError) {
               console.error(`❌ Failed to sync ages to illustration ${otherIllustrationId}:`, syncError);
@@ -1411,7 +1411,7 @@ function ProposalDetailContent() {
 
           // Wait for all age sync operations to complete
           await Promise.all(ageSyncPromises);
-          console.log('📊 Age synchronization completed');
+          // console.log('📊 Age synchronization completed');
 
           // Show success message for age sync
           if (otherIllustrationIds.length > 0) {
@@ -1431,10 +1431,10 @@ function ProposalDetailContent() {
 
         toast.success('Changes saved successfully!');
 
-        console.log('👥 CLIENT SYNC DEBUG - Reloading extracted data from database...');
+        // console.log('👥 CLIENT SYNC DEBUG - Reloading extracted data from database...');
         // Reload extracted data to get the updated values from the database
         await handleManageIllustrations(true);
-        console.log('👥 CLIENT SYNC DEBUG - Data reload complete. Check if UI updated with synced values.');
+        // console.log('👥 CLIENT SYNC DEBUG - Data reload complete. Check if UI updated with synced values.');
 
         // No need to recalculate conversions since we saved converted values
       }
@@ -1444,7 +1444,7 @@ function ProposalDetailContent() {
 
       // Handle 404 for illustrations - they might have been deleted
       if (error.response?.status === 404) {
-        console.log('Illustration not found - it may have been deleted');
+        // console.log('Illustration not found - it may have been deleted');
         toast.warning('Illustration was not found - it may have been deleted. Please refresh the page.');
         return;
       }
@@ -1485,7 +1485,7 @@ function ProposalDetailContent() {
 
       // Handle 409 Conflict - proposal might not exist, redirect to create new one
       if (error.response?.status === 409) {
-        console.log('Proposal conflict - redirecting to create new proposal');
+        // console.log('Proposal conflict - redirecting to create new proposal');
         toast.warning('Proposal state conflict. Redirecting to create a new proposal...');
         window.location.href = '/proposals?tab=create';
         return;
@@ -1525,12 +1525,12 @@ function ProposalDetailContent() {
       });
 
       if (mappedIllustrations.length === 0) {
-        console.log('❌ No mapped illustrations found. Available extractedData:', extractedData);
+        // console.log('❌ No mapped illustrations found. Available extractedData:', extractedData);
         toast.error('Please map at least one illustration to an insurance product');
         return;
       }
 
-      console.log('✅ Found mapped illustrations:', mappedIllustrations.length, mappedIllustrations);
+      // console.log('✅ Found mapped illustrations:', mappedIllustrations.length, mappedIllustrations);
 
       // Auto-save any pending changes before generating
       await handleSaveDraft();
@@ -1547,7 +1547,7 @@ function ProposalDetailContent() {
         generation_type: 'complete'
       };
 
-      console.log('Generating proposal with data:', generationData);
+      // console.log('Generating proposal with data:', generationData);
 
       // Call backend API to generate proposal
       const response = await apiClient.post(`/api/v1/oracle/proposals/${proposalId}/generate`, generationData);
@@ -1560,7 +1560,7 @@ function ProposalDetailContent() {
         window.open(previewUrl, '_blank');
 
         // Re-enable button after successful generation
-        console.log('✅ GENERATE BUTTON: Generation successful, re-enabling button');
+        // console.log('✅ GENERATE BUTTON: Generation successful, re-enabling button');
         setIsGenerating(false);
       } else {
         throw new Error(response.data.message || 'Failed to generate proposal');
@@ -1585,19 +1585,19 @@ function ProposalDetailContent() {
 
     // IMPORTANT: Never restart polling if we've already shown completion notification (use ref for synchronous check)
     if (hasShownCompletionRef.current) {
-      console.log('🛑 POLLING: Completion notification already shown, will not restart polling');
+      // console.log('🛑 POLLING: Completion notification already shown, will not restart polling');
       return false;
     }
 
     // Check if proposal is in processing state
     if (currentProposal.status === 'extracting') {
-      console.log('🔍 POLLING: Proposal status is extracting');
+      // console.log('🔍 POLLING: Proposal status is extracting');
       return true;
     }
 
     // Check if Phase 2 is processing (ready_for_age_analysis but no intelligent_cash_analysis yet)
     if (currentProposal.status === 'ready_for_age_analysis' && !currentProposal.intelligent_cash_analysis) {
-      console.log('🤖 POLLING: Phase 2 age analysis in progress');
+      // console.log('🤖 POLLING: Phase 2 age analysis in progress');
       return true;
     }
 
@@ -1607,7 +1607,7 @@ function ProposalDetailContent() {
     );
 
     if (hasProcessingIllustrations) {
-      console.log('🔍 POLLING: Found processing illustrations');
+      // console.log('🔍 POLLING: Found processing illustrations');
       return true;
     }
 
@@ -1618,19 +1618,19 @@ function ProposalDetailContent() {
       );
 
       if (hasCashProcessing) {
-        console.log('🔍 POLLING: Found cash extraction still processing');
+        // console.log('🔍 POLLING: Found cash extraction still processing');
         return true;
       }
     }
 
-    console.log('🔍 POLLING: No processing activities detected');
+    // console.log('🔍 POLLING: No processing activities detected');
     return false;
   }, []); // Ref doesn't need to be in dependencies
 
   // Targeted data refresh for polling
   const pollProcessingStatus = useCallback(async () => {
     try {
-      console.log('📡 POLLING: Checking for status updates...');
+      // console.log('📡 POLLING: Checking for status updates...');
       setPollingRetryCount(0); // Reset on successful attempt
 
       // 1. Check proposal status
@@ -1654,27 +1654,27 @@ function ProposalDetailContent() {
       }
       setLastPollTime(new Date());
 
-      console.log('✅ POLLING: Status updated successfully');
+      // console.log('✅ POLLING: Status updated successfully');
 
       // Check if we should stop polling
       if (!shouldPoll(updatedProposal, updatedExtractedData)) {
-        console.log('🛑 POLLING: Processing complete, stopping auto-polling');
+        // console.log('🛑 POLLING: Processing complete, stopping auto-polling');
 
         // Show completion notification only once using ref (synchronous check)
         if (!hasShownCompletionRef.current) {
-          console.log('🎉 POLLING: Showing completion notification for the first time');
+          // console.log('🎉 POLLING: Showing completion notification for the first time');
           hasShownCompletionRef.current = true; // Set ref immediately (synchronous)
           setHasShownCompletionNotification(true); // Update state for UI
           toast.success('🎉 Processing completed! All illustrations are ready.');
         } else {
-          console.log('⏭️ POLLING: Completion notification already shown, skipping toast');
+          // console.log('⏭️ POLLING: Completion notification already shown, skipping toast');
         }
 
         // Stop polling AFTER showing notification
         stopPolling();
 
         // Currency conversion available via manual refresh button
-        console.log('💱 POLLING: Processing complete, currency conversion available via manual refresh');
+        // console.log('💱 POLLING: Processing complete, currency conversion available via manual refresh');
       }
 
     } catch (error: any) {
@@ -1683,9 +1683,9 @@ function ProposalDetailContent() {
       // Handle polling errors with retry logic
       if (pollingRetryCount < 3) {
         setPollingRetryCount(prev => prev + 1);
-        console.log(`🔄 POLLING: Retrying... attempt ${pollingRetryCount + 1}/3`);
+        // console.log(`🔄 POLLING: Retrying... attempt ${pollingRetryCount + 1}/3`);
       } else {
-        console.log('🛑 POLLING: Max retries reached, stopping polling');
+        // console.log('🛑 POLLING: Max retries reached, stopping polling');
         stopPolling();
         toast.error('Auto-refresh failed. Please refresh manually if needed.');
       }
@@ -1698,11 +1698,11 @@ function ProposalDetailContent() {
 
     // Don't start polling if completion notification has been shown (use ref for synchronous check)
     if (hasShownCompletionRef.current) {
-      console.log('🛑 POLLING: Not starting - completion notification already shown');
+      // console.log('🛑 POLLING: Not starting - completion notification already shown');
       return;
     }
 
-    console.log('🚀 POLLING: Starting auto-status polling');
+    // console.log('🚀 POLLING: Starting auto-status polling');
     setIsPolling(true);
 
     // Initial immediate check
@@ -1717,7 +1717,7 @@ function ProposalDetailContent() {
 
   // Stop polling
   const stopPolling = useCallback(() => {
-    console.log('🛑 POLLING: Stopping auto-status polling');
+    // console.log('🛑 POLLING: Stopping auto-status polling');
 
     if (pollInterval) {
       clearInterval(pollInterval);
@@ -1732,10 +1732,10 @@ function ProposalDetailContent() {
   useEffect(() => {
     if (proposal && !isPolling && !hasShownCompletionNotification) {
       if (shouldPoll(proposal, extractedData)) {
-        console.log('🔄 POLLING: Auto-starting polling due to processing state');
+        // console.log('🔄 POLLING: Auto-starting polling due to processing state');
         startPolling();
       } else {
-        console.log('🔍 POLLING: No need to start polling - processing complete');
+        // console.log('🔍 POLLING: No need to start polling - processing complete');
       }
     }
   }, [proposal, extractedData, isPolling, shouldPoll, startPolling, hasShownCompletionNotification]);
@@ -1751,7 +1751,7 @@ function ProposalDetailContent() {
 
   // Manual refresh with polling restart
   const handleManualRefresh = useCallback(async () => {
-    console.log('🔄 MANUAL REFRESH: Force refreshing status');
+    // console.log('🔄 MANUAL REFRESH: Force refreshing status');
 
     // Stop current polling
     stopPolling();
@@ -1778,10 +1778,10 @@ function ProposalDetailContent() {
     // Restart polling only if processing is still active and we haven't shown completion notification
     setTimeout(() => {
       if (shouldPoll(proposal, extractedData) && !hasShownCompletionNotification) {
-        console.log('🔄 POLLING: Restarting polling after manual refresh');
+        // console.log('🔄 POLLING: Restarting polling after manual refresh');
         startPolling();
       } else {
-        console.log('🔍 POLLING: No need to restart polling after manual refresh - processing complete');
+        // console.log('🔍 POLLING: No need to restart polling after manual refresh - processing complete');
       }
     }, 1000);
 
@@ -1796,9 +1796,9 @@ function ProposalDetailContent() {
   useEffect(() => {
     if (!isGenerating) return;
 
-    console.log('⏱️ GENERATE BUTTON: Starting 3-minute safety timeout');
+    // console.log('⏱️ GENERATE BUTTON: Starting 3-minute safety timeout');
     const timeout = setTimeout(() => {
-      console.log('⏱️ GENERATE BUTTON: Safety timeout reached, re-enabling button');
+      // console.log('⏱️ GENERATE BUTTON: Safety timeout reached, re-enabling button');
       setIsGenerating(false);
       toast.warning('Generation took longer than expected. Button re-enabled. Please check proposal status.');
     }, 180000); // 3 minutes
@@ -1834,9 +1834,9 @@ function ProposalDetailContent() {
         formData.append('files', file);
       });
 
-      console.log('📤 [UPLOAD] Uploading', acceptedFiles.length, 'illustrations');
+      // console.log('📤 [UPLOAD] Uploading', acceptedFiles.length, 'illustrations');
       const uploadResponse = await apiClient.post(`/api/v1/oracle/proposals/${proposalId}/illustrations`, formData);
-      console.log('✅ [UPLOAD] Response:', uploadResponse.data);
+      // console.log('✅ [UPLOAD] Response:', uploadResponse.data);
 
       toast.success(`Successfully uploaded ${acceptedFiles.length} illustrations`);
 
@@ -1844,7 +1844,7 @@ function ProposalDetailContent() {
       await new Promise(resolve => setTimeout(resolve, 500));
 
       // Reload proposal data with cache busting
-      console.log('🔄 [RELOAD] Reloading proposal data...');
+      // console.log('🔄 [RELOAD] Reloading proposal data...');
       await loadProposal();
 
     } catch (error: any) {
@@ -1876,7 +1876,7 @@ function ProposalDetailContent() {
 
       // CRITICAL FIX: Sync client age from DOB to all illustrations after mapping
       if (calculatedAge !== null) {
-        console.log('🔗 Syncing DOB-calculated age after insurance assignment:', calculatedAge);
+        // console.log('🔗 Syncing DOB-calculated age after insurance assignment:', calculatedAge);
 
         // Update the newly assigned illustration with DOB age
         await apiClient.put(`/api/v1/oracle/proposals/${proposalId}/illustrations/${manualAssignment.illustrationId}`, {
@@ -1891,7 +1891,7 @@ function ProposalDetailContent() {
           .filter((data: any) => data.id !== manualAssignment.illustrationId)
           .map((data: any) => data.id);
 
-        console.log('🔗 Syncing DOB age to other illustrations:', otherIllustrationIds);
+        // console.log('🔗 Syncing DOB age to other illustrations:', otherIllustrationIds);
 
         const syncPromises = otherIllustrationIds.map(async (illustrationId: string) => {
           try {
@@ -1906,7 +1906,7 @@ function ProposalDetailContent() {
         });
 
         await Promise.all(syncPromises);
-        console.log('✅ Age synchronization completed after insurance assignment');
+        // console.log('✅ Age synchronization completed after insurance assignment');
       }
 
       toast.success('Insurance assigned successfully');
@@ -1955,15 +1955,15 @@ function ProposalDetailContent() {
 
   // Load extracted data
   const handleManageIllustrations = async (forceRefresh: boolean = false, autoLoad: boolean = false) => {
-    console.log('🔄 handleManageIllustrations called:', {
-      showExtractedData,
-      forceRefresh,
-      autoLoad,
-      action: showExtractedData && !forceRefresh ? 'HIDE' : 'LOAD_AND_SHOW'
-    });
+    // console.log('🔄 handleManageIllustrations called:', {
+      // showExtractedData,
+      // forceRefresh,
+      // autoLoad,
+      // action: showExtractedData && !forceRefresh ? 'HIDE' : 'LOAD_AND_SHOW'
+    // });
 
     if (showExtractedData && !forceRefresh) {
-      console.log('🔒 Hiding extracted data');
+      // console.log('🔒 Hiding extracted data');
       setShowExtractedData(false);
       return;
     }
@@ -1973,38 +1973,38 @@ function ProposalDetailContent() {
       // Add timestamp to prevent caching
       const timestamp = new Date().getTime();
       const response = await apiClient.get(`/api/v1/oracle/proposals/${proposalId}/illustrations/extracted-data?t=${timestamp}`);
-      console.log('API response:', response.data); // Debug log
+      // console.log('API response:', response.data); // Debug log
       // The API returns {success: true, data: [...]}
-      const data = response.data.data || response.data;
-      console.log('🔍 DEBUG: Extracted data array:', data);
+      // const data = response.data.data || response.data;
+      // console.log('🔍 DEBUG: Extracted data array:', data);
 
       // Debug: Check user_edited_data in the response
       data.forEach((item: any, index: number) => {
-        console.log(`🔍 DEBUG: Item ${index} user_edited_data:`, item.user_edited_data);
-        console.log(`🔍 DEBUG: Item ${index} comprehensive_data:`, item.comprehensive_data);
-        console.log(`🔍 DEBUG: Item ${index} getFieldValue('client_age'):`, getFieldValue(item, 'client_age'));
-        console.log(`🔍 DEBUG: Item ${index} getFieldValue('gender'):`, getFieldValue(item, 'gender'));
+        // console.log(`🔍 DEBUG: Item ${index} user_edited_data:`, item.user_edited_data);
+        // console.log(`🔍 DEBUG: Item ${index} comprehensive_data:`, item.comprehensive_data);
+        // console.log(`🔍 DEBUG: Item ${index} getFieldValue('client_age'):`, getFieldValue(item, 'client_age'));
+        // console.log(`🔍 DEBUG: Item ${index} getFieldValue('gender'):`, getFieldValue(item, 'gender'));
       });
       
       // Log each item to see the mapping status
       if (Array.isArray(data)) {
         data.forEach((item, index) => {
-          console.log(`Item ${index}:`, {
-            filename: item.original_filename,
-            matched_insurance_id: item.matched_insurance_id,
-            final_insurance_name: item.final_insurance_name,
-            extracted_name: item.comprehensive_data?.insurance_name || item.extracted_insurance_name
-          });
+          // console.log(`Item ${index}:`, {
+            // filename: item.original_filename,
+            // matched_insurance_id: item.matched_insurance_id,
+            // final_insurance_name: item.final_insurance_name,
+            // extracted_name: item.comprehensive_data?.insurance_name || item.extracted_insurance_name
+          // });
         });
       }
       
       setExtractedData(Array.isArray(data) ? data : []);
       // Show UI unless it's auto-loading
       if (!autoLoad) {
-        console.log('✅ Showing extracted data UI (manual request)');
+        // console.log('✅ Showing extracted data UI (manual request)');
         setShowExtractedData(true);
       } else {
-        console.log('🔇 Not showing UI (auto-loading)');
+        // console.log('🔇 Not showing UI (auto-loading)');
       }
     } catch (error: any) {
       console.error('Error loading extracted data:', error);
@@ -2058,14 +2058,14 @@ function ProposalDetailContent() {
       
       // Immediately refresh extracted data if shown
       if (showExtractedData) {
-        console.log('Refreshing extracted data after mapping...');
+        // console.log('Refreshing extracted data after mapping...');
         // Force refresh extracted data by first setting it to null, then reloading
         setExtractedData(null);
         // Add a small delay to ensure database consistency, then reload
         setTimeout(async () => {
           try {
             await handleManageIllustrations(true); // Force refresh extracted data
-            console.log('Extracted data refreshed after mapping');
+            // console.log('Extracted data refreshed after mapping');
           } catch (refreshError) {
             console.error('Error refreshing extracted data:', refreshError);
             toast.error('Mapping successful, but failed to refresh display. Please click the Refresh button.');
@@ -2454,7 +2454,7 @@ function ProposalDetailContent() {
                         <h3 className="text-xl font-semibold text-gray-900">Insurance Database Mapping</h3>
                         <button
                           onClick={() => {
-                            console.log('Manual refresh triggered');
+                            // console.log('Manual refresh triggered');
                             setExtractedData(null);
                             handleManageIllustrations(true);
                           }}
@@ -2993,14 +2993,14 @@ function ProposalDetailContent() {
                                               return <span className="text-green-600 font-medium">{savedMyrFormatted} ✓</span>;
                                             }
 
-                                            console.log('Conversion display debug:', {
-                                              dataId: data.id,
-                                              savedMyrFormatted: savedMyrFormatted,
-                                              myConversions: myConversions,
-                                              conversionForThis: myConversions[data.id],
-                                              conversionSuccess: myConversions[data.id]?.conversion?.success,
-                                              formattedMyr: myConversions[data.id]?.conversion?.formatted
-                                            });
+                                            // console.log('Conversion display debug:', {
+                                              // dataId: data.id,
+                                              // savedMyrFormatted: savedMyrFormatted,
+                                              // myConversions: myConversions,
+                                              // conversionForThis: myConversions[data.id],
+                                              // conversionSuccess: myConversions[data.id]?.conversion?.success,
+                                              // formattedMyr: myConversions[data.id]?.conversion?.formatted
+                                            // });
 
                                             if (myConversions[data.id]?.conversion?.success) {
                                               return myConversions[data.id].conversion.formatted;
@@ -3051,13 +3051,13 @@ function ProposalDetailContent() {
                                               return <span className="text-green-600 font-medium">{savedTotalMyrFormatted} ✓</span>;
                                             }
 
-                                            console.log('Total conversion display debug:', {
-                                              dataId: data.id,
-                                              savedTotalMyrFormatted: savedTotalMyrFormatted,
-                                              totalConversion: myConversions[data.id]?.total_conversion,
-                                              success: myConversions[data.id]?.total_conversion?.success,
-                                              formattedMyr: myConversions[data.id]?.total_conversion?.formatted
-                                            });
+                                            // console.log('Total conversion display debug:', {
+                                              // dataId: data.id,
+                                              // savedTotalMyrFormatted: savedTotalMyrFormatted,
+                                              // totalConversion: myConversions[data.id]?.total_conversion,
+                                              // success: myConversions[data.id]?.total_conversion?.success,
+                                              // formattedMyr: myConversions[data.id]?.total_conversion?.formatted
+                                            // });
 
                                             if (myConversions[data.id]?.total_conversion?.success) {
                                               return myConversions[data.id].total_conversion.formatted;
@@ -3254,13 +3254,13 @@ function ProposalDetailContent() {
                                     <div className="grid grid-cols-2 gap-3">
                                       {(() => {
                                         const agesAndValues = getCashSurrenderAgesAndValues(data, data, false);
-                                        console.log('READ MODE - function returned:', agesAndValues, 'type:', typeof agesAndValues);
-                                        console.log('Cash Surrender Values Debug:', {
-                                          dataId: data.id,
-                                          agesAndValues,
-                                          userData: data.user_edited_data,
-                                          comprehensive: data.comprehensive_data
-                                        });
+                                        // console.log('READ MODE - function returned:', agesAndValues, 'type:', typeof agesAndValues);
+                                        // console.log('Cash Surrender Values Debug:', {
+                                          // dataId: data.id,
+                                          // agesAndValues,
+                                          // userData: data.user_edited_data,
+                                          // comprehensive: data.comprehensive_data
+                                        // });
 
                                         // Check for Phase 2 loading state
                                         if (agesAndValues === 'PHASE_2_LOADING') {
@@ -3280,7 +3280,7 @@ function ProposalDetailContent() {
                                         }
 
                                         // Safety check and fix string serialization issue
-                                        console.log('READ MODE - checking agesAndValues:', agesAndValues, 'isArray:', Array.isArray(agesAndValues));
+                                        // console.log('READ MODE - checking agesAndValues:', agesAndValues, 'isArray:', Array.isArray(agesAndValues));
                                         let processedAgesAndValues = agesAndValues;
 
                                         if (!Array.isArray(agesAndValues)) {
@@ -3288,7 +3288,7 @@ function ProposalDetailContent() {
                                             try {
                                               // Try to parse string back to array
                                               processedAgesAndValues = JSON.parse(agesAndValues.replace(/'/g, '"'));
-                                              console.log('READ MODE - parsed string to array:', processedAgesAndValues);
+                                              // console.log('READ MODE - parsed string to array:', processedAgesAndValues);
                                             } catch (e) {
                                               console.error('READ MODE - failed to parse string:', agesAndValues);
                                               return <div key="error" className="text-red-600 p-4 border border-red-300 rounded">Error: Invalid data format (READ MODE)</div>;
@@ -3318,18 +3318,18 @@ function ProposalDetailContent() {
                                   ) : (
                                     <div className="space-y-3">
                                       {(() => {
-                                        console.log('🔧 EDIT MODE RENDER - Debug info:', {
-                                          dataId: data.id,
-                                          hasEditData: !!editData[data.id],
-                                          editDataKeys: editData[data.id] ? Object.keys(editData[data.id]) : 'no edit data',
-                                          editDataCashValues: editData[data.id]?.cash_surrender_values,
-                                          originalDataCashValues: data.user_edited_data?.cash_surrender_values
-                                        });
+                                        // console.log('🔧 EDIT MODE RENDER - Debug info:', {
+                                          // dataId: data.id,
+                                          // hasEditData: !!editData[data.id],
+                                          // editDataKeys: editData[data.id] ? Object.keys(editData[data.id]) : 'no edit data',
+                                          // editDataCashValues: editData[data.id]?.cash_surrender_values,
+                                          // originalDataCashValues: data.user_edited_data?.cash_surrender_values
+                                        // });
 
                                         const agesAndValues = getCashSurrenderAgesAndValues(editData[data.id] || data, data, true);
 
                                         // Safety check to prevent crash
-                                        console.log('EDIT MODE - checking agesAndValues:', agesAndValues, 'isArray:', Array.isArray(agesAndValues));
+                                        // console.log('EDIT MODE - checking agesAndValues:', agesAndValues, 'isArray:', Array.isArray(agesAndValues));
                                         if (!Array.isArray(agesAndValues)) {
                                           console.error('EDIT MODE - agesAndValues is not an array:', agesAndValues, typeof agesAndValues);
                                           return <div key="error" className="text-red-600 p-4 border border-red-300 rounded">Error: Invalid data format (EDIT MODE)</div>;
@@ -3522,13 +3522,13 @@ function ProposalDetailContent() {
                             <div className="space-y-4">
                               {extractedData.map((data: any, index: number) => {
                                 const commission = commissionData[data.matched_insurance_id];
-                                console.log('🔍 COMMISSION DISPLAY DEBUG:', {
-                                  insuranceName: data.final_insurance_name,
-                                  matchedInsuranceId: data.matched_insurance_id,
-                                  commissionData: commissionData,
-                                  foundCommission: commission,
-                                  hasCommission: !!commission
-                                });
+                                // console.log('🔍 COMMISSION DISPLAY DEBUG:', {
+                                  // insuranceName: data.final_insurance_name,
+                                  // matchedInsuranceId: data.matched_insurance_id,
+                                  // commissionData: commissionData,
+                                  // foundCommission: commission,
+                                  // hasCommission: !!commission
+                                // });
                                 return (
                                   <div key={index} className="border border-gray-200 rounded-lg p-4">
                                     <h4 className="font-medium text-lg text-gray-900 mb-3">{data.final_insurance_name}</h4>
