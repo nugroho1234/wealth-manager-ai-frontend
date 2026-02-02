@@ -138,16 +138,29 @@ interface DashboardStats {
 }
 ```
 
-#### `/oracle/products`
-**Purpose**: Search and explore insurance products using AI or manual filters.
+#### `/oracle/products` ✅ RAG SEARCH (UPDATED FEB 2026)
+**Purpose**: Advanced AI-powered search with RAG verification and category filtering.
 
 **Features**:
-- **AI Search Tab**:
-  - Semantic search with natural language queries
-  - Category filtering (Life, Health, Investment, Travel, Property, All)
-  - Similarity scoring with matched content highlights
+- **AI Search Tab** ✨ (Enhanced with RAG):
+  - 5-phase RAG architecture with AI verification
+  - Automatic category classification (critical illness, whole life, etc.)
+  - Streaming results with progressive loading (SSE)
+  - **Three-Section Results UI**:
+    - ✅ **Perfect Matches** - Approved products (90-100% match)
+    - ⚠️ **Also Consider** - Partial matches with gaps and upsell reasoning (60-89% match)
+    - ❌ **Not Recommended** - Rejected products (hidden by default)
+  - **Evidence Cards** with:
+    - Page-specific citations (e.g., "Page 5, Coverage Details")
+    - Direct quotes from documents
+    - Clickable PDF links to exact pages
+    - Confidence scores
+  - **Summary-Based Fallback** (Phase 2.5):
+    - Amber "Summary-Based Matches" banner when triggered
+    - "📝 Summary-Based" badge on individual cards
+    - Fallback when no detailed matches found
   - Product selection for comparison (up to 5 products)
-  - Category fallback warnings
+  - Real-time progress indicators during search
 
 - **Manual Search Tab**:
   - Search by product name
@@ -156,9 +169,9 @@ interface DashboardStats {
   - Real-time search and filtering
 
 - **Product Actions**:
-  - View product details
-  - Compare products side-by-side
+  - View PDF document at specific page (NEW!)
   - Chat with product AI
+  - Compare products side-by-side
   - Edit product (ADMIN only)
 
 **Access**: All authenticated users
@@ -174,10 +187,30 @@ interface Product {
   created_at: string;
   processing_status: string;
   pdf_url?: string;
-  similarity_score?: number;      // AI search only
-  matched_content?: string;       // AI search only
+
+  // RAG Search fields (NEW!)
+  status?: 'approved' | 'partial_match' | 'rejected' | 'uncertain';
+  confidence_score?: number;
+  similarity_score?: number;
+  summary?: string;              // AI-generated reasoning
+  evidences?: Evidence[];        // Citations with page numbers
+  gaps?: string[];               // Missing requirements (partial matches)
+  upsell_reasoning?: string;     // Why to still consider (partial matches)
+  is_summary_based?: boolean;    // From Phase 2.5 fallback
+}
+
+interface Evidence {
+  quote: string;                 // Direct quote from document
+  page_number: number;           // Page reference
+  section: string;               // Section heading
+  relevance_reasoning: string;   // Why this evidence matters
 }
 ```
+
+**Performance**:
+- Average search time: < 5 seconds
+- Streaming enables progressive result loading
+- Category filtering reduces search space by 80-90%
 
 #### `/oracle/products/compare`
 **Purpose**: Side-by-side comparison of up to 5 insurance products.

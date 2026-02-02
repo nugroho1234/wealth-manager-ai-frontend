@@ -420,9 +420,9 @@ export default function FileUpload({
               {dropzoneActive ? 'Drop files here' : 'Upload Insurance Documents'}
             </h3>
             <p className={`text-sm mt-2 ${disabled ? 'text-gray-400' : 'text-gray-500'}`}>
-              {disabled 
+              {disabled
                 ? 'Upload is currently disabled'
-                : `Drag and drop up to ${uploadOptions.maxFiles} PDF files here, or click to select files`
+                : `Drag and drop ${uploadOptions.maxFiles === 1 ? 'a' : `up to ${uploadOptions.maxFiles}`} PDF ${uploadOptions.maxFiles === 1 ? 'file' : 'files'} here, or click to select files`
               }
             </p>
             
@@ -443,7 +443,7 @@ export default function FileUpload({
             <span>•</span>
             <span>Max {(uploadOptions.maxSizeBytes! / (1024 * 1024)).toFixed(0)}MB per file</span>
             <span>•</span>
-            <span>Up to {uploadOptions.maxFiles} files</span>
+            <span>Up to {uploadOptions.maxFiles} {uploadOptions.maxFiles === 1 ? 'file' : 'files'}</span>
           </div>
         </div>
       </div>
