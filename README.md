@@ -1,479 +1,772 @@
-# Insurance Proposal Generator - Frontend
+# Wealth Manager AI - Frontend
 
-A modern Next.js 15 application for insurance agents to manage documents, compare products, and generate professional proposals.
+A unified Next.js 15 frontend platform for insurance and financial advisory teams, featuring **Oracle (WealthTalk AI)** for insurance product management and **Meeting Tracker** for team coordination.
 
-## Features
+## 🎯 Platform Overview
 
-### 🔐 Authentication & Authorization
-- **Passwordless OTP Login** - Secure email-based authentication via Resend
-- **Role-Based Access Control** - 6-tier system (SUPER_ADMIN, ADMIN, ADVISOR, LEADER_1, LEADER_2, SENIOR_PARTNER)
-- **JWT Token Management** - Automatic refresh with 3-day session persistence
-- **Protected Routes** - Role-aware navigation and access control
+This modern web application provides two complementary interfaces:
 
-### 📄 Document Management
-- **PDF Upload** - Drag-and-drop interface for insurance documents (up to 5 files, 15MB each)
-- **Real-time Processing** - Live progress tracking through parsing, extraction, and vectorization
-- **Document Search** - Semantic search through uploaded documents
-- **AI-Powered Chat** - Query insurance documents with natural language
+1. **Oracle (WealthTalk AI)** - AI-powered insurance product search, proposal generation, and CRM
+2. **Meeting Tracker** - Google Calendar integration, meeting reports, and task management
 
-### 📊 Product Comparison
-- **Side-by-Side Analysis** - Compare up to 5 insurance products
-- **Commission Rates** - Role-based commission display with expandable terms
-- **Financial Metrics** - Premium structures, returns, and yield data
-- **PDF Export** - Dual-mode export (agent vs. client presentation)
+Both applications share a seamless navigation experience with a single sign-on authentication system.
 
-### 📋 Proposal Generation
-- **4-Page Professional Proposals** - AI-generated personalized content
-- **Interactive Builder** - Edit all insurance fields with real-time sync
-- **Cash Surrender Values** - Intelligent age harmonization across products
-- **Currency Conversion** - Automatic MYR conversion with live exchange rates
-- **PDF Generation** - High-quality landscape proposals via Playwright
+## 📚 Documentation
 
-### 👥 Client Management (CRM)
-- **Client Database** - Manage client information with multi-tenancy support
-- **Card-Based Interface** - Visual client cards with search and filtering
-- **Policy Tracking** - Link insurance policies to clients with status tracking
-- **Document Management** - Upload and store policy documents securely
-- **Client Statistics** - Track total clients, active policies, and premiums
+### Feature Documentation
+- **[Oracle (WealthTalk AI) Documentation](ORACLE.md)** - Insurance product management and proposals
+- **[Meeting Tracker Documentation](MEETING_TRACKER.md)** - Meeting reports and task tracking
 
-### 🎨 Modern UI/UX
-- **Responsive Design** - Mobile-first approach with glass-morphism effects
-- **Collapsible Sidebar** - Persistent navigation state
-- **Real-time Notifications** - Live updates with badge counters
-- **Loading States** - Elegant skeleton screens and progress indicators
-- **Toast Notifications** - User feedback for all actions
+### Quick Links
+- [Tech Stack](#tech-stack)
+- [Quick Start](#quick-start)
+- [Application Routes](#application-routes)
+- [Key Features](#key-features)
+- [Deployment](#deployment)
+- [Support](#support)
 
-## Tech Stack
+---
 
-- **Framework**: Next.js 15 (App Router)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS
-- **State Management**: React Context + React Query
-- **Forms**: React Hook Form + Zod validation
-- **HTTP Client**: Axios with interceptors
-- **PDF Generation**: html2canvas + jsPDF
-- **Charts**: Recharts
-- **Icons**: Lucide React
-- **Database**: Supabase (client integration)
+## 🏗️ Architecture
 
-## Prerequisites
+### Multi-Application Platform
+
+```
+wealth-manager-frontend/
+├── src/
+│   ├── app/                       # Next.js App Router
+│   │   ├── login/                 # Shared authentication
+│   │   ├── oracle/                # Oracle (WealthTalk AI)
+│   │   │   ├── dashboard/
+│   │   │   ├── products/
+│   │   │   ├── proposals/
+│   │   │   ├── clients/
+│   │   │   ├── chat/
+│   │   │   ├── admin/
+│   │   │   └── profile/
+│   │   └── meeting-tracker/       # Meeting Tracker
+│   │       ├── dashboard/
+│   │       ├── meetings/
+│   │       ├── reports/
+│   │       ├── tasks/
+│   │       ├── team/
+│   │       └── form/
+│   ├── components/
+│   │   ├── Sidebar.tsx            # Shared navigation
+│   │   ├── ProtectedRoute.tsx     # Auth wrapper
+│   │   ├── meeting-tracker/       # Meeting components
+│   │   └── oracle/                # Oracle components
+│   ├── contexts/
+│   │   ├── AuthContext.tsx        # Shared auth state
+│   │   └── NotificationContext.tsx
+│   ├── lib/
+│   │   └── api.ts                 # API client
+│   ├── types/                     # TypeScript types
+│   └── styles/                    # Global styles
+├── ORACLE.md                       # Oracle docs
+├── MEETING_TRACKER.md              # Meeting Tracker docs
+└── README.md                       # This file
+```
+
+### Shared Infrastructure
+
+**Authentication**:
+- Passwordless OTP login via email
+- JWT token management with automatic refresh
+- 3-day session persistence
+- Role-based navigation
+
+**UI Framework**:
+- Next.js 15 with App Router
+- TypeScript for type safety
+- Tailwind CSS for styling
+- Responsive mobile-first design
+
+**State Management**:
+- React Context API for global state
+- React Hooks for local state
+- URL state for pagination and filters
+
+**API Integration**:
+- Axios-based HTTP client
+- Automatic JWT token injection
+- Request/response interceptors
+- Error handling with toast notifications
+
+---
+
+## 🚀 Tech Stack
+
+### Core Framework
+- **Next.js 15** - React framework with App Router
+- **React 18** - UI library
+- **TypeScript** - Type-safe development
+
+### UI & Styling
+- **Tailwind CSS** - Utility-first CSS framework
+- **Gradient Design System** - Modern gradient backgrounds
+- **Glass-morphism Effects** - Translucent UI elements
+- **Responsive Design** - Mobile-first approach
+
+### State Management
+- **React Context API** - Global state (auth, notifications)
+- **React Hooks** - Local component state
+- **URL State** - Pagination and filters
+
+### API & Data
+- **Axios** - HTTP client with interceptors
+- **React Hot Toast** - Toast notifications
+- **date-fns** - Date formatting
+
+### Form Handling
+- **Controlled Components** - React-managed forms
+- **Client-side Validation** - Real-time validation
+
+### Other Libraries
+- **React Markdown** - Markdown rendering (chat)
+- **remark-gfm** - GitHub Flavored Markdown
+
+---
+
+## ⚡ Quick Start
+
+### Prerequisites
 
 - Node.js 18+ and npm/yarn
 - Backend API running (see backend README)
-- Supabase project configured
+- Environment variables configured
 
-## Local Development Setup
+### Installation
 
-### 1. Clone the repository
-
+1. **Clone the repository**:
 ```bash
 git clone https://github.com/nugroho1234/wealth-manager-ai-frontend.git
-cd wealth-manager-frontend
+cd wealth-manager-ai-frontend
 ```
 
-### 2. Install dependencies
-
+2. **Install dependencies**:
 ```bash
 npm install
 # or
 yarn install
 ```
 
-### 3. Set up environment variables
+3. **Configure environment variables**:
 
-Create a `.env.local` file:
-
+Create `.env.local` file:
 ```env
-# Supabase Configuration
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+# API Configuration
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_APP_NAME=Wealth Manager AI
 
-# Backend API Configuration
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
-
-# Exchange Rate API (Optional)
-NEXT_PUBLIC_EXCHANGE_RATE_API_KEY=your-exchange-rate-api-key
+# Application Settings
+NEXT_PUBLIC_ENVIRONMENT=development
 ```
 
-See `.env.local.example` for detailed configuration.
-
-### 4. Run development server
-
+4. **Run development server**:
 ```bash
 npm run dev
 # or
 yarn dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Application available at: `http://localhost:3000`
 
-### 5. Build for production
+---
 
+## 🛣️ Application Routes
+
+### Shared Routes
+```
+/login                          # Passwordless OTP login
+```
+
+### Oracle (WealthTalk AI) Routes
+```
+/oracle/dashboard               # Main dashboard with stats
+/oracle/products                # AI product search & catalog
+/oracle/products/compare        # Compare up to 5 products
+/oracle/proposals               # Proposal management
+/oracle/proposals/create        # Create new proposal
+/oracle/proposals/[id]          # Proposal details
+/oracle/proposals/[id]/preview  # PDF preview
+/oracle/clients                 # Client management (CRM)
+/oracle/clients/[id]            # Client details & policies
+/oracle/chat                    # AI assistant
+/oracle/profile                 # User profile
+/oracle/notifications           # Notification center
+
+# Admin Routes (ADMIN+ only)
+/oracle/admin/users             # User management
+/oracle/admin/invitations       # Email invitations
+/oracle/admin/products          # Product management
+/oracle/admin/documents         # Document library
+/oracle/admin/commissions       # Commission rates
+/oracle/admin/companies         # Company management (MASTER only)
+```
+
+### Meeting Tracker Routes
+```
+/meeting-tracker/dashboard      # Overview with statistics
+/meeting-tracker/meetings       # Calendar view & list
+/meeting-tracker/reports        # Meeting reports
+/meeting-tracker/reports/[id]   # Report details
+/meeting-tracker/tasks          # Task management
+/meeting-tracker/tasks/grouped  # Tasks grouped by meeting
+/meeting-tracker/team           # Team hierarchy
+/meeting-tracker/form/[id]      # Post-meeting form
+/meeting-tracker/settings       # Calendar settings
+```
+
+**Total Routes**: 30+ pages across both applications
+
+---
+
+## 🎨 Key Features
+
+### Oracle (WealthTalk AI)
+
+**AI-Powered Product Search**:
+- Semantic search with natural language queries
+- Similarity scoring with matched content highlights
+- Category filtering with automatic fallback
+- Manual search with filters (category, provider)
+
+**Proposal Generation**:
+- Multi-step creation wizard
+- PDF illustration upload and processing
+- AI-generated professional proposals
+- Real-time status tracking (draft → extracting → reviewing → generating → completed)
+- PDF preview and download
+
+**Client Management (CRM)**:
+- Complete client database with search and pagination
+- Policy tracking with status management
+- Policy document upload to private storage
+- Client portfolio statistics (premiums, coverage)
+- Tag-based organization
+
+**Product Comparison**:
+- Side-by-side comparison (up to 5 products)
+- Feature-by-feature breakdown
+- Commission rate display
+- Export to PDF
+
+**AI Chat Assistant**:
+- Session-based chat for specific products
+- Markdown-formatted responses
+- Context-aware product information
+- Session management (rename, archive, delete)
+
+**Modern UI/UX**:
+- Gradient backgrounds with modern design
+- Responsive mobile-first layout
+- Glass-morphism effects
+- Real-time notifications
+- Loading states and progress indicators
+
+**Read More**: [ORACLE.md](ORACLE.md)
+
+### Meeting Tracker
+
+**Google Calendar Integration**:
+- OAuth 2.0 authentication
+- Incremental sync with sync tokens
+- Real-time webhook notifications
+- Automatic meeting status updates
+
+**Meeting Management**:
+- Calendar view and list view
+- AI-powered category detection
+- Meeting details with participants
+- Google Meet link integration
+- Upcoming and past meetings
+
+**Meeting Reports**:
+- Structured report templates
+- Markdown editor with preview
+- Key discussion points tracking
+- Decisions and next steps
+- Form link generation
+
+**Task Management**:
+- Create tasks from meetings
+- Priority levels (High, Medium, Low)
+- Due date tracking with overdue indicators
+- Task status (Pending, In Progress, Completed)
+- Two view modes:
+  - **Meeting-grouped**: Tasks organized by meeting
+  - **Priority-grouped**: Tasks organized by priority
+
+**Team Hierarchy**:
+- CSV import for team structure
+- Visual team tree
+- Multi-level organization
+- Team member filtering
+
+**Notifications**:
+- 8 types of automated Telegram notifications
+- Daily summaries and previews
+- Task reminders
+- Form completion reminders
+- Customizable notification settings
+
+**Modern UI/UX**:
+- Dark theme design
+- Responsive layout
+- Real-time updates
+- Badge counters
+- Loading skeletons
+
+**Read More**: [MEETING_TRACKER.md](MEETING_TRACKER.md)
+
+---
+
+## 👥 Multi-Tenancy & Roles
+
+### Role Hierarchy
+
+| Role | Level | Description |
+|------|-------|-------------|
+| **MASTER** | 1 | Platform owner, all permissions |
+| **SUPER_ADMIN** | 2 | Company owner, company-wide access |
+| **ADMIN** | 3 | Company admin, user management |
+| **LEADER_1** | 4 | Senior team leader |
+| **LEADER_2** | 5 | Junior team leader |
+| **SENIOR_PARTNER** | 6 | Senior advisor |
+| **ADVISOR** | 7 | Standard advisor |
+
+### Role-Based Navigation
+
+The sidebar dynamically shows/hides menu items based on user role:
+
+**Everyone**:
+- Dashboard
+- Search Products (Oracle)
+- Chat (Oracle)
+- Proposals (Oracle)
+- Meetings (Meeting Tracker)
+- Reports (Meeting Tracker)
+- Tasks (Meeting Tracker)
+
+**ADVISOR+** (Advisor and above):
+- My Clients (Oracle)
+
+**ADMIN+** (Admin, Super Admin, Master):
+- Admin section
+  - Manage Users
+  - Manage Invitations
+  - Manage Products
+  - Manage Documents
+  - Commission Rates
+
+**MASTER only**:
+- Company Management
+
+### Application Switcher
+
+Users can seamlessly switch between Oracle and Meeting Tracker via sidebar:
+```
+Switch to Meeting Tracker (from Oracle)
+Switch to Oracle (from Meeting Tracker)
+```
+
+---
+
+## 🔧 Component Architecture
+
+### Shared Components
+
+**`<Sidebar>`**:
+- Main navigation for both applications
+- Collapsible on desktop
+- Hamburger menu on mobile
+- Active route highlighting
+- Role-based menu items
+- Application switcher
+
+**`<ProtectedRoute>`**:
+- Authentication wrapper
+- Redirect to login if not authenticated
+- Role-based access control
+- Loading state during auth check
+
+### Oracle Components
+
+Located in `src/components/oracle/`:
+- Product cards
+- Proposal forms
+- Client cards
+- Policy management
+- Chat interface
+
+### Meeting Tracker Components
+
+Located in `src/components/meeting-tracker/`:
+- **MeetingTaskGroup** - Meeting with tasks
+- **PriorityTaskList** - Tasks by priority
+- **TaskItem** - Individual task card
+- **MeetingCard** - Meeting list item
+- **ReportForm** - Report editor
+- **TaskForm** - Task creation/edit
+- **Sidebar** - Navigation menu
+- **CalendarView** - Calendar grid
+- **TeamHierarchy** - Team tree view
+
+---
+
+## 🚀 Deployment
+
+### Vercel (Recommended)
+
+**Why Vercel?**:
+- Optimized for Next.js
+- Automatic deployments from Git
+- Preview deployments for PRs
+- Edge network (CDN)
+- Zero configuration
+
+**Steps**:
+
+1. **Connect GitHub repository** to Vercel
+2. **Configure environment variables**:
+   ```
+   NEXT_PUBLIC_API_URL=https://your-backend-url.onrender.com
+   NEXT_PUBLIC_APP_NAME=Wealth Manager AI
+   NEXT_PUBLIC_ENVIRONMENT=production
+   ```
+3. **Deploy**:
+   - Automatic on push to `main` branch
+   - Preview on pull requests
+
+**Custom Domain** (optional):
+- Add custom domain in Vercel dashboard
+- Configure DNS (A/CNAME records)
+- SSL automatically provisioned
+
+### Manual Deployment
+
+**Build**:
 ```bash
 npm run build
-npm run start
+# or
+yarn build
 ```
 
-## Production Deployment (Vercel)
-
-### Step 1: Prepare Your Repository
-
-1. Ensure all changes are committed to GitHub
-2. Verify `.env.local` is in `.gitignore`
-3. Confirm build succeeds locally: `npm run build`
-
-### Step 2: Import Project to Vercel
-
-1. Go to [Vercel Dashboard](https://vercel.com/dashboard)
-2. Click **"Add New..."** → **"Project"**
-3. Import your GitHub repository: `nugroho1234/wealth-manager-ai-frontend`
-4. Vercel will auto-detect Next.js configuration
-
-### Step 3: Configure Project Settings
-
-**Framework Preset**: Next.js (auto-detected)
-
-**Build Settings**:
-- **Build Command**: `npm run build` (default)
-- **Output Directory**: `.next` (default)
-- **Install Command**: `npm install` (default)
-
-**Root Directory**: `.` (leave empty)
-
-**Node.js Version**: 18.x or higher
-
-### Step 4: Configure Environment Variables
-
-In Vercel's **Environment Variables** section, add:
-
-```
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-supabase-anon-key>
-NEXT_PUBLIC_API_BASE_URL=https://your-backend-api.onrender.com
-NEXT_PUBLIC_EXCHANGE_RATE_API_KEY=<your-exchange-rate-api-key>
+**Start production server**:
+```bash
+npm start
+# or
+yarn start
 ```
 
-**Important Notes**:
-- Use your **production backend URL** (e.g., Render.com URL)
-- Get Supabase keys from: Supabase Dashboard → Settings → API
-- Exchange Rate API key is optional but recommended
+**Requirements**:
+- Node.js 18+ runtime
+- Environment variables configured
+- Backend API accessible
 
-### Step 5: Deploy
+---
 
-1. Click **"Deploy"**
-2. Vercel will build and deploy your application
-3. Monitor build logs for any errors
-4. Once deployed, you'll receive a URL like: `https://your-app.vercel.app`
+## 🎨 Design System
 
-### Step 6: Configure Backend CORS
+### Color Palette
 
-Update your backend's `CORS_ORIGINS` environment variable:
+**Oracle (WealthTalk AI)**:
+- Primary: Blue gradient (`from-blue-500 to-purple-600`)
+- Background: Light gray (`from-gray-50 to-white`)
+- Accent: Green (success), Red (error), Yellow (warning)
 
-```env
-CORS_ORIGINS=["https://your-app.vercel.app"]
-```
+**Meeting Tracker**:
+- Primary: Dark theme (`bg-gray-900`)
+- Accent: Blue (`blue-500`)
+- Priority colors:
+  - High: Red (`red-700`)
+  - Medium: Yellow (`yellow-700`)
+  - Low: Green (`green-700`)
 
-Redeploy your backend after updating CORS settings.
+### Typography
 
-### Step 7: Optional - Custom Domain
+- **Headings**: `font-bold` with sizes `text-3xl`, `text-2xl`, `text-xl`
+- **Body**: `text-base` or `text-sm`
+- **Labels**: `text-xs` with `uppercase` and `font-semibold`
 
-1. In Vercel dashboard, go to your project
-2. Click **"Settings"** → **"Domains"**
-3. Add your custom domain (e.g., `app.yourdomain.com`)
-4. Follow Vercel's DNS configuration instructions
-5. Update backend `CORS_ORIGINS` with new domain
+### Spacing
 
-### Step 8: Configure Production Environment
+- **Page margins**: `px-6 py-8` or `px-4 py-6` (mobile)
+- **Card padding**: `p-6` or `p-4` (mobile)
+- **Section gaps**: `space-y-6` or `space-y-4`
 
-**Vercel Environment Settings**:
-- **Production**: Main branch (master/main)
-- **Preview**: Pull request branches
-- **Development**: Local development
+### Responsive Breakpoints
 
-**Recommended Settings**:
-- Enable **Automatic Deployments** for main branch
-- Enable **Preview Deployments** for PRs
-- Configure **Branch Protection** on GitHub
+- **sm**: 640px (Small tablets)
+- **md**: 768px (Tablets)
+- **lg**: 1024px (Laptops)
+- **xl**: 1280px (Desktops)
+- **2xl**: 1536px (Large desktops)
 
-## Environment Variables Reference
+---
 
-| Variable | Description | Required | Example |
-|----------|-------------|----------|---------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | Yes | `https://xxx.supabase.co` |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key | Yes | `eyJhbGc...` |
-| `NEXT_PUBLIC_API_BASE_URL` | Backend API base URL | Yes | `http://localhost:8000` (dev)<br>`https://api.example.com` (prod) |
-| `NEXT_PUBLIC_EXCHANGE_RATE_API_KEY` | ExchangeRate-API key | No | Free tier available |
+## 📊 Version History
 
-## Project Structure
+### Version 1.3.0 (January 2026)
+
+**New Features**:
+- Multi-application navigation system
+- Seamless switching between Oracle and Meeting Tracker
+- Consolidated sidebar with role-based menus
+- Enhanced company management UI
+- Dashboard statistics with role-specific metrics
+- User activation/deactivation interface
+
+**Meeting Tracker UI**:
+- Complete meeting tracker interface
+- Calendar view and list view
+- Report creation and editing
+- Task management with two view modes
+- Team hierarchy visualization
+- Settings and notification preferences
+
+**Oracle Improvements**:
+- Enhanced client management interface
+- Policy management with document upload
+- Improved search and filtering
+- Product comparison mobile warnings
+
+### Version 1.2.0 (January 2026)
+
+**New Features**:
+- Client Management System (CRM)
+- Client detail pages with policy lists
+- Policy document upload interface
+- Client portfolio statistics
+- Tag-based client organization
+
+### Version 1.1.0 (December 2025)
+
+**New Features**:
+- Products pagination
+- User management interface
+- Profile completion indicators
+- Admin panel enhancements
+
+### Version 1.0.0 (November 2025)
+
+**Initial Release**:
+- Passwordless OTP authentication
+- AI-powered product search
+- Proposal generation interface
+- Product comparison tool
+- Admin portal
+- Responsive design
+
+---
+
+## 🛠️ Development
+
+### Project Structure
 
 ```
 wealth-manager-frontend/
 ├── src/
-│   ├── app/                    # Next.js App Router
-│   │   ├── admin/             # Admin pages (upload, commissions, users)
-│   │   ├── chat/              # AI chat with documents
-│   │   ├── dashboard/         # Role-based dashboard
-│   │   ├── login/             # OTP authentication
-│   │   ├── notifications/     # Notification center
-│   │   ├── products/          # Product listing & comparison
-│   │   ├── profile/           # User profile management
-│   │   ├── proposals/         # Proposal generation & management
-│   │   └── layout.tsx         # Root layout with sidebar
-│   ├── components/            # Reusable React components
-│   │   ├── auth/              # Authentication components
-│   │   ├── chat/              # Chat UI components
-│   │   ├── dashboard/         # Dashboard widgets
-│   │   ├── proposals/         # Proposal builder components
-│   │   └── ui/                # Generic UI components
-│   ├── contexts/              # React Context providers
-│   ├── hooks/                 # Custom React hooks
-│   ├── lib/                   # Utility libraries
-│   ├── services/              # API service layer
-│   ├── types/                 # TypeScript type definitions
-│   └── utils/                 # Helper functions
-├── public/                    # Static assets
-├── .env.local.example         # Environment variables template
+│   ├── app/                    # Next.js App Router pages
+│   ├── components/             # Reusable components
+│   ├── contexts/               # React contexts
+│   ├── lib/                    # Utilities and API client
+│   ├── types/                  # TypeScript type definitions
+│   └── styles/                 # Global styles
+├── public/                     # Static assets
+├── .env.local                  # Environment variables
 ├── next.config.js             # Next.js configuration
-├── tailwind.config.js         # Tailwind CSS configuration
-└── tsconfig.json              # TypeScript configuration
+├── tailwind.config.js         # Tailwind configuration
+├── tsconfig.json              # TypeScript configuration
+├── package.json               # Dependencies
+├── ORACLE.md                  # Oracle documentation
+├── MEETING_TRACKER.md         # Meeting Tracker docs
+└── README.md                  # This file
 ```
 
-## Key Routes
-
-### Public Routes
-- `/login` - OTP authentication page
-
-### Protected Routes (All Roles)
-- `/dashboard` - Role-based dashboard
-- `/profile` - User profile settings
-- `/notifications` - Notification center
-- `/chat` - AI document chat
-- `/products` - Product listing
-- `/products/compare` - Product comparison
-- `/proposals` - Proposal management
-- `/proposals/[id]` - Proposal builder
-- `/proposals/[id]/preview` - Proposal preview
-- `/clients` - Client list with search and filtering
-- `/clients/[id]` - Client detail view with policies
-
-### Admin Routes (ADMIN, SUPER_ADMIN)
-- `/admin/upload` - Insurance document upload
-- `/admin/products` - Product management with pagination and filtering
-- `/admin/commissions` - Commission rate management (SUPER_ADMIN only)
-- `/admin/users` - User management with pagination and filtering
-
-## Scripts
+### Running Tests
 
 ```bash
-# Development
-npm run dev          # Start development server (localhost:3000)
+# Run all tests
+npm test
+# or
+yarn test
 
-# Production Build
-npm run build        # Build for production
-npm run start        # Start production server
-
-# Code Quality
-npm run lint         # Run ESLint
-npm run type-check   # TypeScript type checking
+# Run with coverage
+npm run test:coverage
+# or
+yarn test:coverage
 ```
 
-## Troubleshooting
+### Code Quality
 
-### Build Failures on Vercel
-
-**Issue**: TypeScript errors during build
 ```bash
-# Solution: Run type-check locally first
+# Lint code
+npm run lint
+# or
+yarn lint
+
+# Format code
+npm run format
+# or
+yarn format
+
+# Type check
 npm run type-check
+# or
+yarn type-check
 ```
 
-**Issue**: Missing environment variables
-- Verify all `NEXT_PUBLIC_*` variables are set in Vercel
-- Check for typos in variable names
-- Ensure no trailing spaces in values
+### Building for Production
 
-### Runtime Errors
+```bash
+# Create production build
+npm run build
+# or
+yarn build
 
-**Issue**: API calls fail (CORS errors)
-- Verify backend `CORS_ORIGINS` includes Vercel URL
-- Ensure `NEXT_PUBLIC_API_BASE_URL` is correct
-- Check backend is running and accessible
+# Analyze bundle size
+npm run analyze
+# or
+yarn analyze
+```
 
-**Issue**: Authentication not working
-- Verify `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- Check Supabase project is active
-- Ensure backend OTP service is configured
+---
 
-**Issue**: PDFs not generating
-- Check browser console for errors
-- Verify `html2canvas` and `jsPDF` are installed
-- Ensure sufficient browser memory
+## 📖 API Integration
 
-### Preview Deployments
+### API Client
 
-**Issue**: Preview deployment environment variables
-- Vercel automatically uses Production environment variables for previews
-- Override with Preview-specific variables if needed
-- Test preview deployments before merging to main
+Located in `src/lib/api.ts`:
 
-## Performance Optimization
+```typescript
+import axios from 'axios';
 
-### Vercel Edge Network
-- Automatic global CDN distribution
-- Edge caching for static assets
-- Optimal routing for API requests
+const apiClient = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
-### Next.js Optimizations
-- **Image Optimization**: Automatic via Next.js Image component
-- **Code Splitting**: Route-based automatic splitting
-- **Server Components**: Improved performance with React Server Components
+// Request interceptor: Add JWT token
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('auth_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
-### Recommended Settings
-- Enable **Vercel Analytics** for performance monitoring
-- Configure **Vercel Speed Insights** for real-user metrics
-- Set up **Error Tracking** (Sentry integration recommended)
+// Response interceptor: Handle errors
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('auth_token');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
 
-## Security Best Practices
+export { apiClient };
+export default apiClient;
+```
 
-- Never commit `.env.local` file
-- Rotate Supabase keys if exposed
-- Use environment variables for all sensitive data
-- Enable Vercel's **Authentication Protection** for staging environments
-- Review Vercel **Deployment Protection** settings
-- Configure **Security Headers** in `next.config.js`
+### Making API Calls
 
-## Browser Support
+```typescript
+// GET request
+const response = await apiClient.get('/api/v1/oracle/products');
 
-- Chrome/Edge (latest 2 versions)
-- Firefox (latest 2 versions)
-- Safari (latest 2 versions)
-- Mobile browsers (iOS Safari, Chrome Mobile)
+// POST request
+const response = await apiClient.post('/api/v1/oracle/proposals', data);
 
-## Contributing
+// PUT request
+const response = await apiClient.put('/api/v1/oracle/clients/${id}', data);
 
-This is a proprietary internal application. For questions or issues, contact the development team.
+// DELETE request
+const response = await apiClient.delete('/api/v1/oracle/proposals/${id}');
 
-## License
+// File upload
+const formData = new FormData();
+formData.append('file', file);
+const response = await apiClient.post('/api/v1/upload', formData, {
+  headers: { 'Content-Type': 'multipart/form-data' }
+});
+```
+
+---
+
+## 🔒 Security
+
+### Best Practices
+
+- **Never commit** `.env.local` or sensitive data to Git
+- **Use HTTPS** in production for API calls
+- **Sanitize** user inputs before rendering
+- **Validate** data on both client and server
+- **Store** JWT tokens securely in localStorage
+- **Implement** CSRF protection for forms
+- **Rate limit** API requests
+
+### XSS Prevention
+
+- Use React's built-in XSS protection (JSX escaping)
+- Sanitize user-generated content before rendering
+- Avoid `dangerouslySetInnerHTML` unless necessary
+- Validate and sanitize Markdown content
+
+---
+
+## 🤝 Support
+
+### Getting Help
+
+1. **Check Documentation**:
+   - [Oracle Documentation](ORACLE.md)
+   - [Meeting Tracker Documentation](MEETING_TRACKER.md)
+   - [Next.js Documentation](https://nextjs.org/docs)
+
+2. **Common Issues**:
+   - API connection errors: Check `NEXT_PUBLIC_API_URL`
+   - Authentication issues: Clear localStorage and re-login
+   - Build errors: Delete `.next` folder and rebuild
+
+3. **Contact**:
+   - Create an issue in the GitHub repository
+   - Contact the development team
+
+### Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
 
 Proprietary - Internal use only
 
-## Version History
+---
 
-### Version 1.2.0 (January 2026)
+## 🙏 Acknowledgments
 
-**New Features:**
+- **Next.js** - React framework
+- **Vercel** - Hosting platform
+- **Tailwind CSS** - CSS framework
+- **React** - UI library
+- **TypeScript** - Type safety
 
-- **Client Management System** - Complete CRM for advisors
-  - **Client List Page** (`/clients`) - Card-based interface with clients
-    - Search by name, email, or phone with debounce
-    - Filter by policy status (all/with policies/without policies)
-    - Pagination (12 clients per page)
-    - Statistics: Total clients, With policies, Prospects
-    - Add Client button with inline modal
+---
 
-  - **Add Client Modal** - Comprehensive client creation form
-    - Required fields: first name, last name, date of birth
-    - Optional fields: email, phone, address, gender, occupation, national ID, tags, notes
-    - Tag management (add/remove tags)
-    - Form validation with error messages
+**Maintained By**: Wealth Manager AI Development Team
 
-  - **Client Detail Page** (`/clients/[id]`) - Full client profile view
-    - Client information section with all details
-    - Statistics cards: Total Policies, Active Policies, Monthly Premium, Total Coverage
-    - Edit client functionality with pre-filled modal
-    - Delete client with cascade warning
+**Last Updated**: January 2026
 
-  - **Policy Management** - Track client insurance policies
-    - List all policies with insurance product details
-    - Add Policy modal with searchable product selection
-    - Policy details: policy number, active date, renewal date, expiry date
-    - Premium and coverage tracking
-    - Policy status badges (Active, Lapsed, Expired, Pending)
-    - Delete policy functionality
-
-  - **Policy Document Upload** - Secure document storage
-    - Upload PDF documents for each policy
-    - Replace existing documents
-    - Visual upload status indicators
-    - Auto-generated filenames: `DDMMYYYY-firstname-lastname-insurance-name.pdf`
-    - Download links for uploaded documents
-
-**Technical Implementation:**
-- TypeScript interfaces for all client and policy types
-- Multi-tenancy support with company_id filtering
-- Integration with backend `/api/v1/clients` endpoints
-- Responsive design with Tailwind CSS
-- Toast notifications for user feedback
-- Loading states and error handling
-
-**UI/UX Improvements:**
-- Modern card-based layout for clients
-- Color-coded policy status badges
-- Clean modal designs for forms
-- Intuitive file upload interface
-- Real-time search with debounce
-- Smooth pagination controls
-
-### Version 1.1.0 (December 2025)
-
-**New Features:**
-
-- **Products Pagination Interface** - Complete pagination UI for products listing at `/admin/products`
-  - Pagination controls: First, Previous, Next, Last buttons
-  - Page number display with current position
-  - Configurable items per page (20, 50, 100)
-  - Total count and range display (e.g., "Showing 1 to 20 of 150 products")
-  - Pagination resets when applying filters
-  - Smooth loading states during page transitions
-
-- **Show Discontinued Products Filter** - Enhanced filtering UI
-  - Clean checkbox design replacing awkward toggle switch
-  - Better layout: 3-column filter grid with separate bottom row
-  - Checkbox on left, "Clear All Filters" button on right
-  - Border-top separator for visual hierarchy
-  - Hover states and cursor feedback
-  - Filters integrate seamlessly with pagination
-
-- **User Management Interface** - New admin page at `/admin/users`
-  - View all users with pagination (20 per page)
-  - Filter users by role and company
-  - Edit user profiles (first name, last name, phone)
-  - Update user roles (SUPER_ADMIN only)
-  - Real-time user statistics dashboard
-  - Profile completion status indicators
-
-- **Profile Auto-Completion** - Intelligent profile status updates
-  - Automatically checks profile completion on login
-  - Automatically updates status when editing profile
-  - Real-time profile completion indicators
-  - Required fields: first name, last name, phone
-
-**Improvements:**
-- **Enhanced Admin UI** - Consistent white background design across all admin pages
-- **Better Data Display** - User avatars with fallback initials, role badges with color coding
-- **Improved UX** - Modal-based editing with inline validation and error handling
-- **Products Page Performance** - Optimized with pagination to handle large product catalogs
-- **Better Filter Organization** - Cleaner filter layout with logical grouping
-
-**Bug Fixes:**
-- Fixed pagination field mapping to match backend API response
-- Resolved user data fetching issues with proper role handling
-- Fixed CORS and authentication token handling for user management endpoints
-- Products page now displays accurate total counts and pagination states
-- Profile completion status updates correctly after editing
-
-### Version 1.0.0 (November 2025)
-- Initial release with core features
-- Passwordless OTP authentication with role-based access
-- PDF document upload with real-time processing
-- AI-powered chat for insurance document queries
-- Product comparison tool (up to 5 products)
-- Professional proposal generation with PDF export
-- Responsive design with collapsible sidebar
-
-## Support
-
-For deployment issues:
-- Check [Vercel Documentation](https://vercel.com/docs)
-- Review [Next.js Deployment Guide](https://nextjs.org/docs/deployment)
-- Contact development team for internal support
+**Version**: 1.3.0

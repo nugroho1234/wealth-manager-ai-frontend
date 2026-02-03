@@ -89,7 +89,7 @@ export default function InsuranceSearch({
   const loadAllInsurances = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get('/api/v1/insurance');
+      const response = await apiClient.get('/api/v1/oracle/insurance');
       setAllInsurances(response.data.data || []);
     } catch (error: any) {
       console.error('Error loading insurances:', error);

@@ -112,7 +112,7 @@ export default function FileUpload({
 
   const uploadFiles = async (filesToUpload: File[]): Promise<void> => {
     try {
-      console.log(`🚀 Starting upload for ${filesToUpload.length} files`);
+      // console.log(`🚀 Starting upload for ${filesToUpload.length} files`);
       
       // Update all files to uploading status
       filesToUpload.forEach(file => {
@@ -124,20 +124,20 @@ export default function FileUpload({
       
       // Add all files under the same 'files' key (FastAPI expects List[UploadFile])
       filesToUpload.forEach((file, index) => {
-        console.log(`📎 Adding file ${index + 1}: ${file.name} (${file.size} bytes)`);
+        // console.log(`📎 Adding file ${index + 1}: ${file.name} (${file.size} bytes)`);
         formData.append('files', file);
       });
       
       // No metadata needed - backend extracts everything from PDF
 
       // Debug FormData contents
-      console.log('📤 FormData contents:');
+      // console.log('📤 FormData contents:');
       const entries = Array.from(formData.entries());
       entries.forEach(([key, value]) => {
         if (value instanceof File) {
-          console.log(`  ${key}: File(${value.name}, ${value.size} bytes, ${value.type})`);
+          // console.log(`  ${key}: File(${value.name}, ${value.size} bytes, ${value.type})`);
         } else {
-          console.log(`  ${key}: ${value}`);
+          // console.log(`  ${key}: ${value}`);
         }
       });
 
@@ -147,7 +147,7 @@ export default function FileUpload({
         message: string;
         uploads: UploadResponse[];
         failed_uploads: Array<{[key: string]: string}>;
-      }>('/api/v1/admin/upload-insurance', formData, {
+      }>('/api/v1/oracle/admin/upload-insurance', formData, {
         onUploadProgress: (progressEvent) => {
           if (progressEvent.total) {
             const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
@@ -159,7 +159,7 @@ export default function FileUpload({
         },
       });
 
-      console.log('✅ Upload response received:', response.data);
+      // console.log('✅ Upload response received:', response.data);
 
       if (!response.data.success) {
         throw new Error(response.data.message || 'Upload failed');
@@ -170,7 +170,7 @@ export default function FileUpload({
         response.data.uploads.forEach((uploadResponse, index) => {
           const file = filesToUpload[index];
           if (file) {
-            console.log(`✅ File ${file.name} uploaded successfully with ID: ${uploadResponse.upload_id}`);
+            // console.log(`✅ File ${file.name} uploaded successfully with ID: ${uploadResponse.upload_id}`);
             // Update status to processing
             updateFileProgress(file, { 
               status: 'processing', 
@@ -233,7 +233,7 @@ export default function FileUpload({
 
     const checkStatus = async (): Promise<void> => {
       try {
-        const response = await apiClient.get<ProcessingStatus>(`/api/v1/admin/upload-status/${uploadId}`);
+        const response = await apiClient.get<ProcessingStatus>(`/api/v1/oracle/admin/upload-status/${uploadId}`);
         const status = response.data;
 
         // Update progress based on processing step
@@ -420,9 +420,9 @@ export default function FileUpload({
               {dropzoneActive ? 'Drop files here' : 'Upload Insurance Documents'}
             </h3>
             <p className={`text-sm mt-2 ${disabled ? 'text-gray-400' : 'text-gray-500'}`}>
-              {disabled 
+              {disabled
                 ? 'Upload is currently disabled'
-                : `Drag and drop up to ${uploadOptions.maxFiles} PDF files here, or click to select files`
+                : `Drag and drop ${uploadOptions.maxFiles === 1 ? 'a' : `up to ${uploadOptions.maxFiles}`} PDF ${uploadOptions.maxFiles === 1 ? 'file' : 'files'} here, or click to select files`
               }
             </p>
             
@@ -443,7 +443,7 @@ export default function FileUpload({
             <span>•</span>
             <span>Max {(uploadOptions.maxSizeBytes! / (1024 * 1024)).toFixed(0)}MB per file</span>
             <span>•</span>
-            <span>Up to {uploadOptions.maxFiles} files</span>
+            <span>Up to {uploadOptions.maxFiles} {uploadOptions.maxFiles === 1 ? 'file' : 'files'}</span>
           </div>
         </div>
       </div>

@@ -38,7 +38,7 @@ export const getAuthTokens = (): AuthTokens | null => {
         
         // Check if token is expired (3-day sessions as per requirements)
         if (isTokenExpired(tokens.access_token)) {
-          console.log('Stored token is expired, clearing tokens');
+          // console.log('Stored token is expired, clearing tokens');
           localStorage.removeItem('auth_tokens');
           return null;
         }
@@ -80,8 +80,8 @@ if (typeof window !== 'undefined') {
 // Request interceptor
 apiClient.interceptors.request.use(
   (config) => {
-    console.log('🌐 Making API request:', config.method?.toUpperCase(), config.url);
-    console.log('🌐 Request data:', config.data);
+    // console.log('🌐 Making API request:', config.method?.toUpperCase(), config.url);
+    // console.log('🌐 Request data:', config.data);
     
     // Ensure we have the latest token
     const tokens = getAuthTokens();
@@ -109,7 +109,7 @@ apiClient.interceptors.request.use(
 // Response interceptor for error handling
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
-    console.log('✅ API response success:', response.config.url, response.status);
+    // console.log('✅ API response success:', response.config.url, response.status);
     console.debug('API response data:', response.data);
     return response;
   },

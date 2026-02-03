@@ -30,15 +30,16 @@ export default function LoginPage() {
   const [otpExpiry, setOtpExpiry] = useState<number | null>(null);
   const [countdown, setCountdown] = useState<number>(0);
 
-  const { isAuthenticated, requestOTP, verifyOTP, checkEmailAllowed } = useAuth();
+  const { isAuthenticated, requestOTP, verifyOTP, checkEmailAllowed, getRedirectPath } = useAuth();
   const router = useRouter();
 
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      router.replace('/dashboard');
+      const redirectPath = getRedirectPath();
+      router.replace(redirectPath);
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, router, getRedirectPath]);
 
   // Countdown timer for OTP expiry
   useEffect(() => {

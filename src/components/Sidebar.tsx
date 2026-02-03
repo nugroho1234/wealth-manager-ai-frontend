@@ -59,41 +59,52 @@ export default function Sidebar({ children }: SidebarProps) {
   const mainNavigationItems: SidebarItem[] = [
     {
       name: 'Dashboard',
-      href: '/dashboard',
+      href: '/oracle/dashboard',
       icon: '🏠',
     },
     {
       name: 'Search for Insurance',
-      href: '/products',
+      href: '/oracle/products',
       icon: '🔍',
     },
     {
       name: 'Chat with Insurance',
-      href: '/chat',
+      href: '/oracle/chat',
       icon: '💬',
     },
     {
       name: 'Manage Proposals',
-      href: '/proposals',
+      href: '/oracle/proposals',
       icon: '📊',
+    },
+    {
+      name: 'My Clients',
+      href: '/oracle/clients',
+      icon: '👥',
+      requiredRoles: [UserRole.ADVISOR, UserRole.LEADER_1, UserRole.LEADER_2, UserRole.SENIOR_PARTNER, UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MASTER],
     },
   ];
 
   const bottomNavigationItems: SidebarItem[] = [
     {
       name: 'Notifications',
-      href: '/notifications',
+      href: '/oracle/notifications',
       icon: '🔔',
     },
     {
       name: 'Settings',
-      href: '/settings',
+      href: '/oracle/settings',
       icon: '⚙️',
     },
     {
       name: 'Profile',
-      href: '/profile',
+      href: '/oracle/profile',
       icon: '👤',
+    },
+    {
+      name: 'Switch to Meeting Tracker',
+      href: '/meeting-tracker/dashboard',
+      icon: '📅',
     },
     {
       name: 'Logout',

@@ -76,6 +76,24 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
   }
 }
 
+// Helper function to get redirect path based on plan type
+function getRedirectPath(user: User | null): string {
+  if (!user) return '/login';
+
+  // If user has no plan_type or it's null, default to meeting_tracker
+  // This ensures new users start with the meeting tracker
+  const planType = user.plan_type || 'meeting_tracker';
+
+  switch (planType) {
+    case 'meeting_tracker':
+      return '/meeting-tracker/dashboard';
+    case 'oracle':
+      return '/oracle/dashboard';
+    default:
+      return '/meeting-tracker/dashboard';
+  }
+}
+
 // Context interface
 interface AuthContextType extends AuthState {
   requestOTP: (email: string) => Promise<OTPResponse>;
@@ -84,6 +102,7 @@ interface AuthContextType extends AuthState {
   updateProfile: (data: ProfileUpdateData) => Promise<void>;
   checkEmailAllowed: (email: string) => Promise<boolean>;
   refreshUser: () => Promise<void>;
+  getRedirectPath: () => string;
 }
 
 // Create context
@@ -153,18 +172,28 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const verifyOTP = async (email: string, otpCode: string): Promise<void> => {
     try {
+      // console.log('[AUTH] 🔐 Starting OTP verification for:', email);
       dispatch({ type: 'SET_LOADING', payload: true });
-      
+
       const otpVerification: OTPVerification = { email, otp_code: otpCode };
+      // console.log('[AUTH] 📤 Sending verify-otp request');
       const authResponse = await authService.verifyOTP(otpVerification);
-      
+
+      // console.log('[AUTH] 📥 Received response from backend');
+      // console.log('[AUTH] User data:', authResponse.user);
+      // console.log('[AUTH] User ID:', authResponse.user?.id);
+      // console.log('[AUTH] Company ID:', authResponse.user?.company_id);
+      // console.log('[AUTH] Access token length:', authResponse.access_token?.length);
+
       // Set tokens in API client
       setAuthTokens({
         access_token: authResponse.access_token,
         token_type: authResponse.token_type,
         expires_in: authResponse.expires_in,
       });
-      
+
+      // console.log('[AUTH] ✅ Tokens saved, dispatching LOGIN_SUCCESS');
+
       // Update state
       dispatch({
         type: 'LOGIN_SUCCESS',
@@ -177,7 +206,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
           },
         },
       });
+
+      // console.log('[AUTH] ✅ Login successful');
     } catch (error) {
+      console.error('[AUTH] ❌ Login failed:', error);
       dispatch({ type: 'SET_LOADING', payload: false });
       throw error;
     }
@@ -213,6 +245,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  const getUserRedirectPath = (): string => {
+    return getRedirectPath(state.user);
+  };
+
   const contextValue: AuthContextType = {
     ...state,
     requestOTP,
@@ -221,6 +257,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     updateProfile,
     checkEmailAllowed,
     refreshUser,
+    getRedirectPath: getUserRedirectPath,
   };
 
   return (

@@ -6,18 +6,19 @@ import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 export default function HomePage() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, getRedirectPath } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!isLoading) {
       if (isAuthenticated) {
-        router.replace('/dashboard');
+        const redirectPath = getRedirectPath();
+        router.replace(redirectPath);
       } else {
         router.replace('/login');
       }
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isLoading, router, getRedirectPath]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
