@@ -798,13 +798,6 @@ function ChatContent() {
 
                     {/* Products List */}
                     <div className="overflow-y-auto max-h-64">
-                      {/* Test Click Handler */}
-                      <div 
-                        onClick={() => console.log('🧪 Test div clicked!')}
-                        className="p-2 bg-red-100 text-red-800 text-sm cursor-pointer hover:bg-red-200"
-                      >
-                        🧪 Click Test (If you see this log, div clicks work)
-                      </div>
                       {(() => {
                         // console.log('🔍 Rendering products list:', {
                           // isLoadingProducts,

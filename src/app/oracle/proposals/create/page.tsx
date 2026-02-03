@@ -269,8 +269,8 @@ function CreateProposalContent() {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="complete">Complete Proposal (Full Analysis)</option>
-                    <option value="summary">Summary Proposal (Key Points)</option>
-                    <option value="both">Both Complete & Summary</option>
+                    {/* <option value="summary">Summary Proposal (Key Points)</option>
+                    <option value="both">Both Complete & Summary</option> */}
                   </select>
                 </div>
 

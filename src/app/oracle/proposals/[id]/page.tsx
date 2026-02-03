@@ -1975,7 +1975,7 @@ function ProposalDetailContent() {
       const response = await apiClient.get(`/api/v1/oracle/proposals/${proposalId}/illustrations/extracted-data?t=${timestamp}`);
       // console.log('API response:', response.data); // Debug log
       // The API returns {success: true, data: [...]}
-      // const data = response.data.data || response.data;
+      const data = response.data.data || response.data;
       // console.log('🔍 DEBUG: Extracted data array:', data);
 
       // Debug: Check user_edited_data in the response

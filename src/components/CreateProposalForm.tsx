@@ -293,7 +293,7 @@ export default function CreateProposalForm({ onProposalCreated }: CreateProposal
                   </p>
                 </div>
               </label>
-              <label className="flex items-start">
+              {/* <label className="flex items-start">
                 <input
                   type="radio"
                   value="summary"
@@ -320,7 +320,7 @@ export default function CreateProposalForm({ onProposalCreated }: CreateProposal
                     Generate both complete and summary versions
                   </p>
                 </div>
-              </label>
+              </label> */}
               </div>
             </div>
           </div>
