@@ -228,7 +228,9 @@ function MyTeamContent() {
       if (a.manager.level !== b.manager.level) {
         return a.manager.level - b.manager.level;
       }
-      return a.manager.name.localeCompare(b.manager.name);
+      const aName = a.manager.name || a.manager.email || 'Unknown';
+      const bName = b.manager.name || b.manager.email || 'Unknown';
+      return aName.localeCompare(bName);
     });
 
     return groups;

@@ -121,10 +121,12 @@ export default function TeamFilter({ value, onChange, className = '' }: TeamFilt
             .sort((a, b) => {
               // Sort by depth (direct reports first), then by name
               if (a.depth !== b.depth) return a.depth - b.depth;
-              return (a.user_name || a.user_email).localeCompare(b.user_name || b.user_email);
+              const aName = a.user_name || a.user_email || 'Unknown';
+              const bName = b.user_name || b.user_email || 'Unknown';
+              return aName.localeCompare(bName);
             })
             .map((sub) => {
-              const name = sub.user_name || sub.user_email.split('@')[0];
+              const name = sub.user_name || (sub.user_email ? sub.user_email.split('@')[0] : 'Unknown');
               const indent = '  '.repeat(sub.depth); // Visual indent for hierarchy
               const title = sub.position_title ? ` (${sub.position_title})` : '';
 
