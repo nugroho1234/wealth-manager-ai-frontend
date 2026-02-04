@@ -143,7 +143,7 @@ function ChatContent() {
         // Call handleProductSelect and clean URL after it completes
         handleProductSelect(product).then(() => {
           // console.log('✅ Product selection completed, clearing URL parameter');
-          router.replace('/chat', { scroll: false });
+          router.replace('/oracle/chat', { scroll: false });
         });
       }
     }
