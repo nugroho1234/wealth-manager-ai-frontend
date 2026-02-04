@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import MeetingTrackerSidebar from '@/components/meeting-tracker/Sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || '${API_BASE_URL}';
+
 interface Company {
   company_id: string;
   name: string;
@@ -82,7 +84,7 @@ export default function CompaniesListPage() {
 
       // Fetch draft companies
       const draftResponse = await fetch(
-        'http://localhost:8000/api/v1/admin/meeting-tracker/companies/drafts',
+        '${API_BASE_URL}/api/v1/admin/meeting-tracker/companies/drafts',
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -93,7 +95,7 @@ export default function CompaniesListPage() {
 
       // Fetch active companies
       const activeResponse = await fetch(
-        'http://localhost:8000/api/v1/admin/meeting-tracker/companies/active',
+        '${API_BASE_URL}/api/v1/admin/meeting-tracker/companies/active',
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -104,7 +106,7 @@ export default function CompaniesListPage() {
 
       // Fetch inactive companies
       const inactiveResponse = await fetch(
-        'http://localhost:8000/api/v1/admin/meeting-tracker/companies/inactive',
+        '${API_BASE_URL}/api/v1/admin/meeting-tracker/companies/inactive',
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -159,7 +161,7 @@ export default function CompaniesListPage() {
       const token = authTokens.access_token;
 
       const response = await fetch(
-        `http://localhost:8000/api/v1/admin/meeting-tracker/hierarchy/members?company_id=${companyId}&limit=100`,
+        `${API_BASE_URL}/api/v1/admin/meeting-tracker/hierarchy/members?company_id=${companyId}&limit=100`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -191,7 +193,7 @@ export default function CompaniesListPage() {
       const token = authTokens.access_token;
 
       const response = await fetch(
-        'http://localhost:8000/api/v1/admin/meeting-tracker/hierarchy/members/with-user',
+        '${API_BASE_URL}/api/v1/admin/meeting-tracker/hierarchy/members/with-user',
         {
           method: 'POST',
           headers: {
@@ -253,7 +255,7 @@ export default function CompaniesListPage() {
       const token = authTokens.access_token;
 
       const response = await fetch(
-        'http://localhost:8000/api/v1/admin/meeting-tracker/hierarchy/members/link-existing',
+        '${API_BASE_URL}/api/v1/admin/meeting-tracker/hierarchy/members/link-existing',
         {
           method: 'POST',
           headers: {
@@ -311,7 +313,7 @@ export default function CompaniesListPage() {
         }
 
         const response = await fetch(
-          `http://localhost:8000/api/v1/admin/meeting-tracker/companies/${companyId}`,
+          `${API_BASE_URL}/api/v1/admin/meeting-tracker/companies/${companyId}`,
           {
             method: 'DELETE',
             headers: { Authorization: `Bearer ${token}` },
@@ -329,7 +331,7 @@ export default function CompaniesListPage() {
         }
 
         const response = await fetch(
-          `http://localhost:8000/api/v1/admin/meeting-tracker/companies/${companyId}/deactivate`,
+          `${API_BASE_URL}/api/v1/admin/meeting-tracker/companies/${companyId}/deactivate`,
           {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}` },
@@ -347,7 +349,7 @@ export default function CompaniesListPage() {
         }
 
         const response = await fetch(
-          `http://localhost:8000/api/v1/admin/meeting-tracker/companies/${companyId}/activate`,
+          `${API_BASE_URL}/api/v1/admin/meeting-tracker/companies/${companyId}/activate`,
           {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}` },
