@@ -14,7 +14,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { format, isToday, isTomorrow, isPast, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, subMonths, subYears, addDays } from 'date-fns';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 type DateRangeFilter = 'this_month' | 'last_7_days' | 'last_30_days' | 'this_week' | 'last_month' | 'this_year' | 'last_year' | 'custom' | 'all_time';
 

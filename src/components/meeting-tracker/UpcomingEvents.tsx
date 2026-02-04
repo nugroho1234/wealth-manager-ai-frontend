@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, memo, useCallback, useMemo } from 'react';
 import { MeetingDetailModal, type MeetingForModal } from '@/components/meeting-tracker/MeetingDetailModal';
 
 // API Base URL
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 // Type definitions
 interface Meeting {

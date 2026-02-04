@@ -6,7 +6,7 @@ import MeetingTrackerSidebar from '@/components/meeting-tracker/Sidebar';
 import { useState, useEffect, useRef } from 'react';
 
 // API Base URL
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 interface Company {
   company_id: string;

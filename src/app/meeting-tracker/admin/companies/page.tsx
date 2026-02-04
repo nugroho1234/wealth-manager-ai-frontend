@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import MeetingTrackerSidebar from '@/components/meeting-tracker/Sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || '${API_BASE_URL}';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 interface Company {
   company_id: string;

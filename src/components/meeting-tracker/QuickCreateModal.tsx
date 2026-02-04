@@ -8,7 +8,7 @@ import MultiTaskForm from './MultiTaskForm';
 import { TaskFormFieldsData } from './TaskFormFields';
 import { subDays, addDays } from 'date-fns';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 // Meeting interface for dropdown
 interface MeetingOption {
