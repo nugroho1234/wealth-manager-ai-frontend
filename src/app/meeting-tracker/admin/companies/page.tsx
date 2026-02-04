@@ -84,7 +84,7 @@ export default function CompaniesListPage() {
 
       // Fetch draft companies
       const draftResponse = await fetch(
-        '${API_BASE_URL}/api/v1/admin/meeting-tracker/companies/drafts',
+        `${API_BASE_URL}/api/v1/admin/meeting-tracker/companies/drafts`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -95,7 +95,7 @@ export default function CompaniesListPage() {
 
       // Fetch active companies
       const activeResponse = await fetch(
-        '${API_BASE_URL}/api/v1/admin/meeting-tracker/companies/active',
+        `${API_BASE_URL}/api/v1/admin/meeting-tracker/companies/active`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -106,7 +106,7 @@ export default function CompaniesListPage() {
 
       // Fetch inactive companies
       const inactiveResponse = await fetch(
-        '${API_BASE_URL}/api/v1/admin/meeting-tracker/companies/inactive',
+        `${API_BASE_URL}/api/v1/admin/meeting-tracker/companies/inactive`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -193,7 +193,7 @@ export default function CompaniesListPage() {
       const token = authTokens.access_token;
 
       const response = await fetch(
-        '${API_BASE_URL}/api/v1/admin/meeting-tracker/hierarchy/members/with-user',
+        `${API_BASE_URL}/api/v1/admin/meeting-tracker/hierarchy/members/with-user`,
         {
           method: 'POST',
           headers: {
@@ -255,7 +255,7 @@ export default function CompaniesListPage() {
       const token = authTokens.access_token;
 
       const response = await fetch(
-        '${API_BASE_URL}/api/v1/admin/meeting-tracker/hierarchy/members/link-existing',
+        `${API_BASE_URL}/api/v1/admin/meeting-tracker/hierarchy/members/link-existing`,
         {
           method: 'POST',
           headers: {
