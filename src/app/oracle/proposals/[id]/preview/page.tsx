@@ -433,7 +433,7 @@ export default function ProposalPreviewPage() {
 
       {/* Page Content */}
       <div className="p-6">
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+        <div className="bg-white rounded-lg shadow-lg overflow-auto max-h-[calc(100vh-160px)]">
           {/* Page Info */}
           {pages.length > 0 && pages[activeTab] && (
             <div className="bg-gray-50 px-6 py-3 border-b border-gray-200">
@@ -474,22 +474,37 @@ export default function ProposalPreviewPage() {
       <style jsx global>{`
         .proposal-page-viewer {
           /* Center the page content and add scale for better viewing */
-          display: flex;
-          justify-content: center;
-          align-items: flex-start;
+          display: block;
           padding: 20px;
           background: #f3f4f6;
-          min-height: 70vh;
+          /* Remove min-height to let parent container control height */
+          /* Disable overflow here - parent handles it */
+          overflow: visible;
         }
 
         .proposal-content {
           /* Scale the A4 landscape page for better readability */
           transform: scale(0.85);
-          transform-origin: top center;
+          transform-origin: top left;
           box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
           border-radius: 8px;
           background: white;
           font-family: 'Inter', system-ui, -apple-system, sans-serif;
+          /* Use actual dimensions instead of fit-content */
+          display: inline-block;
+          /* Ensure content can expand beyond viewport when zoomed */
+          min-width: 297mm;
+          width: auto;
+        }
+
+        /* CRITICAL FIX: Override embedded HTML's overflow:hidden */
+        /* The template HTML pages have body{overflow:hidden} for PDF generation */
+        /* We need to override this for preview scrolling to work */
+        .proposal-content html,
+        .proposal-content body {
+          overflow: visible !important;
+          height: auto !important;
+          min-height: auto !important;
         }
 
         .proposal-content img {
