@@ -9,14 +9,14 @@ interface BacktestResultsProps {
 }
 
 export default function BacktestResults({ results }: BacktestResultsProps) {
-  const profitLoss = results.final_value - results.total_invested;
+  const profitLoss = Number(results.final_value) - Number(results.total_invested);
   const isProfitable = profitLoss >= 0;
 
   // Format chart data
   const chartData = results.time_series.map((point) => ({
     date: new Date(point.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-    'Portfolio Value': parseFloat(point.value.toFixed(2)),
-    'Total Invested': results.strategy === 'dca' ? undefined : parseFloat(results.total_invested.toFixed(2)),
+    'Portfolio Value': parseFloat(Number(point.value).toFixed(2)),
+    'Total Invested': results.strategy === 'dca' ? undefined : parseFloat(Number(results.total_invested).toFixed(2)),
   }));
 
   // Risk level colors
