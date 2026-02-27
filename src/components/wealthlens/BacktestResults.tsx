@@ -57,7 +57,7 @@ export default function BacktestResults({ results }: BacktestResultsProps) {
             <DollarSign className="h-5 w-5 text-gray-400" />
           </div>
           <div className="text-2xl font-bold text-gray-900">
-            ${results.total_invested.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            ${Number(results.total_invested).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
         </div>
 
@@ -67,7 +67,7 @@ export default function BacktestResults({ results }: BacktestResultsProps) {
             <TrendingUp className="h-5 w-5 text-gray-400" />
           </div>
           <div className="text-2xl font-bold text-gray-900">
-            ${results.final_value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            ${Number(results.final_value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
         </div>
 
@@ -82,7 +82,7 @@ export default function BacktestResults({ results }: BacktestResultsProps) {
           </div>
           <div className={`text-2xl font-bold ${isProfitable ? 'text-green-600' : 'text-red-600'}`}>
             {isProfitable ? '+' : ''}
-            {(results.total_return * 100).toFixed(2)}%
+            {(Number(results.total_return) * 100).toFixed(2)}%
           </div>
           <div className="text-sm text-gray-500 mt-1">
             {isProfitable ? '+' : ''}${profitLoss.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -95,7 +95,7 @@ export default function BacktestResults({ results }: BacktestResultsProps) {
             <Percent className="h-5 w-5 text-blue-500" />
           </div>
           <div className="text-2xl font-bold text-blue-600">
-            {(results.cagr * 100).toFixed(2)}%
+            {(Number(results.cagr) * 100).toFixed(2)}%
           </div>
           <div className="text-xs text-gray-500 mt-1">Compound Annual Growth Rate</div>
         </div>
@@ -168,19 +168,19 @@ export default function BacktestResults({ results }: BacktestResultsProps) {
           <div>
             <div className="text-sm text-gray-600 mb-1">Volatility (Annual)</div>
             <div className="text-lg font-semibold text-gray-900">
-              {(results.risk_metrics.volatility_annual * 100).toFixed(2)}%
+              {(Number(results.risk_metrics.volatility_annual) * 100).toFixed(2)}%
             </div>
           </div>
           <div>
             <div className="text-sm text-gray-600 mb-1">Sharpe Ratio</div>
             <div className="text-lg font-semibold text-gray-900">
-              {results.risk_metrics.sharpe_ratio.toFixed(2)}
+              {Number(results.risk_metrics.sharpe_ratio).toFixed(2)}
             </div>
           </div>
           <div>
             <div className="text-sm text-gray-600 mb-1">Max Drawdown</div>
             <div className="text-lg font-semibold text-red-600">
-              {(results.risk_metrics.max_drawdown * 100).toFixed(2)}%
+              {(Number(results.risk_metrics.max_drawdown) * 100).toFixed(2)}%
             </div>
             {results.risk_metrics.max_drawdown_date && (
               <div className="text-xs text-gray-500 mt-0.5">
@@ -196,7 +196,7 @@ export default function BacktestResults({ results }: BacktestResultsProps) {
             <div>
               <div className="text-sm font-medium text-green-900">Best Day</div>
               <div className="text-lg font-bold text-green-600">
-                +{(results.risk_metrics.best_day_return * 100).toFixed(2)}%
+                +{(Number(results.risk_metrics.best_day_return) * 100).toFixed(2)}%
               </div>
               {results.risk_metrics.best_day_date && (
                 <div className="text-xs text-green-700">
@@ -210,7 +210,7 @@ export default function BacktestResults({ results }: BacktestResultsProps) {
             <div>
               <div className="text-sm font-medium text-red-900">Worst Day</div>
               <div className="text-lg font-bold text-red-600">
-                {(results.risk_metrics.worst_day_return * 100).toFixed(2)}%
+                {(Number(results.risk_metrics.worst_day_return) * 100).toFixed(2)}%
               </div>
               {results.risk_metrics.worst_day_date && (
                 <div className="text-xs text-red-700">
@@ -254,16 +254,16 @@ export default function BacktestResults({ results }: BacktestResultsProps) {
                     <div className="text-sm text-gray-500">{allocation.name}</div>
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap text-right text-sm text-gray-900">
-                    {allocation.percentage.toFixed(1)}%
+                    {Number(allocation.percentage).toFixed(1)}%
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap text-right text-sm text-gray-900">
-                    {allocation.shares_owned.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {Number(allocation.shares_owned).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900">
-                    ${allocation.final_value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    ${Number(allocation.final_value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap text-right text-sm text-gray-600">
-                    {allocation.contribution_to_portfolio.toFixed(1)}%
+                    {Number(allocation.contribution_to_portfolio).toFixed(1)}%
                   </td>
                 </tr>
               ))}
