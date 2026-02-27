@@ -120,25 +120,34 @@ export default function PortfolioBuilder({
                 </button>
               </div>
 
-              {/* Allocation Slider */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <label className="text-gray-700 font-medium">Allocation</label>
-                  <span className="text-lg font-semibold text-blue-600">{percentage.toFixed(1)}%</span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  step="0.1"
-                  value={percentage}
-                  onChange={(e) => onUpdateAllocation(instrument.instrument_id, parseFloat(e.target.value))}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
-                />
-                <div className="flex justify-between text-xs text-gray-500">
-                  <span>0%</span>
-                  <span>50%</span>
-                  <span>100%</span>
+              {/* Allocation Input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Allocation</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    value={percentage}
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value);
+                      if (!isNaN(value) && value >= 0 && value <= 100) {
+                        onUpdateAllocation(instrument.instrument_id, value);
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const value = parseFloat(e.target.value);
+                      if (isNaN(value) || value < 0) {
+                        onUpdateAllocation(instrument.instrument_id, 0);
+                      } else if (value > 100) {
+                        onUpdateAllocation(instrument.instrument_id, 100);
+                      }
+                    }}
+                    className="w-full px-4 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg font-semibold"
+                    placeholder="0.0"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">%</span>
                 </div>
               </div>
             </div>
