@@ -12,8 +12,8 @@
 **Directory Structure:**
 ```
 wealth-manager-frontend/src/
-├── app/oracle/wealthlens/
-│   └── page.tsx                          # Main WealthLens page
+├── app/wealthlens/
+│   └── page.tsx                          # Main WealthLens page (root level)
 ├── components/wealthlens/
 │   ├── InstrumentSearch.tsx              # Search with autocomplete
 │   ├── PortfolioBuilder.tsx              # Allocation management
@@ -95,7 +95,7 @@ wealth-manager-frontend/src/
   - Final value
   - Contribution to portfolio
 
-#### 6. **Main Page** - [src/app/oracle/wealthlens/page.tsx](src/app/oracle/wealthlens/page.tsx)
+#### 6. **Main Page** - [src/app/wealthlens/page.tsx](src/app/wealthlens/page.tsx)
 - **4-Step Workflow**:
   1. Search Instruments (left column)
   2. Build Portfolio (left column)
@@ -188,7 +188,7 @@ npm run dev
 
 ### 3. Navigate to WealthLens
 
-Open browser: **http://localhost:3000/oracle/wealthlens**
+Open browser: **http://localhost:3000/wealthlens**
 
 ---
 
@@ -425,12 +425,12 @@ Open browser: **http://localhost:3000/oracle/wealthlens**
    - Risk metrics
    - Asset breakdown table
 
-6. **src/app/oracle/wealthlens/page.tsx** (252 lines)
+6. **src/app/wealthlens/page.tsx** (208 lines)
    - Main page layout
    - State management
    - Component integration
 
-**Total:** ~1,437 lines of TypeScript/React code
+**Total:** ~1,393 lines of TypeScript/React code
 
 ---
 
@@ -449,4 +449,6 @@ git push origin feature/wealthlens
 **Ready to test!** 🚀
 
 Start the backend and frontend, then navigate to:
-**http://localhost:3000/oracle/wealthlens**
+**http://localhost:3000/wealthlens**
+
+**Note:** WealthLens is now at the root level (no authentication required), not under `/oracle/`
