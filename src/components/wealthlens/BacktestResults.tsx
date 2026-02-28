@@ -2,22 +2,48 @@
 
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { TrendingUp, TrendingDown, DollarSign, Percent, Activity, AlertTriangle } from 'lucide-react';
-import { BacktestResults as BacktestResultsType } from '@/lib/api/wealthlens';
+import { BacktestResults as BacktestResultsType, BenchmarkResult } from '@/lib/api/wealthlens';
 
 interface BacktestResultsProps {
   results: BacktestResultsType;
+  benchmark?: BenchmarkResult | null;
 }
 
-export default function BacktestResults({ results }: BacktestResultsProps) {
+export default function BacktestResults({ results, benchmark }: BacktestResultsProps) {
   const profitLoss = Number(results.final_value) - Number(results.total_invested);
   const isProfitable = profitLoss >= 0;
 
-  // Format chart data
-  const chartData = results.time_series.map((point) => ({
-    date: new Date(point.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-    'Portfolio Value': parseFloat(Number(point.value).toFixed(2)),
-    'Total Invested': results.strategy === 'dca' ? undefined : parseFloat(Number(results.total_invested).toFixed(2)),
-  }));
+  // Colors for each instrument line
+  const instrumentColors = ['#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#6366f1'];
+
+  // Format chart data with individual instruments and benchmark
+  const chartData = results.time_series.map((point, index) => {
+    const dataPoint: any = {
+      date: new Date(point.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+      'Total Portfolio': parseFloat(Number(point.value).toFixed(2)),
+    };
+
+    // Add each individual instrument value from their time series
+    results.allocations.forEach((allocation) => {
+      // Use the per-instrument time series data from backend
+      if (allocation.time_series && allocation.time_series[index]) {
+        const instrumentValue = parseFloat(Number(allocation.time_series[index].value).toFixed(2));
+        dataPoint[allocation.symbol] = instrumentValue;
+      }
+    });
+
+    // Add benchmark value if available
+    if (benchmark && benchmark.time_series[index]) {
+      dataPoint['Benchmark'] = parseFloat(Number(benchmark.time_series[index].value).toFixed(2));
+    }
+
+    // Add total invested line for lump sum
+    if (results.strategy === 'lump_sum') {
+      dataPoint['Total Invested'] = parseFloat(Number(results.total_invested).toFixed(2));
+    }
+
+    return dataPoint;
+  });
 
   // Risk level colors
   const getRiskColor = (level: string) => {
@@ -124,27 +150,58 @@ export default function BacktestResults({ results }: BacktestResultsProps) {
                 borderRadius: '8px',
                 padding: '12px',
               }}
-              formatter={(value: number) => [
+              formatter={(value: number, name: string) => [
                 `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-                '',
+                name,
               ]}
             />
             <Legend />
+
+            {/* Individual instrument lines */}
+            {results.allocations.map((allocation, idx) => (
+              <Line
+                key={allocation.symbol}
+                type="monotone"
+                dataKey={allocation.symbol}
+                stroke={instrumentColors[idx % instrumentColors.length]}
+                strokeWidth={2}
+                dot={false}
+                activeDot={{ r: 4 }}
+                opacity={0.7}
+              />
+            ))}
+
+            {/* Total Portfolio line */}
             <Line
               type="monotone"
-              dataKey="Portfolio Value"
+              dataKey="Total Portfolio"
               stroke="#3b82f6"
               strokeWidth={3}
               dot={false}
               activeDot={{ r: 6 }}
             />
+
+            {/* Benchmark line */}
+            {benchmark && (
+              <Line
+                type="monotone"
+                dataKey="Benchmark"
+                stroke="#6b7280"
+                strokeWidth={2}
+                strokeDasharray="5 5"
+                dot={false}
+                activeDot={{ r: 5 }}
+              />
+            )}
+
+            {/* Total Invested line (Lump Sum only) */}
             {results.strategy === 'lump_sum' && (
               <Line
                 type="monotone"
                 dataKey="Total Invested"
-                stroke="#9ca3af"
-                strokeWidth={2}
-                strokeDasharray="5 5"
+                stroke="#d1d5db"
+                strokeWidth={1}
+                strokeDasharray="3 3"
                 dot={false}
               />
             )}

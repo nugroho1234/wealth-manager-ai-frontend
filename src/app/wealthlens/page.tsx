@@ -1,19 +1,59 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { TrendingUp, BarChart3, Info } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import InstrumentSearch from '@/components/wealthlens/InstrumentSearch';
 import PortfolioBuilder from '@/components/wealthlens/PortfolioBuilder';
 import BacktestConfiguration, { BacktestConfig } from '@/components/wealthlens/BacktestConfiguration';
 import BacktestResults from '@/components/wealthlens/BacktestResults';
-import { runBacktest, InstrumentSearchResult, BacktestResults as BacktestResultsType } from '@/lib/api/wealthlens';
+import BenchmarkSelector from '@/components/wealthlens/BenchmarkSelector';
+import BenchmarkComparisonResults from '@/components/wealthlens/BenchmarkComparisonResults';
+import {
+  runBacktest,
+  compareWithBenchmark,
+  getCoverageOverlap,
+  InstrumentSearchResult,
+  BacktestResults as BacktestResultsType,
+  BenchmarkComparison,
+  CoverageOverlap,
+} from '@/lib/api/wealthlens';
 
 export default function WealthLensPage() {
   const [selectedInstruments, setSelectedInstruments] = useState<InstrumentSearchResult[]>([]);
   const [allocations, setAllocations] = useState<Record<string, number>>({});
+  const [selectedBenchmark, setSelectedBenchmark] = useState<InstrumentSearchResult | null>(null);
   const [backtestResults, setBacktestResults] = useState<BacktestResultsType | null>(null);
+  const [benchmarkComparison, setBenchmarkComparison] = useState<BenchmarkComparison | null>(null);
+  const [coverageOverlap, setCoverageOverlap] = useState<CoverageOverlap | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Fetch coverage overlap whenever instruments or benchmark change
+  useEffect(() => {
+    const fetchCoverageOverlap = async () => {
+      if (selectedInstruments.length === 0) {
+        setCoverageOverlap(null);
+        return;
+      }
+
+      try {
+        // Include benchmark in overlap calculation if selected
+        const instrumentIds = selectedInstruments.map((inst) => inst.instrument_id);
+        if (selectedBenchmark) {
+          instrumentIds.push(selectedBenchmark.instrument_id);
+        }
+
+        const overlap = await getCoverageOverlap(instrumentIds);
+        setCoverageOverlap(overlap);
+      } catch (error: any) {
+        console.error('Error fetching coverage overlap:', error);
+        toast.error('Failed to fetch date coverage for selected instruments');
+        setCoverageOverlap(null);
+      }
+    };
+
+    fetchCoverageOverlap();
+  }, [selectedInstruments, selectedBenchmark]);
 
   const handleAddInstrument = (instrument: InstrumentSearchResult) => {
     setSelectedInstruments([...selectedInstruments, instrument]);
@@ -60,6 +100,7 @@ export default function WealthLensPage() {
   const handleRunBacktest = async (config: BacktestConfig) => {
     setLoading(true);
     setBacktestResults(null);
+    setBenchmarkComparison(null);
 
     try {
       const request = {
@@ -78,9 +119,17 @@ export default function WealthLensPage() {
         })),
       };
 
-      const results = await runBacktest(request);
-      setBacktestResults(results);
-      toast.success('Backtest completed successfully!');
+      // Run backtest with or without benchmark comparison
+      if (selectedBenchmark) {
+        const comparison = await compareWithBenchmark(request, selectedBenchmark.instrument_id);
+        setBenchmarkComparison(comparison);
+        setBacktestResults(comparison.portfolio); // Extract portfolio results
+        toast.success('Backtest with benchmark comparison completed!');
+      } else {
+        const results = await runBacktest(request);
+        setBacktestResults(results);
+        toast.success('Backtest completed successfully!');
+      }
 
       // Scroll to results
       setTimeout(() => {
@@ -156,17 +205,35 @@ export default function WealthLensPage() {
                 allocations={allocations}
                 onUpdateAllocation={handleUpdateAllocation}
                 onRemoveInstrument={handleRemoveInstrument}
+                coverageOverlap={coverageOverlap}
+                hasBenchmark={!!selectedBenchmark}
               />
             </div>
           </div>
 
           {/* Right Column: Configuration & Results */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Step 3: Configure Backtest */}
+            {/* Step 3: Select Benchmark (Optional) */}
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold text-sm">
+                  3
+                </div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Select Benchmark <span className="text-sm font-normal text-gray-500">(Optional)</span>
+                </h2>
+              </div>
+              <BenchmarkSelector
+                selectedBenchmark={selectedBenchmark}
+                onSelectBenchmark={setSelectedBenchmark}
+              />
+            </div>
+
+            {/* Step 4: Configure Backtest */}
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-sm">
-                  3
+                  4
                 </div>
                 <h2 className="text-lg font-semibold text-gray-900">Configure & Run Backtest</h2>
               </div>
@@ -174,10 +241,11 @@ export default function WealthLensPage() {
                 onRunBacktest={handleRunBacktest}
                 loading={loading}
                 disabled={!canRunBacktest}
+                coverageOverlap={coverageOverlap}
               />
             </div>
 
-            {/* Step 4: Results */}
+            {/* Step 5: Results */}
             {backtestResults && (
               <div id="results-section">
                 <div className="flex items-center gap-2 mb-4">
@@ -186,7 +254,21 @@ export default function WealthLensPage() {
                   </div>
                   <h2 className="text-lg font-semibold text-gray-900">Results</h2>
                 </div>
-                <BacktestResults results={backtestResults} />
+                <BacktestResults
+                  results={backtestResults}
+                  benchmark={benchmarkComparison?.benchmark || null}
+                />
+
+                {/* Benchmark Comparison Results */}
+                {benchmarkComparison && (
+                  <div className="mt-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-4">Benchmark Comparison</h3>
+                    <BenchmarkComparisonResults
+                      benchmark={benchmarkComparison.benchmark}
+                      comparison={benchmarkComparison.comparison}
+                    />
+                  </div>
+                )}
               </div>
             )}
 

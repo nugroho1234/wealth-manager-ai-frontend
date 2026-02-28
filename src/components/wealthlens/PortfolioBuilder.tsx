@@ -1,14 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { InstrumentSearchResult } from '@/lib/api/wealthlens';
+import { X, AlertCircle, CheckCircle2, Calendar } from 'lucide-react';
+import { InstrumentSearchResult, CoverageOverlap } from '@/lib/api/wealthlens';
 
 interface PortfolioBuilderProps {
   instruments: InstrumentSearchResult[];
   allocations: Record<string, number>;
   onUpdateAllocation: (instrumentId: string, percentage: number) => void;
   onRemoveInstrument: (instrumentId: string) => void;
+  coverageOverlap: CoverageOverlap | null;
+  hasBenchmark?: boolean;
 }
 
 export default function PortfolioBuilder({
@@ -16,6 +18,8 @@ export default function PortfolioBuilder({
   allocations,
   onUpdateAllocation,
   onRemoveInstrument,
+  coverageOverlap,
+  hasBenchmark = false,
 }: PortfolioBuilderProps) {
   const totalAllocation = Object.values(allocations).reduce((sum, val) => sum + val, 0);
   const isValid = Math.abs(totalAllocation - 100) < 0.01;
@@ -179,6 +183,43 @@ export default function PortfolioBuilder({
           >
             Reset
           </button>
+        </div>
+      )}
+
+      {/* Coverage Overlap Info */}
+      {coverageOverlap && instruments.length > 0 && (
+        <div className={`mt-4 p-4 rounded-lg border ${
+          coverageOverlap.has_coverage
+            ? 'bg-blue-50 border-blue-200'
+            : 'bg-red-50 border-red-200'
+        }`}>
+          <div className="flex items-start gap-2">
+            <Calendar className={`h-5 w-5 flex-shrink-0 mt-0.5 ${
+              coverageOverlap.has_coverage ? 'text-blue-600' : 'text-red-600'
+            }`} />
+            <div className="flex-1">
+              <div className={`text-sm font-medium ${
+                coverageOverlap.has_coverage ? 'text-blue-900' : 'text-red-900'
+              }`}>
+                {coverageOverlap.has_coverage
+                  ? `Available Data Range for ${hasBenchmark ? 'Portfolio & Benchmark' : 'All Instruments'}`
+                  : 'No Overlapping Data Range'}
+              </div>
+              {coverageOverlap.has_coverage ? (
+                <div className={`text-xs mt-1 ${
+                  coverageOverlap.has_coverage ? 'text-blue-700' : 'text-red-700'
+                }`}>
+                  {new Date(coverageOverlap.earliest_overlap).toLocaleDateString()} to{' '}
+                  {new Date(coverageOverlap.latest_overlap).toLocaleDateString()}
+                  {' '}({coverageOverlap.total_days.toLocaleString()} days)
+                </div>
+              ) : (
+                <div className="text-xs text-red-700 mt-1">
+                  Selected instruments do not have overlapping data. Please adjust your selection.
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

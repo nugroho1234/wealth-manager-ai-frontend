@@ -34,6 +34,21 @@ export interface DataCoverage {
   data_quality_score?: number;
 }
 
+export interface CoverageOverlap {
+  earliest_overlap: string;
+  latest_overlap: string;
+  total_days: number;
+  has_coverage: boolean;
+  instrument_coverage: Array<{
+    instrument_id: string;
+    symbol: string;
+    name: string;
+    earliest_date: string;
+    latest_date: string;
+    total_days: number;
+  }>;
+}
+
 export interface AllocationInput {
   instrument_id: string;
   symbol: string;
@@ -65,6 +80,7 @@ export interface AllocationResult {
   shares_owned: number;
   final_value: number;
   contribution_to_portfolio: number;
+  time_series: TimeSeriesPoint[];
 }
 
 export interface RiskMetrics {
@@ -101,6 +117,41 @@ export interface BacktestResults {
   calculated_at?: string;
 }
 
+export interface BenchmarkResult {
+  instrument_id: string;
+  symbol: string;
+  name: string;
+  total_invested: number;
+  final_value: number;
+  total_return: number;
+  cagr: number;
+  volatility_annual: number;
+  sharpe_ratio: number;
+  max_drawdown: number;
+  time_series: TimeSeriesPoint[];
+}
+
+export interface ComparisonMetrics {
+  excess_return: number;
+  tracking_error: number;
+  information_ratio: number;
+  alpha: number;
+  beta: number;
+  correlation: number;
+  r_squared: number;
+  portfolio_sharpe: number;
+  benchmark_sharpe: number;
+  sharpe_difference: number;
+}
+
+export interface BenchmarkComparison {
+  portfolio: BacktestResults;
+  benchmark: BenchmarkResult;
+  comparison: ComparisonMetrics;
+  comparison_period: string;
+  calculated_at: string;
+}
+
 /**
  * Search for financial instruments
  */
@@ -135,10 +186,34 @@ export const getInstrumentCoverage = async (instrumentId: string): Promise<DataC
 };
 
 /**
+ * Get coverage overlap for multiple instruments
+ */
+export const getCoverageOverlap = async (instrumentIds: string[]): Promise<CoverageOverlap> => {
+  const params = new URLSearchParams();
+  instrumentIds.forEach(id => params.append('instrument_ids', id));
+  const response = await apiClient.post(`/api/v1/wealthlens/instruments/coverage/overlap?${params.toString()}`);
+  return response.data;
+};
+
+/**
  * Run a portfolio backtest
  */
 export const runBacktest = async (request: BacktestCreateRequest): Promise<BacktestResults> => {
   const response = await apiClient.post('/api/v1/wealthlens/backtests', request);
+  return response.data;
+};
+
+/**
+ * Run a portfolio backtest and compare with benchmark
+ */
+export const compareWithBenchmark = async (
+  request: BacktestCreateRequest,
+  benchmarkInstrumentId: string
+): Promise<BenchmarkComparison> => {
+  const response = await apiClient.post(
+    `/api/v1/wealthlens/backtests/compare?benchmark_instrument_id=${benchmarkInstrumentId}`,
+    request
+  );
   return response.data;
 };
 
@@ -154,6 +229,8 @@ export default {
   searchInstruments,
   getInstrument,
   getInstrumentCoverage,
+  getCoverageOverlap,
   runBacktest,
+  compareWithBenchmark,
   healthCheck,
 };
