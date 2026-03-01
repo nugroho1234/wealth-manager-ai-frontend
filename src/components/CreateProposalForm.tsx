@@ -27,7 +27,7 @@ const proposalSchema = z.object({
   needs_source: z.enum(['manual', 'ai_query']),
   ai_query_id: z.string().optional(),
   proposal_type: z.enum(['complete', 'summary', 'both']),
-  target_currency: z.enum(['MYR', 'IDR']),
+  target_currency: z.enum(['MYR', 'IDR', 'SGD', 'USD']),
 });
 
 type ProposalFormData = z.infer<typeof proposalSchema>;
@@ -248,7 +248,7 @@ export default function CreateProposalForm({ onProposalCreated }: CreateProposal
               <p className="text-xs text-gray-600 mb-3">
                 All financial data in the proposal will be displayed in the selected currency
               </p>
-              <div className="flex space-x-4">
+              <div className="grid grid-cols-2 gap-3">
                 <label className="flex items-center">
                   <input
                     type="radio"
@@ -266,6 +266,24 @@ export default function CreateProposalForm({ onProposalCreated }: CreateProposal
                     className="mr-2"
                   />
                   <span className="text-sm">Indonesian Rupiah (IDR)</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="SGD"
+                    {...register('target_currency')}
+                    className="mr-2"
+                  />
+                  <span className="text-sm">Singapore Dollar (SGD)</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="USD"
+                    {...register('target_currency')}
+                    className="mr-2"
+                  />
+                  <span className="text-sm">US Dollar (USD)</span>
                 </label>
               </div>
               {errors.target_currency && (

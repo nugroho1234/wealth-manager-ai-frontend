@@ -39,6 +39,12 @@ interface IllustrationData {
   is_duplicate_insurance: boolean;
   extraction_confidence?: number;
   processing_notes?: string;
+  review_flags?: {
+    currency_review_needed?: boolean;
+    currency_review_reason?: string;
+    detected_currency_value?: string;
+    suggested_currencies?: string[];
+  };
   created_at: string;
 }
 
@@ -46,6 +52,7 @@ const STATUS_COLORS = {
   draft: 'bg-gray-100 text-gray-800',
   extracting: 'bg-blue-100 text-blue-800',
   reviewing: 'bg-yellow-100 text-yellow-800',
+  needs_review: 'bg-amber-100 text-amber-800',
   ready_for_age_analysis: 'bg-amber-100 text-amber-800',
   generating: 'bg-purple-100 text-purple-800',
   completed: 'bg-green-100 text-green-800',
@@ -56,6 +63,7 @@ const EXTRACTION_STATUS_COLORS = {
   pending: 'bg-gray-100 text-gray-800',
   processing: 'bg-blue-100 text-blue-800',
   completed: 'bg-green-100 text-green-800',
+  needs_review: 'bg-amber-100 text-amber-800',
   failed: 'bg-red-100 text-red-800',
 };
 
@@ -124,6 +132,113 @@ const getFieldValue = (data: any, fieldName: string, fallback: any = null) => {
   // 6. Return fallback
   return fallback;
 };
+
+// Currency Review Component
+interface CurrencyReviewBoxProps {
+  illustration: IllustrationData;
+  proposalId: string;
+  onCurrencyConfirmed: () => void;
+}
+
+function CurrencyReviewBox({ illustration, proposalId, onCurrencyConfirmed }: CurrencyReviewBoxProps) {
+  const [selectedCurrency, setSelectedCurrency] = useState<string>('');
+  const [confirming, setConfirming] = useState(false);
+
+  const currencyOptions = [
+    { code: 'USD', name: 'US Dollar' },
+    { code: 'SGD', name: 'Singapore Dollar' },
+    { code: 'HKD', name: 'Hong Kong Dollar' },
+    { code: 'EUR', name: 'Euro' },
+    { code: 'GBP', name: 'British Pound' },
+    { code: 'JPY', name: 'Japanese Yen' },
+    { code: 'CNY', name: 'Chinese Yuan' },
+    { code: 'IDR', name: 'Indonesian Rupiah' },
+    { code: 'MYR', name: 'Malaysian Ringgit' },
+  ];
+
+  const handleConfirmCurrency = async () => {
+    if (!selectedCurrency) {
+      toast.error('Please select a currency');
+      return;
+    }
+
+    setConfirming(true);
+    try {
+      await apiClient.patch(
+        `/api/v1/oracle/proposals/${proposalId}/illustrations/${illustration.id}/confirm-currency`,
+        { currency_code: selectedCurrency }
+      );
+
+      toast.success(`Currency confirmed as ${selectedCurrency}`);
+      onCurrencyConfirmed();
+    } catch (error: any) {
+      console.error('Error confirming currency:', error);
+      toast.error(error.response?.data?.detail || 'Failed to confirm currency');
+    } finally {
+      setConfirming(false);
+    }
+  };
+
+  return (
+    <div className="mt-3 bg-amber-50 border-l-4 border-amber-400 p-4 rounded">
+      <div className="flex items-start">
+        <svg className="w-5 h-5 text-amber-400 mr-3 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <div className="flex-1">
+          <h4 className="text-sm font-semibold text-amber-800 mb-1">
+            Currency Review Required
+          </h4>
+          <p className="text-sm text-amber-700 mb-2">
+            {illustration.review_flags?.currency_review_reason || 'Please confirm the currency for this illustration'}
+          </p>
+
+          {illustration.review_flags?.detected_currency_value && (
+            <p className="text-xs text-amber-600 mb-3">
+              Detected: "{illustration.review_flags.detected_currency_value}"
+            </p>
+          )}
+
+          <div className="flex items-center gap-3 flex-wrap">
+            <label className="text-sm font-medium text-amber-900">
+              Select Currency:
+            </label>
+            <select
+              value={selectedCurrency}
+              onChange={(e) => setSelectedCurrency(e.target.value)}
+              className="px-3 py-2 border border-amber-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+              disabled={confirming}
+            >
+              <option value="">-- Choose Currency --</option>
+              {currencyOptions.map((currency) => (
+                <option key={currency.code} value={currency.code}>
+                  {currency.code} - {currency.name}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={handleConfirmCurrency}
+              disabled={!selectedCurrency || confirming}
+              className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center space-x-1"
+            >
+              {confirming && (
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></div>
+              )}
+              <span>{confirming ? 'Confirming...' : 'Confirm'}</span>
+            </button>
+          </div>
+
+          {illustration.review_flags?.suggested_currencies && illustration.review_flags.suggested_currencies.length > 0 && (
+            <div className="mt-3 text-xs text-amber-600">
+              <span className="font-medium">Suggested: </span>
+              {illustration.review_flags.suggested_currencies.join(', ')}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 
 function ProposalDetailContent() {
@@ -2423,6 +2538,18 @@ function ProposalDetailContent() {
                         {illustration.processing_notes}
                       </div>
                     )}
+
+                    {/* Currency Review UI */}
+                    {illustration.review_flags?.currency_review_needed && (
+                      <CurrencyReviewBox
+                        illustration={illustration}
+                        proposalId={proposal.proposal_id}
+                        onCurrencyConfirmed={() => {
+                          // Refresh proposal data after currency confirmation
+                          fetchProposal();
+                        }}
+                      />
+                    )}
                   </div>
                 ))}
                 
@@ -3717,30 +3844,45 @@ function ProposalDetailContent() {
                                 'Select highlighted insurance and generate recommendation to continue.'
                               }
                             </div>
-                            <div className="flex space-x-4">
-                              <button 
-                                onClick={handleSaveDraft}
-                                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-                              >
-                                Save Draft
-                              </button>
-                              <button
-                                onClick={handleGenerateProposal}
-                                disabled={!page4Content || isGenerating}
-                                className={`px-6 py-2 bg-green-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 ${isGenerating ? '' : 'hover:bg-green-700'}`}
-                              >
-                                {isGenerating ? (
-                                  <>
-                                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                    <span>Generating...</span>
-                                  </>
-                                ) : (
-                                  <span>Generate Proposal</span>
-                                )}
-                              </button>
+                            <div className="space-y-3">
+                              {/* Warning if proposal needs review */}
+                              {proposal.status === 'needs_review' && (
+                                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start space-x-2">
+                                  <svg className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                  </svg>
+                                  <div>
+                                    <p className="text-sm font-medium text-amber-800">Please resolve currency reviews before generating</p>
+                                    <p className="text-xs text-amber-700 mt-1">Some illustrations require manual currency confirmation. Scroll up to review and confirm.</p>
+                                  </div>
+                                </div>
+                              )}
+
+                              <div className="flex space-x-4">
+                                <button
+                                  onClick={handleSaveDraft}
+                                  className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                                >
+                                  Save Draft
+                                </button>
+                                <button
+                                  onClick={handleGenerateProposal}
+                                  disabled={!page4Content || isGenerating || proposal.status === 'needs_review'}
+                                  className={`px-6 py-2 bg-green-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 ${isGenerating ? '' : 'hover:bg-green-700'}`}
+                                >
+                                  {isGenerating ? (
+                                    <>
+                                      <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                      </svg>
+                                      <span>Generating...</span>
+                                    </>
+                                  ) : (
+                                    <span>Generate Proposal</span>
+                                  )}
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>
