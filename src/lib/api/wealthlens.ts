@@ -60,11 +60,44 @@ export interface BacktestCreateRequest {
   description?: string;
   start_date: string; // ISO format: YYYY-MM-DD
   end_date: string;
-  initial_amount: number;
+  initial_amount?: number; // Phase 6.5: Optional for DCA (defaults to 0)
   strategy: 'lump_sum' | 'dca';
   dca_frequency?: 'monthly' | 'weekly' | 'biweekly' | 'quarterly';
   dca_amount?: number;
   allocations: AllocationInput[];
+}
+
+// ============================================================================
+// MULTI-PORTFOLIO COMPARISON TYPES (Phase 6, Phase 6.7)
+// ============================================================================
+
+export interface PortfolioComparisonResult {
+  name: string;
+  results: BacktestResults;
+  rank_by_return: number;
+  rank_by_sharpe: number;
+  rank_by_alpha?: number; // Phase 6.7: Only present if benchmark selected
+  is_best_return: boolean;
+  is_best_sharpe: boolean;
+  is_best_alpha?: boolean; // Phase 6.7: Only present if benchmark selected
+  is_worst_return: boolean;
+  benchmark_comparisons?: ComparisonMetrics[]; // Phase 6.7: Array of comparison metrics (one per benchmark)
+}
+
+export interface MultiPortfolioComparisonResponse {
+  portfolios: PortfolioComparisonResult[];
+  benchmarks?: BenchmarkResult[]; // Phase 6.7: Benchmark backtest results
+  best_return_portfolio: string;
+  best_sharpe_portfolio: string;
+  best_alpha_portfolio?: string; // Phase 6.7: Only present if benchmark selected
+  worst_return_portfolio: string;
+  highest_volatility_portfolio: string;
+  calculated_at: string;
+}
+
+export interface MultiPortfolioRequest {
+  portfolios: BacktestCreateRequest[];
+  shared_benchmarks?: string[];
 }
 
 export interface TimeSeriesPoint {
@@ -218,6 +251,16 @@ export const compareWithBenchmark = async (
 };
 
 /**
+ * Compare multiple portfolios side-by-side (Phase 6)
+ */
+export const compareMultiplePortfolios = async (
+  request: MultiPortfolioRequest
+): Promise<MultiPortfolioComparisonResponse> => {
+  const response = await apiClient.post('/api/v1/wealthlens/backtests/compare-multi', request);
+  return response.data;
+};
+
+/**
  * Health check for WealthLens service
  */
 export const healthCheck = async (): Promise<any> => {
@@ -232,5 +275,6 @@ export default {
   getCoverageOverlap,
   runBacktest,
   compareWithBenchmark,
+  compareMultiplePortfolios,
   healthCheck,
 };
