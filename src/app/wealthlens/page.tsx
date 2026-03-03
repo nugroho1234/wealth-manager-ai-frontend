@@ -21,6 +21,8 @@ import {
   BenchmarkComparison,
   CoverageOverlap,
   MultiPortfolioComparisonResponse,
+  BacktestCreateRequest,
+  MultiPortfolioRequest,
 } from '@/lib/api/wealthlens';
 
 // Portfolio interface for Phase 6
@@ -65,6 +67,10 @@ export default function WealthLensPage() {
   const [comparisonResults, setComparisonResults] = useState<MultiPortfolioComparisonResponse | null>(null);
   const [coverageOverlap, setCoverageOverlap] = useState<CoverageOverlap | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Phase 7: Store request data for PDF generation
+  const [backtestRequest, setBacktestRequest] = useState<BacktestCreateRequest | null>(null);
+  const [comparisonRequest, setComparisonRequest] = useState<MultiPortfolioRequest | null>(null);
 
   // Get active portfolio
   const activePortfolio = portfolios.find((p) => p.id === activePortfolioId) || portfolios[0];
@@ -187,6 +193,8 @@ export default function WealthLensPage() {
     setBacktestResults(null);
     setBenchmarkComparison(null);
     setComparisonResults(null);
+    setBacktestRequest(null);
+    setComparisonRequest(null);
 
     // Update backtest dates
     setBacktestDates(dates);
@@ -216,13 +224,14 @@ export default function WealthLensPage() {
           })),
         }));
 
-        const comparisonRequest = {
+        const comparisonRequestData = {
           portfolios: portfolioRequests,
           shared_benchmarks: selectedBenchmark ? [selectedBenchmark.instrument_id] : undefined,
         };
 
-        const comparison = await compareMultiplePortfolios(comparisonRequest);
+        const comparison = await compareMultiplePortfolios(comparisonRequestData);
         setComparisonResults(comparison);
+        setComparisonRequest(comparisonRequestData); // Phase 7: Store for PDF generation
         toast.success(`${validPortfolios.length} portfolios compared successfully!`);
       } else {
         // Single portfolio mode
@@ -248,10 +257,12 @@ export default function WealthLensPage() {
           const comparison = await compareWithBenchmark(request, selectedBenchmark.instrument_id);
           setBenchmarkComparison(comparison);
           setBacktestResults(comparison.portfolio); // Extract portfolio results
+          setBacktestRequest(request); // Phase 7: Store for PDF generation
           toast.success('Backtest with benchmark comparison completed!');
         } else {
           const results = await runBacktest(request);
           setBacktestResults(results);
+          setBacktestRequest(request); // Phase 7: Store for PDF generation
           toast.success('Backtest completed successfully!');
         }
       }
@@ -441,7 +452,10 @@ export default function WealthLensPage() {
                   </div>
                   <h2 className="text-lg font-semibold text-gray-900">Multi-Portfolio Comparison Results</h2>
                 </div>
-                <PortfolioComparison comparison={comparisonResults} />
+                <PortfolioComparison
+                  comparison={comparisonResults}
+                  comparisonRequest={comparisonRequest || undefined}
+                />
               </div>
             )}
 
@@ -457,6 +471,7 @@ export default function WealthLensPage() {
                 <BacktestResults
                   results={backtestResults}
                   benchmark={benchmarkComparison?.benchmark || null}
+                  backtestRequest={backtestRequest || undefined}
                 />
 
                 {/* Benchmark Comparison Results */}

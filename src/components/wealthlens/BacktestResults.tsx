@@ -1,23 +1,72 @@
 'use client';
 
+import { useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign, Percent, Activity, AlertTriangle } from 'lucide-react';
-import { BacktestResults as BacktestResultsType, BenchmarkResult } from '@/lib/api/wealthlens';
+import { TrendingUp, TrendingDown, DollarSign, Percent, Activity, AlertTriangle, Download } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { BacktestResults as BacktestResultsType, BenchmarkResult, BacktestCreateRequest, generateBacktestPDF } from '@/lib/api/wealthlens';
 
 interface BacktestResultsProps {
   results: BacktestResultsType;
   benchmark?: BenchmarkResult | null;
+  backtestRequest?: BacktestCreateRequest;
 }
 
-export default function BacktestResults({ results, benchmark }: BacktestResultsProps) {
+export default function BacktestResults({ results, benchmark, backtestRequest }: BacktestResultsProps) {
+  const [downloadingPDF, setDownloadingPDF] = useState(false);
   const profitLoss = Number(results.final_value) - Number(results.total_invested);
   const isProfitable = profitLoss >= 0;
+
+  const handleDownloadPDF = async () => {
+    if (!backtestRequest) {
+      toast.error('Cannot generate PDF: backtest request data not available');
+      return;
+    }
+
+    setDownloadingPDF(true);
+    try {
+      toast.loading('Generating PDF report...', { id: 'pdf-gen' });
+
+      const pdfBlob = await generateBacktestPDF(backtestRequest);
+
+      // Create download link
+      const url = window.URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      const safePortfolioName = results.name.replace(/[^a-zA-Z0-9-_]/g, '-').toLowerCase();
+      const today = new Date().toISOString().split('T')[0];
+      a.download = `backtest-${safePortfolioName}-${today}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast.success('PDF report downloaded!', { id: 'pdf-gen' });
+    } catch (error: any) {
+      console.error('Error generating PDF:', error);
+      toast.error('Failed to generate PDF report', { id: 'pdf-gen' });
+    } finally {
+      setDownloadingPDF(false);
+    }
+  };
 
   // Colors for each instrument line
   const instrumentColors = ['#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#6366f1'];
 
   // Format chart data with individual instruments and benchmark
-  const chartData = results.time_series.map((point, index) => {
+  // First validate that time_series is an array
+  if (!Array.isArray(results.time_series)) {
+    console.error('time_series is not an array:', results.time_series);
+    throw new Error('Invalid time_series data received from API');
+  }
+
+  const fullChartData = results.time_series.map((point, index) => {
+    // Validate each point has required fields
+    if (!point || typeof point !== 'object' || !point.date) {
+      console.error('Invalid data point at index', index, ':', point);
+      throw new Error(`Invalid data point at index ${index}`);
+    }
+
     const dataPoint: any = {
       date: new Date(point.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
       'Total Portfolio': parseFloat(Number(point.value).toFixed(2)),
@@ -33,7 +82,7 @@ export default function BacktestResults({ results, benchmark }: BacktestResultsP
     });
 
     // Add benchmark value if available
-    if (benchmark && benchmark.time_series[index]) {
+    if (benchmark && benchmark.time_series && benchmark.time_series[index]) {
       dataPoint['Benchmark'] = parseFloat(Number(benchmark.time_series[index].value).toFixed(2));
     }
 
@@ -44,6 +93,57 @@ export default function BacktestResults({ results, benchmark }: BacktestResultsP
 
     return dataPoint;
   });
+
+  // Downsample chart data based on data point count to prevent chart truncation
+  const downsampleChartData = (data: any[]): any[] => {
+    const count = data.length;
+
+    // Validate data exists
+    if (!data || count === 0) {
+      console.warn('No chart data to downsample');
+      return [];
+    }
+
+    let targetPoints: number;
+
+    // Determine target points based on data count
+    if (count >= 1000) {
+      targetPoints = 200;  // ~200 points for >= 1000 (yearly intervals for ~19+ years)
+    } else if (count >= 700) {
+      targetPoints = 150;  // ~150 points for 700-999 (quarterly)
+    } else if (count >= 365) {
+      targetPoints = 100;  // ~100 points for 365-699 (monthly)
+    } else {
+      // Less than 1 year of data - keep all points
+      return data;
+    }
+
+    // Calculate step size to evenly distribute samples across entire dataset
+    const step = (count - 1) / (targetPoints - 1);
+    const downsampled: any[] = [];
+
+    // Sample evenly across the entire dataset
+    for (let i = 0; i < targetPoints; i++) {
+      const index = Math.round(i * step);
+      // Ensure index is within bounds
+      if (index >= 0 && index < count && data[index]) {
+        downsampled.push(data[index]);
+      }
+    }
+
+    console.log('Downsampling summary:', {
+      originalPoints: count,
+      targetPoints,
+      actualDownsampledPoints: downsampled.length,
+      step: step.toFixed(2),
+      firstPoint: downsampled[0]?.date,
+      lastPoint: downsampled[downsampled.length - 1]?.date
+    });
+
+    return downsampled;
+  };
+
+  const chartData = downsampleChartData(fullChartData);
 
   // Risk level colors
   const getRiskColor = (level: string) => {
@@ -61,17 +161,40 @@ export default function BacktestResults({ results, benchmark }: BacktestResultsP
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header with Download Button */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg p-6 text-white">
-        <h2 className="text-2xl font-bold mb-2">{results.name}</h2>
-        {results.description && <p className="text-blue-100">{results.description}</p>}
-        <div className="flex items-center gap-4 mt-4 text-sm">
-          <span>
-            {new Date(results.start_date).toLocaleDateString()} → {new Date(results.end_date).toLocaleDateString()}
-          </span>
-          <span className="px-3 py-1 bg-white/20 rounded-full">
-            {results.strategy === 'lump_sum' ? 'Lump Sum' : `DCA ${results.dca_frequency}`}
-          </span>
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <h2 className="text-2xl font-bold mb-2">{results.name}</h2>
+            {results.description && <p className="text-blue-100">{results.description}</p>}
+            <div className="flex items-center gap-4 mt-4 text-sm">
+              <span>
+                {new Date(results.start_date).toLocaleDateString()} → {new Date(results.end_date).toLocaleDateString()}
+              </span>
+              <span className="px-3 py-1 bg-white/20 rounded-full">
+                {results.strategy === 'lump_sum' ? 'Lump Sum' : `DCA ${results.dca_frequency}`}
+              </span>
+            </div>
+          </div>
+          {backtestRequest && (
+            <button
+              onClick={handleDownloadPDF}
+              disabled={downloadingPDF}
+              className="ml-4 px-4 py-2 bg-white text-blue-600 rounded-lg font-medium hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 shadow-lg"
+            >
+              {downloadingPDF ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  <span>Generating...</span>
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4" />
+                  <span>Download PDF</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
 

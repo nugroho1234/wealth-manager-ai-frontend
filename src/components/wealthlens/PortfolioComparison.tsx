@@ -1,12 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { TrendingUp, TrendingDown, Award, AlertTriangle } from 'lucide-react';
-import { MultiPortfolioComparisonResponse, PortfolioComparisonResult } from '@/lib/api/wealthlens';
+import { TrendingUp, TrendingDown, Award, AlertTriangle, Download } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { MultiPortfolioComparisonResponse, PortfolioComparisonResult, MultiPortfolioRequest, generateComparisonPDF } from '@/lib/api/wealthlens';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface PortfolioComparisonProps {
   comparison: MultiPortfolioComparisonResponse;
+  comparisonRequest?: MultiPortfolioRequest;
 }
 
 // Helper function to format currency
@@ -50,11 +52,44 @@ const formatInvestmentDetails = (portfolio: PortfolioComparisonResult): string =
   }
 };
 
-export default function PortfolioComparison({ comparison }: PortfolioComparisonProps) {
+export default function PortfolioComparison({ comparison, comparisonRequest }: PortfolioComparisonProps) {
   const { portfolios } = comparison;
 
   // State for "Show All Assets" toggles (one per portfolio)
   const [showAllAssets, setShowAllAssets] = useState<Record<string, boolean>>({});
+  const [downloadingPDF, setDownloadingPDF] = useState(false);
+
+  const handleDownloadPDF = async () => {
+    if (!comparisonRequest) {
+      toast.error('Cannot generate PDF: comparison request data not available');
+      return;
+    }
+
+    setDownloadingPDF(true);
+    try {
+      toast.loading('Generating comparison PDF report...', { id: 'pdf-gen' });
+
+      const pdfBlob = await generateComparisonPDF(comparisonRequest);
+
+      // Create download link
+      const url = window.URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      const today = new Date().toISOString().split('T')[0];
+      a.download = `portfolio-comparison-${today}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast.success('Comparison PDF downloaded!', { id: 'pdf-gen' });
+    } catch (error: any) {
+      console.error('Error generating comparison PDF:', error);
+      toast.error('Failed to generate comparison PDF', { id: 'pdf-gen' });
+    } finally {
+      setDownloadingPDF(false);
+    }
+  };
 
   // Portfolio line colors
   const portfolioColors = ['#3b82f6', '#10b981', '#f59e0b']; // Blue, Green, Orange
@@ -79,9 +114,30 @@ export default function PortfolioComparison({ comparison }: PortfolioComparisonP
 
   return (
     <div className="space-y-6">
-      {/* Header with Quick Insights */}
+      {/* Header with Quick Insights and Download Button */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg p-6 text-white">
-        <h2 className="text-2xl font-bold mb-4">Portfolio Comparison</h2>
+        <div className="flex items-start justify-between mb-4">
+          <h2 className="text-2xl font-bold">Portfolio Comparison</h2>
+          {comparisonRequest && (
+            <button
+              onClick={handleDownloadPDF}
+              disabled={downloadingPDF}
+              className="ml-4 px-4 py-2 bg-white text-blue-600 rounded-lg font-medium hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 shadow-lg"
+            >
+              {downloadingPDF ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  <span>Generating...</span>
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4" />
+                  <span>Download PDF</span>
+                </>
+              )}
+            </button>
+          )}
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white/20 rounded-lg p-3">

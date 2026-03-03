@@ -268,6 +268,26 @@ export const healthCheck = async (): Promise<any> => {
   return response.data;
 };
 
+/**
+ * Generate PDF report for single portfolio backtest (Phase 7)
+ */
+export const generateBacktestPDF = async (request: BacktestCreateRequest): Promise<Blob> => {
+  const response = await apiClient.post('/api/v1/wealthlens/backtests/pdf', request, {
+    responseType: 'blob',
+  });
+  return response.data;
+};
+
+/**
+ * Generate PDF report for multi-portfolio comparison (Phase 7)
+ */
+export const generateComparisonPDF = async (request: MultiPortfolioRequest): Promise<Blob> => {
+  const response = await apiClient.post('/api/v1/wealthlens/backtests/compare/pdf', request, {
+    responseType: 'blob',
+  });
+  return response.data;
+};
+
 export default {
   searchInstruments,
   getInstrument,
@@ -277,4 +297,6 @@ export default {
   compareWithBenchmark,
   compareMultiplePortfolios,
   healthCheck,
+  generateBacktestPDF,
+  generateComparisonPDF,
 };

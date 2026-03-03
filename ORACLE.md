@@ -278,10 +278,90 @@ const STATUS_COLORS = {
 - Edit client information
 - Add/remove illustrations
 - Preview PDF illustrations
+- **Currency Review UI** - Manual confirmation for ambiguous currencies ✨ NEW
 - Generate final PDF proposal
 - Track processing status
 
 **Access**: Proposal owner or ADMIN
+
+**Currency Review Workflow**:
+
+When an illustration PDF contains ambiguous currency information (e.g., "Dollar" without country context), the system flags it for manual review:
+
+1. **Amber Warning Box Appears**:
+   - Displays below the illustration card
+   - Shows detected currency value
+   - Explains why manual confirmation is needed
+   - Lists suggested currencies (if available)
+
+2. **User Selects Correct Currency**:
+   - Dropdown with 9 supported currencies:
+     - USD - US Dollar
+     - SGD - Singapore Dollar
+     - HKD - Hong Kong Dollar
+     - EUR - Euro
+     - GBP - British Pound
+     - JPY - Japanese Yen
+     - CNY - Chinese Yuan
+     - IDR - Indonesian Rupiah
+     - MYR - Malaysian Ringgit
+
+3. **Confirms Selection**:
+   - Calls `PATCH /proposals/{id}/illustrations/{id}/confirm-currency` API
+   - Updates illustration currency
+   - Clears review flag
+   - Changes extraction status from `needs_review` to `completed`
+
+4. **Proposal Status Updates**:
+   - When **any** illustration needs review → Proposal status = `needs_review`
+   - When **all** reviews resolved → Proposal status = `reviewing`
+   - Generation button **blocked** until all reviews resolved
+
+**UI States**:
+
+```typescript
+// Illustration with review needed
+interface IllustrationData {
+  id: string;
+  original_filename: string;
+  extraction_status: 'needs_review';  // Amber badge
+  review_flags: {
+    currency_review_needed: true;
+    currency_review_reason: "Ambiguous currency detected: 'Dollar'. Please select the correct currency.";
+    detected_currency_value: "Dollar";
+    suggested_currencies: ["USD", "SGD", "HKD", "AUD"];
+  };
+}
+
+// Status Colors
+const STATUS_COLORS = {
+  needs_review: 'bg-amber-100 text-amber-800',  // NEW
+  // ... other statuses
+};
+```
+
+**Generation Blocker**:
+
+When proposal status is `needs_review`, the Generate Proposal button is disabled with a warning:
+
+```tsx
+{proposal.status === 'needs_review' && (
+  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+    ⚠️ Please resolve currency reviews before generating
+    Some illustrations require manual currency confirmation.
+    Scroll up to review and confirm.
+  </div>
+)}
+```
+
+**Automatic Normalization** (No UI shown):
+
+For clear currency cases, normalization happens automatically:
+- "Rupiah" → IDR (auto-mapped, extraction succeeds)
+- "Singapore Dollar" → SGD (auto-mapped, extraction succeeds)
+- "IDR" → IDR (already valid, passes through)
+
+Only ambiguous or unknown currencies trigger the review UI.
 
 #### `/oracle/proposals/[id]/illustrations`
 **Purpose**: Manage PDF illustrations for a proposal.
