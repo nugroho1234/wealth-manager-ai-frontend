@@ -144,7 +144,7 @@ function AdminProductsContent() {
   };
 
   const handleEditProduct = (product: Product) => {
-    router.push(`/products/edit/${product.insurance_id}`);
+    router.push(`/oracle/products/edit/${product.insurance_id}`);
   };
 
   const handleViewDocument = (product: Product) => {
