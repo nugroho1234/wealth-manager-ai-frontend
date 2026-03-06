@@ -7,6 +7,7 @@ import { useNotifications } from '@/contexts/NotificationContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Sidebar from '@/components/Sidebar';
 import { apiClient } from '@/lib/api';
+import ComparisonSummary from '@/components/oracle/ComparisonSummary';
 
 interface Product {
   insurance_id: string;
@@ -60,12 +61,16 @@ function CompareContent() {
   const [loading, setLoading] = useState(true);
   const [showShareModal, setShowShareModal] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [userQuery, setUserQuery] = useState<string | null>(null);
   const printContentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const productIds = searchParams.get('products');
+    const query = searchParams.get('query'); // Get user search query if available
+
     if (productIds) {
       const ids = productIds.split(',');
+      setUserQuery(query);
       fetchComparisonData(ids);
     } else {
       notifyError('Invalid Request', 'No products selected for comparison');
@@ -262,10 +267,6 @@ function CompareContent() {
       if (!includeCommission) {
         const commissionTables = clonedElement.querySelectorAll('[data-table="commission"]');
         commissionTables.forEach(table => table.remove());
-        
-        // Also hide suitability information for client presentations
-        const suitabilityTables = clonedElement.querySelectorAll('[data-table="suitability"]');
-        suitabilityTables.forEach(table => table.remove());
       }
 
       // Remove horizontal scroll containers and optimize table layout for PDF
@@ -495,6 +496,12 @@ function CompareContent() {
                 ))}
               </div>
             </div>
+
+            {/* AI-Generated Comparison Summary */}
+            <ComparisonSummary
+              insuranceIds={products.map(p => p.insurance_id)}
+              userQuery={userQuery || undefined}
+            />
           </div>
 
           {/* Comparison Tables */}
@@ -657,7 +664,6 @@ function CompareContent() {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {[
-                      { key: 'premium', label: 'Premium' },
                       { key: 'minimum_sum_assured', label: 'Minimum Sum Assured' },
                       { key: 'maximum_sum_assured', label: 'Maximum Sum Assured' },
                       { key: 'guaranteed_interest_rate', label: 'Guaranteed Interest Rate' },
