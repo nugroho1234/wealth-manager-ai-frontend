@@ -8,6 +8,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import Sidebar from '@/components/Sidebar';
 import { apiClient } from '@/lib/api';
 import ComparisonSummary from '@/components/oracle/ComparisonSummary';
+import ComparisonChatbot from '@/components/oracle/compare/ComparisonChatbot';
 
 interface Product {
   insurance_id: string;
@@ -33,6 +34,7 @@ interface Product {
   reason_for_need?: string;
   target_market?: string;
   market_positioning?: string;
+  pdf_url?: string;
 }
 
 interface CommissionData {
@@ -454,9 +456,10 @@ function CompareContent() {
 
   return (
     <Sidebar>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
-        <main className="max-w-7xl mx-auto px-6 py-8">
-          <div ref={printContentRef}>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex">
+        {/* Main content area */}
+        <main className="flex-1 px-6 py-8 overflow-auto">
+          <div ref={printContentRef} className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
@@ -735,8 +738,6 @@ function CompareContent() {
               </div>
             </div>
           </div>
-          </div>
-        </main>
 
         {/* Download PDF Modal */}
         {showShareModal && (
@@ -787,6 +788,16 @@ function CompareContent() {
             </div>
           </div>
         )}
+          </div>
+        </main>
+
+        {/* Chatbot sidebar */}
+        <aside className="w-96 h-screen sticky top-0 pdf-hide">
+          <ComparisonChatbot
+            insuranceIds={products.map(p => p.insurance_id)}
+            products={products}
+          />
+        </aside>
       </div>
     </Sidebar>
   );
