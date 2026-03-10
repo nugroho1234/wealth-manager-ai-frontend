@@ -76,22 +76,27 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
   }
 }
 
-// Helper function to get redirect path based on plan type
+// Helper function to get redirect path based on subscribed plans
 function getRedirectPath(user: User | null): string {
   if (!user) return '/login';
 
-  // If user has no plan_type or it's null, default to meeting_tracker
-  // This ensures new users start with the meeting tracker
-  const planType = user.plan_type || 'meeting_tracker';
+  // Check subscribed_plans array
+  const subscribedPlans = user.subscribed_plans || ['oracle'];
 
-  switch (planType) {
-    case 'meeting_tracker':
-      return '/meeting-tracker/dashboard';
-    case 'oracle':
-      return '/oracle/dashboard';
-    default:
-      return '/meeting-tracker/dashboard';
+  // Priority: oracle > meeting_tracker > wealthlens > digivault
+  // If user has multiple plans, redirect to oracle by default
+  if (subscribedPlans.includes('oracle')) {
+    return '/oracle/dashboard';
+  } else if (subscribedPlans.includes('meeting_tracker')) {
+    return '/meeting-tracker/dashboard';
+  } else if (subscribedPlans.includes('wealthlens')) {
+    return '/wealthlens/dashboard';
+  } else if (subscribedPlans.includes('digivault')) {
+    return '/digivault/dashboard';
   }
+
+  // Fallback to oracle if no valid plan found
+  return '/oracle/dashboard';
 }
 
 // Context interface

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import MeetingTrackerSidebar from '@/components/meeting-tracker/Sidebar';
+import Sidebar from '@/components/Sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface CompanyFormData {
@@ -64,18 +64,16 @@ export default function EditCompanyPage() {
     logo_url: '',
   });
 
-  // Check admin access (MASTER=7, SUPER_ADMIN=1, ADMIN=2)
-  const isAdmin = user?.role_id === 7 || user?.role_id === 1 || user?.role_id === 2;
+  // MASTER-only access
   const isMaster = user?.role_id === 7;
 
   useEffect(() => {
-    if (isAdmin && user && companyId) {
+    if (isMaster && user && companyId) {
       fetchCompany();
+    } else if (!isMaster && user) {
+      setLoading(false);
     }
-  }, [isAdmin, user, companyId]);
-
-  // Check ownership for non-MASTER users
-  const canEdit = isMaster || (user?.company_id === companyId);
+  }, [isMaster, user, companyId]);
 
   const fetchCompany = async () => {
     try {
@@ -250,7 +248,7 @@ export default function EditCompanyPage() {
       }
 
       // Redirect back to companies list
-      router.push('/meeting-tracker/admin/companies');
+      router.push('/oracle/master/companies');
     } catch (err: any) {
       setError(err.message || 'Failed to update company');
     } finally {
@@ -258,67 +256,52 @@ export default function EditCompanyPage() {
     }
   };
 
-  if (!isAdmin) {
+  if (!isMaster) {
     return (
-      <MeetingTrackerSidebar>
-        <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+      <Sidebar>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center">
             <div className="text-6xl mb-4">🔒</div>
-            <h1 className="text-2xl font-bold text-white mb-2">Access Denied</h1>
-            <p className="text-gray-400">You need admin privileges to access this page.</p>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
+            <p className="text-gray-600">Only MASTER users can edit companies.</p>
           </div>
         </div>
-      </MeetingTrackerSidebar>
+      </Sidebar>
     );
   }
 
   if (loading) {
     return (
-      <MeetingTrackerSidebar>
-        <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-          <div className="text-white text-xl">Loading...</div>
+      <Sidebar>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-gray-900 text-xl">Loading...</div>
         </div>
-      </MeetingTrackerSidebar>
-    );
-  }
-
-  // Check if user can edit this company (after loading)
-  if (!canEdit) {
-    return (
-      <MeetingTrackerSidebar>
-        <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-          <div className="text-center">
-            <div className="text-6xl mb-4">🔒</div>
-            <h1 className="text-2xl font-bold text-white mb-2">Access Denied</h1>
-            <p className="text-gray-400">You can only manage your own company. Only MASTER can edit other companies.</p>
-          </div>
-        </div>
-      </MeetingTrackerSidebar>
+      </Sidebar>
     );
   }
 
   const availableTimezones = formData.country ? TIMEZONES_BY_COUNTRY[formData.country] || [] : [];
 
   return (
-    <MeetingTrackerSidebar>
-      <div className="min-h-screen bg-gray-900 p-8">
+    <Sidebar>
+      <div className="min-h-screen bg-gray-50 p-8">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">Edit Company</h1>
-            <p className="text-gray-400">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Edit Company</h1>
+            <p className="text-gray-600">
               Update company information, branding, and settings
             </p>
           </div>
 
           {/* Error Alert */}
           {error && (
-            <div className="mb-6 bg-red-900/20 border border-red-700 rounded-lg p-4">
+            <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
               <div className="flex items-start">
-                <span className="text-red-400 text-xl mr-3">⚠️</span>
+                <span className="text-red-500 text-xl mr-3">⚠️</span>
                 <div>
-                  <h3 className="text-red-400 font-semibold mb-1">Error</h3>
-                  <p className="text-red-300 text-sm">{error}</p>
+                  <h3 className="text-red-700 font-semibold mb-1">Error</h3>
+                  <p className="text-red-600 text-sm">{error}</p>
                 </div>
               </div>
             </div>
@@ -327,15 +310,15 @@ export default function EditCompanyPage() {
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Logo Section */}
-            <div className="bg-gray-800 rounded-lg p-6">
-              <h2 className="text-xl font-semibold text-white mb-4">Company Logo</h2>
+            <div className="bg-white rounded-lg p-6 border border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Company Logo</h2>
               <div className="flex items-center space-x-6">
                 {formData.logo_url && (
                   <div className="flex-shrink-0">
                     <img
                       src={formData.logo_url}
                       alt="Company logo"
-                      className="w-24 h-24 object-contain bg-white rounded-lg"
+                      className="w-24 h-24 object-contain bg-gray-100 rounded-lg p-2"
                     />
                   </div>
                 )}
@@ -347,12 +330,12 @@ export default function EditCompanyPage() {
                       accept="image/*"
                       onChange={handleLogoUpload}
                       disabled={uploadingLogo}
-                      className="block w-full text-sm text-gray-400
+                      className="block w-full text-sm text-gray-600
                         file:mr-4 file:py-2 file:px-4
                         file:rounded-lg file:border-0
                         file:text-sm file:font-semibold
-                        file:bg-purple-600 file:text-white
-                        hover:file:bg-purple-700
+                        file:bg-blue-600 file:text-white
+                        hover:file:bg-blue-700
                         file:cursor-pointer
                         disabled:opacity-50 disabled:cursor-not-allowed"
                     />
@@ -361,20 +344,20 @@ export default function EditCompanyPage() {
                     Recommended: Square image, max 5MB, PNG or JPG
                   </p>
                   {uploadingLogo && (
-                    <p className="text-purple-400 text-sm mt-2">Uploading logo...</p>
+                    <p className="text-blue-600 text-sm mt-2">Uploading logo...</p>
                   )}
                 </div>
               </div>
             </div>
 
             {/* Basic Information */}
-            <div className="bg-gray-800 rounded-lg p-6 space-y-4">
-              <h2 className="text-xl font-semibold text-white mb-4">Basic Information</h2>
+            <div className="bg-white rounded-lg p-6 space-y-4 border border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Basic Information</h2>
 
               {/* Company Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Company Name <span className="text-red-400">*</span>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Company Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -382,15 +365,15 @@ export default function EditCompanyPage() {
                   value={formData.name}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="ABC Financial Group"
                 />
               </div>
 
               {/* Email */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Company Email <span className="text-red-400">*</span>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Company Email <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="email"
@@ -398,15 +381,15 @@ export default function EditCompanyPage() {
                   value={formData.email}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="admin@abcfinancial.com"
                 />
               </div>
 
               {/* Phone */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Company Phone <span className="text-red-400">*</span>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Company Phone <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="tel"
@@ -414,14 +397,14 @@ export default function EditCompanyPage() {
                   value={formData.phone}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="+6281234567890"
                 />
               </div>
 
               {/* Website */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Website <span className="text-gray-500 text-xs">(optional)</span>
                 </label>
                 <input
@@ -429,7 +412,7 @@ export default function EditCompanyPage() {
                   name="website"
                   value={formData.website}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="abcfinancial.com"
                 />
               </div>
@@ -438,15 +421,15 @@ export default function EditCompanyPage() {
               <div className="grid grid-cols-2 gap-4">
                 {/* Country */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Country <span className="text-red-400">*</span>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Country <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="country"
                     value={formData.country}
                     onChange={handleInputChange}
                     required
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Select country</option>
                     {COUNTRIES.map((country) => (
@@ -459,8 +442,8 @@ export default function EditCompanyPage() {
 
                 {/* City */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    City <span className="text-red-400">*</span>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    City <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -468,7 +451,7 @@ export default function EditCompanyPage() {
                     value={formData.city}
                     onChange={handleInputChange}
                     required
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Jakarta"
                   />
                 </div>
@@ -476,8 +459,8 @@ export default function EditCompanyPage() {
 
               {/* Timezone */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Timezone <span className="text-red-400">*</span>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Timezone <span className="text-red-500">*</span>
                 </label>
                 <select
                   name="timezone"
@@ -485,7 +468,7 @@ export default function EditCompanyPage() {
                   onChange={handleInputChange}
                   required
                   disabled={!formData.country}
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <option value="">
                     {formData.country ? 'Select timezone' : 'Select country first'}
@@ -500,7 +483,7 @@ export default function EditCompanyPage() {
 
               {/* Address */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Address <span className="text-gray-500 text-xs">(optional)</span>
                 </label>
                 <textarea
@@ -508,7 +491,7 @@ export default function EditCompanyPage() {
                   value={formData.address}
                   onChange={handleInputChange}
                   rows={2}
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Full company address"
                 />
               </div>
@@ -517,7 +500,7 @@ export default function EditCompanyPage() {
               <div className="grid grid-cols-2 gap-4">
                 {/* Meeting Prefix */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Meeting Prefix <span className="text-gray-500 text-xs">(optional)</span>
                   </label>
                   <input
@@ -526,7 +509,7 @@ export default function EditCompanyPage() {
                     value={formData.meeting_prefix}
                     onChange={handleInputChange}
                     maxLength={10}
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="ABC-"
                   />
                   <p className="text-gray-500 text-xs mt-1">
@@ -534,39 +517,32 @@ export default function EditCompanyPage() {
                   </p>
                 </div>
 
-                {/* Plan Type - MASTER only can edit */}
+                {/* Plan Type - MASTER can edit */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Plan Type {isMaster && <span className="text-red-400">*</span>}
-                    {!isMaster && <span className="text-gray-500 text-xs">(read-only)</span>}
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Plan Type <span className="text-red-500">*</span>
                   </label>
-                  {isMaster ? (
-                    <select
-                      name="plan_type"
-                      value={formData.plan_type}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    >
-                      <option value="meeting_tracker">Meeting Tracker</option>
-                      <option value="oracle">Oracle</option>
-                    </select>
-                  ) : (
-                    <div className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-400 cursor-not-allowed">
-                      {formData.plan_type === 'meeting_tracker' ? 'Meeting Tracker' : 'Oracle'}
-                    </div>
-                  )}
+                  <select
+                    name="plan_type"
+                    value={formData.plan_type}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="meeting_tracker">Meeting Tracker</option>
+                    <option value="oracle">Oracle</option>
+                  </select>
                 </div>
               </div>
             </div>
 
             {/* Company Profile */}
-            <div className="bg-gray-800 rounded-lg p-6 space-y-4">
-              <h2 className="text-xl font-semibold text-white mb-4">Company Profile</h2>
+            <div className="bg-white rounded-lg p-6 space-y-4 border border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Company Profile</h2>
 
               {/* Tagline */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Tagline <span className="text-gray-500 text-xs">(optional)</span>
                 </label>
                 <input
@@ -574,14 +550,14 @@ export default function EditCompanyPage() {
                   name="tagline"
                   value={formData.tagline}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Your Trusted Financial Partner"
                 />
               </div>
 
               {/* Summary */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Summary <span className="text-gray-500 text-xs">(optional)</span>
                 </label>
                 <textarea
@@ -589,14 +565,14 @@ export default function EditCompanyPage() {
                   value={formData.summary}
                   onChange={handleInputChange}
                   rows={3}
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Brief overview of your company"
                 />
               </div>
 
               {/* Vision */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Vision <span className="text-gray-500 text-xs">(optional)</span>
                 </label>
                 <textarea
@@ -604,14 +580,14 @@ export default function EditCompanyPage() {
                   value={formData.vision}
                   onChange={handleInputChange}
                   rows={3}
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Company vision statement"
                 />
               </div>
 
               {/* Mission */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Mission <span className="text-gray-500 text-xs">(optional)</span>
                 </label>
                 <textarea
@@ -619,18 +595,18 @@ export default function EditCompanyPage() {
                   value={formData.mission}
                   onChange={handleInputChange}
                   rows={3}
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Company mission statement"
                 />
               </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-center justify-end space-x-4 bg-gray-800 rounded-lg p-6">
+            <div className="flex items-center justify-end space-x-4 bg-white rounded-lg p-6 border border-gray-200">
               <button
                 type="button"
-                onClick={() => router.push('/meeting-tracker/admin/companies')}
-                className="px-6 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
+                onClick={() => router.push('/oracle/master/companies')}
+                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
                 disabled={saving || uploadingLogo}
               >
                 Cancel
@@ -638,7 +614,7 @@ export default function EditCompanyPage() {
               <button
                 type="submit"
                 disabled={saving || uploadingLogo}
-                className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? 'Saving...' : 'Save Changes'}
               </button>
@@ -646,6 +622,6 @@ export default function EditCompanyPage() {
           </form>
         </div>
       </div>
-    </MeetingTrackerSidebar>
+    </Sidebar>
   );
 }

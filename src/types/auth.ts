@@ -9,7 +9,7 @@ export interface User {
   company_id: string | null;  // Backend returns UUID as string
   company?: Company;
   is_profile_complete: boolean;  // Backend uses this field name
-  plan_type?: 'meeting_tracker' | 'oracle' | null;  // User's subscription plan
+  subscribed_plans: string[];  // List of subscribed apps (oracle, meeting_tracker, wealthlens, digivault)
   created_at: string;
   updated_at: string | null;
 }

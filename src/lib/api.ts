@@ -110,7 +110,7 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
     // console.log('✅ API response success:', response.config.url, response.status);
-    console.debug('API response data:', response.data);
+    // console.debug('API response data:', response.data);
     return response;
   },
   (error: AxiosError) => {

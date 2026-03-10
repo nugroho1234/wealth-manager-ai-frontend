@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import MeetingTrackerSidebar from '@/components/meeting-tracker/Sidebar';
+import Sidebar from '@/components/Sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -20,7 +20,7 @@ interface Company {
   website?: string;
   created_at: string;
   updated_at?: string;
-  team_member_count?: number; // Only present for active companies
+  team_member_count?: number;
 }
 
 export default function CompaniesListPage() {
@@ -52,18 +52,16 @@ export default function CompaniesListPage() {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [existingUserData, setExistingUserData] = useState<any>(null);
 
-  // Check admin access (MASTER=7, SUPER_ADMIN=1, ADMIN=2)
-  const isAdmin = user?.role_id === 7 || user?.role_id === 1 || user?.role_id === 2;
+  // MASTER-only access
   const isMaster = user?.role_id === 7;
 
   useEffect(() => {
-    if (isAdmin && user) {
+    if (isMaster && user) {
       fetchCompanies();
-    } else if (!isAdmin && user) {
-      // Not admin but user loaded - stop loading
+    } else if (!isMaster && user) {
       setLoading(false);
     }
-  }, [isAdmin, user]);
+  }, [isMaster, user]);
 
   const fetchCompanies = async () => {
     try {
@@ -126,11 +124,11 @@ export default function CompaniesListPage() {
   };
 
   const handleEdit = (companyId: string) => {
-    router.push(`/meeting-tracker/admin/companies/${companyId}/edit`);
+    router.push(`/oracle/master/companies/${companyId}/edit`);
   };
 
   const handleImportCSV = (companyId: string) => {
-    router.push(`/meeting-tracker/admin/companies/${companyId}/import`);
+    router.push(`/oracle/master/companies/${companyId}/import`);
   };
 
   const handleAddMembers = async (companyId: string) => {
@@ -371,182 +369,164 @@ export default function CompaniesListPage() {
   };
 
   const handleCreateNew = () => {
-    router.push('/meeting-tracker/admin/companies/new');
+    router.push('/oracle/master/companies/new');
   };
 
-  if (!isAdmin) {
+  if (!isMaster) {
     return (
-      <MeetingTrackerSidebar>
-        <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+      <Sidebar>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center">
             <div className="text-6xl mb-4">🔒</div>
-            <h1 className="text-2xl font-bold text-white mb-2">Access Denied</h1>
-            <p className="text-gray-400">You need admin privileges to access this page.</p>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
+            <p className="text-gray-600">Only MASTER users can access this page.</p>
           </div>
         </div>
-      </MeetingTrackerSidebar>
+      </Sidebar>
     );
   }
 
   if (loading) {
     return (
-      <MeetingTrackerSidebar>
-        <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-          <div className="text-white text-xl">Loading...</div>
+      <Sidebar>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-gray-900 text-xl">Loading...</div>
         </div>
-      </MeetingTrackerSidebar>
+      </Sidebar>
     );
   }
 
-  // Filter companies based on active tab and user role
-  let companiesForUser = allCompanies;
-
-  // Non-MASTER users can only see their own company
-  if (!isMaster && user?.company_id) {
-    companiesForUser = allCompanies.filter((company) => company.company_id === user.company_id);
-  }
-
-  const filteredCompanies = companiesForUser.filter((company) => {
+  const filteredCompanies = allCompanies.filter((company) => {
     if (filterTab === 'all') return true;
     return company.status === filterTab;
   });
 
-  const draftCount = companiesForUser.filter((c) => c.status === 'draft').length;
-  const activeCount = companiesForUser.filter((c) => c.status === 'active').length;
-  const inactiveCount = companiesForUser.filter((c) => c.status === 'inactive').length;
+  const draftCount = allCompanies.filter((c) => c.status === 'draft').length;
+  const activeCount = allCompanies.filter((c) => c.status === 'active').length;
+  const inactiveCount = allCompanies.filter((c) => c.status === 'inactive').length;
 
   return (
-    <MeetingTrackerSidebar>
-      <div className="min-h-screen bg-gray-900 p-8">
+    <Sidebar>
+      <div className="min-h-screen bg-gray-50 p-8">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h1 className="text-3xl font-bold text-white mb-2">Companies</h1>
-              <p className="text-gray-400">
-                {isMaster
-                  ? 'Manage company profiles and team hierarchies'
-                  : 'Manage your company profile and team hierarchy'}
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Companies</h1>
+              <p className="text-gray-600">
+                Manage company profiles and team hierarchies
               </p>
             </div>
-            {isMaster && (
-              <button
-                onClick={handleCreateNew}
-                className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
-              >
-                + Create Company
-              </button>
-            )}
+            <button
+              onClick={handleCreateNew}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            >
+              + Create Company
+            </button>
           </div>
 
           {/* Error Alert */}
           {error && (
-            <div className="mb-6 bg-red-900/20 border border-red-700 rounded-lg p-4">
+            <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
               <div className="flex items-start">
-                <span className="text-red-400 text-xl mr-3">⚠️</span>
+                <span className="text-red-500 text-xl mr-3">⚠️</span>
                 <div>
-                  <h3 className="text-red-400 font-semibold mb-1">Error</h3>
-                  <p className="text-red-300 text-sm">{error}</p>
+                  <h3 className="text-red-700 font-semibold mb-1">Error</h3>
+                  <p className="text-red-600 text-sm">{error}</p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Filter Tabs - Only show for MASTER */}
-          {isMaster && (
-            <div className="flex space-x-2 mb-6">
-              <button
-                onClick={() => setFilterTab('all')}
-                className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-                  filterTab === 'all'
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                }`}
-              >
-                All ({companiesForUser.length})
-              </button>
-              <button
-                onClick={() => setFilterTab('draft')}
-                className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-                  filterTab === 'draft'
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                }`}
-              >
-                Draft ({draftCount})
-              </button>
-              <button
-                onClick={() => setFilterTab('active')}
-                className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-                  filterTab === 'active'
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                }`}
-              >
-                Active ({activeCount})
-              </button>
-              <button
-                onClick={() => setFilterTab('inactive')}
-                className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-                  filterTab === 'inactive'
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                }`}
-              >
-                Inactive ({inactiveCount})
-              </button>
-            </div>
-          )}
+          {/* Filter Tabs */}
+          <div className="flex space-x-2 mb-6">
+            <button
+              onClick={() => setFilterTab('all')}
+              className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                filterTab === 'all'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+              }`}
+            >
+              All ({allCompanies.length})
+            </button>
+            <button
+              onClick={() => setFilterTab('draft')}
+              className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                filterTab === 'draft'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+              }`}
+            >
+              Draft ({draftCount})
+            </button>
+            <button
+              onClick={() => setFilterTab('active')}
+              className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                filterTab === 'active'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+              }`}
+            >
+              Active ({activeCount})
+            </button>
+            <button
+              onClick={() => setFilterTab('inactive')}
+              className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                filterTab === 'inactive'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+              }`}
+            >
+              Inactive ({inactiveCount})
+            </button>
+          </div>
 
           {/* Companies Table */}
           {filteredCompanies.length === 0 ? (
-            <div className="bg-gray-800 rounded-lg p-12 text-center">
+            <div className="bg-white rounded-lg p-12 text-center border border-gray-200">
               <div className="text-6xl mb-4">🏢</div>
-              <h3 className="text-xl font-semibold text-white mb-2">
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
                 No companies found
               </h3>
-              <p className="text-gray-400 mb-6">
+              <p className="text-gray-600 mb-6">
                 {filterTab === 'all'
-                  ? isMaster
-                    ? 'Create a new company to get started'
-                    : 'No company assigned to your account yet'
+                  ? 'Create a new company to get started'
                   : `No ${filterTab} companies yet`}
               </p>
-              {isMaster && (
-                <button
-                  onClick={handleCreateNew}
-                  className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
-                >
-                  Create First Company
-                </button>
-              )}
+              <button
+                onClick={handleCreateNew}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                Create First Company
+              </button>
             </div>
           ) : (
-            <div className="bg-gray-800 rounded-xl overflow-hidden">
+            <div className="bg-white rounded-xl overflow-hidden border border-gray-200">
               <table className="w-full">
-                <thead className="bg-gray-700">
+                <thead className="bg-gray-100 border-b border-gray-200">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                       Company Name
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                       Email
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-700">
+                <tbody className="divide-y divide-gray-200">
                   {filteredCompanies.map((company) => (
-                    <tr key={company.company_id} className="hover:bg-gray-750">
+                    <tr key={company.company_id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="font-medium text-white">{company.name}</div>
+                        <div className="font-medium text-gray-900">{company.name}</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-400">
+                      <td className="px-6 py-4 whitespace-nowrap text-gray-600">
                         {company.email}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -554,16 +534,16 @@ export default function CompaniesListPage() {
                           <span
                             className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
                               company.status === 'draft'
-                                ? 'bg-yellow-900/30 text-yellow-400'
+                                ? 'bg-yellow-100 text-yellow-700'
                                 : company.status === 'active'
-                                ? 'bg-green-900/30 text-green-400'
-                                : 'bg-gray-700 text-gray-400'
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-gray-100 text-gray-600'
                             }`}
                           >
                             {company.status.toUpperCase()}
                           </span>
                           {company.status === 'active' && company.team_member_count === 0 && (
-                            <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-orange-900/30 text-orange-400">
+                            <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">
                               NO TEAM DATA
                             </span>
                           )}
@@ -577,8 +557,8 @@ export default function CompaniesListPage() {
                           >
                             Edit
                           </button>
-                          {/* Delete/Deactivate/Activate - MASTER only */}
-                          {isMaster && company.status === 'draft' && (
+                          {/* Delete/Deactivate/Activate */}
+                          {company.status === 'draft' && (
                             <button
                               onClick={() => handleDelete(company.company_id, company.name, company.status)}
                               className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition-colors"
@@ -586,7 +566,7 @@ export default function CompaniesListPage() {
                               Delete
                             </button>
                           )}
-                          {isMaster && company.status === 'active' && (
+                          {company.status === 'active' && (
                             <button
                               onClick={() => handleDelete(company.company_id, company.name, company.status)}
                               className="px-3 py-1 bg-orange-600 hover:bg-orange-700 text-white text-xs rounded transition-colors"
@@ -594,7 +574,7 @@ export default function CompaniesListPage() {
                               Deactivate
                             </button>
                           )}
-                          {isMaster && company.status === 'inactive' && (
+                          {company.status === 'inactive' && (
                             <button
                               onClick={() => handleDelete(company.company_id, company.name, company.status)}
                               className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded transition-colors"
@@ -608,12 +588,12 @@ export default function CompaniesListPage() {
                               onClick={() => handleImportCSV(company.company_id)}
                               className="px-3 py-1 bg-orange-600 hover:bg-orange-700 text-white text-xs rounded transition-colors"
                             >
-                              Import CSV
+                              Add to CSV
                             </button>
                           )}
                           <button
                             onClick={() => handleAddMembers(company.company_id)}
-                            className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs rounded transition-colors"
+                            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors"
                           >
                             Add Members
                           </button>
@@ -631,16 +611,16 @@ export default function CompaniesListPage() {
       {/* Add Members Modal */}
       {showAddMemberModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold text-white mb-6">Add Team Member</h2>
+          <div className="bg-white rounded-xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Add Team Member</h2>
 
             {addMemberError && (
-              <div className="mb-6 bg-red-900/20 border border-red-700 rounded-lg p-4">
+              <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
                 <div className="flex items-start">
-                  <span className="text-red-400 text-xl mr-3">⚠️</span>
+                  <span className="text-red-500 text-xl mr-3">⚠️</span>
                   <div>
-                    <h3 className="text-red-400 font-semibold mb-1">Error</h3>
-                    <p className="text-red-300 text-sm">{addMemberError}</p>
+                    <h3 className="text-red-700 font-semibold mb-1">Error</h3>
+                    <p className="text-red-600 text-sm">{addMemberError}</p>
                   </div>
                 </div>
               </div>
@@ -649,63 +629,63 @@ export default function CompaniesListPage() {
             <div className="space-y-4">
               {/* Email */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Email <span className="text-red-400">*</span>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="email"
                   value={addMemberData.email}
                   onChange={(e) => setAddMemberData({ ...addMemberData, email: e.target.value })}
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
               </div>
 
               {/* First Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  First Name <span className="text-red-400">*</span>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  First Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={addMemberData.first_name}
                   onChange={(e) => setAddMemberData({ ...addMemberData, first_name: e.target.value })}
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
               </div>
 
               {/* Last Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Last Name <span className="text-red-400">*</span>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Last Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={addMemberData.last_name}
                   onChange={(e) => setAddMemberData({ ...addMemberData, last_name: e.target.value })}
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
               </div>
 
               {/* Phone */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Phone
                 </label>
                 <input
                   type="tel"
                   value={addMemberData.phone}
                   onChange={(e) => setAddMemberData({ ...addMemberData, phone: e.target.value })}
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               {/* Level */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Level <span className="text-red-400">*</span>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Level <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
@@ -713,22 +693,22 @@ export default function CompaniesListPage() {
                   max="10"
                   value={addMemberData.level}
                   onChange={(e) => setAddMemberData({ ...addMemberData, level: parseInt(e.target.value) || 1 })}
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
-                <p className="text-xs text-gray-400 mt-1">Hierarchy level (1-10). Level 1 is top-level (no manager).</p>
+                <p className="text-xs text-gray-500 mt-1">Hierarchy level (1-10). Level 1 is top-level (no manager).</p>
               </div>
 
               {/* Manager */}
               {addMemberData.level > 1 && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Manager {addMemberData.level > 1 && <span className="text-red-400">*</span>}
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Manager {addMemberData.level > 1 && <span className="text-red-500">*</span>}
                   </label>
                   <select
                     value={addMemberData.manager_id}
                     onChange={(e) => setAddMemberData({ ...addMemberData, manager_id: e.target.value })}
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required={addMemberData.level > 1}
                   >
                     <option value="">Select a manager</option>
@@ -738,7 +718,7 @@ export default function CompaniesListPage() {
                       </option>
                     ))}
                   </select>
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="text-xs text-gray-500 mt-1">
                     Managers must be from a lower level. {getFilteredManagers().length} available.
                   </p>
                 </div>
@@ -746,27 +726,27 @@ export default function CompaniesListPage() {
 
               {/* Team Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Team Name
                 </label>
                 <input
                   type="text"
                   value={addMemberData.team_name}
                   onChange={(e) => setAddMemberData({ ...addMemberData, team_name: e.target.value })}
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               {/* Position Title */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Position Title
                 </label>
                 <input
                   type="text"
                   value={addMemberData.position_title}
                   onChange={(e) => setAddMemberData({ ...addMemberData, position_title: e.target.value })}
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
@@ -780,14 +760,14 @@ export default function CompaniesListPage() {
                   setAddMemberError(null);
                 }}
                 disabled={addingMember}
-                className="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveAddMember}
                 disabled={addingMember || !addMemberData.email || !addMemberData.first_name || !addMemberData.last_name || (addMemberData.level > 1 && !addMemberData.manager_id)}
-                className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {addingMember ? 'Adding...' : 'Add Member'}
               </button>
@@ -799,46 +779,46 @@ export default function CompaniesListPage() {
       {/* Confirmation Modal for Existing User */}
       {showConfirmation && existingUserData && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-xl p-8 max-w-md w-full mx-4">
+          <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4">
             <div className="mb-6">
               <div className="flex items-center gap-3 mb-4">
                 <span className="text-4xl">⚠️</span>
-                <h2 className="text-2xl font-bold text-white">User Already Exists</h2>
+                <h2 className="text-2xl font-bold text-gray-900">User Already Exists</h2>
               </div>
 
-              <div className="bg-blue-900/30 border border-blue-500/50 rounded-lg p-4 mb-4">
-                <p className="text-blue-300 text-sm mb-3">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <p className="text-blue-700 text-sm mb-3">
                   A user with email <strong>{addMemberData.email}</strong> already exists in the system:
                 </p>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Name:</span>
-                    <span className="text-white font-medium">
+                    <span className="text-gray-600">Name:</span>
+                    <span className="text-gray-900 font-medium">
                       {existingUserData.first_name} {existingUserData.last_name}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <p className="text-gray-300 text-sm mb-4">
+              <p className="text-gray-700 text-sm mb-4">
                 Would you like to add this existing user to the team hierarchy with the following details?
               </p>
 
-              <div className="bg-gray-700 rounded-lg p-4 space-y-2 text-sm">
+              <div className="bg-gray-100 rounded-lg p-4 space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Level:</span>
-                  <span className="text-white">{addMemberData.level}</span>
+                  <span className="text-gray-600">Level:</span>
+                  <span className="text-gray-900">{addMemberData.level}</span>
                 </div>
                 {addMemberData.team_name && (
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Team:</span>
-                    <span className="text-white">{addMemberData.team_name}</span>
+                    <span className="text-gray-600">Team:</span>
+                    <span className="text-gray-900">{addMemberData.team_name}</span>
                   </div>
                 )}
                 {addMemberData.position_title && (
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Position:</span>
-                    <span className="text-white">{addMemberData.position_title}</span>
+                    <span className="text-gray-600">Position:</span>
+                    <span className="text-gray-900">{addMemberData.position_title}</span>
                   </div>
                 )}
               </div>
@@ -852,14 +832,14 @@ export default function CompaniesListPage() {
                   setExistingUserData(null);
                 }}
                 disabled={addingMember}
-                className="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmLinkExisting}
                 disabled={addingMember}
-                className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {addingMember ? 'Linking...' : 'Yes, Link This User'}
               </button>
@@ -867,6 +847,6 @@ export default function CompaniesListPage() {
           </div>
         </div>
       )}
-    </MeetingTrackerSidebar>
+    </Sidebar>
   );
 }

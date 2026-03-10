@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import Navigation from '@/components/Navigation';
+import Sidebar from '@/components/Sidebar';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { ApiError } from '@/types/auth';
 import { formatErrorForDisplay } from '@/lib/utils';
@@ -99,10 +99,9 @@ function ProfileContent() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation />
-      
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <Sidebar>
+      <div className="min-h-screen bg-gray-50">
+        <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <div className="bg-white shadow-lg rounded-lg overflow-hidden">
             {/* Header */}
@@ -291,7 +290,8 @@ function ProfileContent() {
           </div>
         </div>
       </main>
-    </div>
+      </div>
+    </Sidebar>
   );
 }
 

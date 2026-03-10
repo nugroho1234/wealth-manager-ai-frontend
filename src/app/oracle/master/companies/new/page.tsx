@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import MeetingTrackerSidebar from '@/components/meeting-tracker/Sidebar';
+import Sidebar from '@/components/Sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface CompanyFormData {
@@ -43,41 +43,25 @@ export default function NewCompanyPage() {
     country: '',
     city: '',
     timezone: '',
-    subscribed_plans: ['meeting_tracker'],
+    subscribed_plans: ['oracle', 'meeting_tracker'], // Pre-checked both
     website: '',
     meeting_prefix: '',
   });
 
-  // Check admin access (MASTER=7 only for creating companies)
-  const isAdmin = user?.role_id === 7 || user?.role_id === 1 || user?.role_id === 2;
+  // MASTER-only access
   const isMaster = user?.role_id === 7;
 
-  if (!isAdmin) {
-    return (
-      <MeetingTrackerSidebar>
-        <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-          <div className="text-center">
-            <div className="text-6xl mb-4">🔒</div>
-            <h1 className="text-2xl font-bold text-white mb-2">Access Denied</h1>
-            <p className="text-gray-400">You need admin privileges to access this page.</p>
-          </div>
-        </div>
-      </MeetingTrackerSidebar>
-    );
-  }
-
-  // Only MASTER can create companies
   if (!isMaster) {
     return (
-      <MeetingTrackerSidebar>
-        <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+      <Sidebar>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center">
             <div className="text-6xl mb-4">🔒</div>
-            <h1 className="text-2xl font-bold text-white mb-2">Access Denied</h1>
-            <p className="text-gray-400">Only MASTER users can create new companies.</p>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
+            <p className="text-gray-600">Only MASTER users can create new companies.</p>
           </div>
         </div>
-      </MeetingTrackerSidebar>
+      </Sidebar>
     );
   }
 
@@ -140,7 +124,7 @@ export default function NewCompanyPage() {
       const company = await response.json();
 
       // Redirect to CSV upload page
-      router.push(`/meeting-tracker/admin/companies/${company.company_id}/import`);
+      router.push(`/oracle/master/companies/${company.company_id}/import`);
     } catch (err: any) {
       setError(err.message || 'Failed to create company');
     } finally {
@@ -151,36 +135,36 @@ export default function NewCompanyPage() {
   const availableTimezones = formData.country ? TIMEZONES_BY_COUNTRY[formData.country] || [] : [];
 
   return (
-    <MeetingTrackerSidebar>
-      <div className="min-h-screen bg-gray-900 p-8">
+    <Sidebar>
+      <div className="min-h-screen bg-gray-50 p-8">
         <div className="max-w-3xl mx-auto">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">Create New Company</h1>
-            <p className="text-gray-400">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Create New Company</h1>
+            <p className="text-gray-600">
               Set up a new company profile. After creating the company, you'll be able to upload the team hierarchy CSV.
             </p>
           </div>
 
           {/* Error Alert */}
           {error && (
-            <div className="mb-6 bg-red-900/20 border border-red-700 rounded-lg p-4">
+            <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
               <div className="flex items-start">
-                <span className="text-red-400 text-xl mr-3">⚠️</span>
+                <span className="text-red-500 text-xl mr-3">⚠️</span>
                 <div>
-                  <h3 className="text-red-400 font-semibold mb-1">Error</h3>
-                  <p className="text-red-300 text-sm">{error}</p>
+                  <h3 className="text-red-700 font-semibold mb-1">Error</h3>
+                  <p className="text-red-600 text-sm">{error}</p>
                 </div>
               </div>
             </div>
           )}
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="bg-gray-800 rounded-lg p-6 space-y-6">
+          <form onSubmit={handleSubmit} className="bg-white rounded-lg p-6 space-y-6 border border-gray-200">
             {/* Company Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Company Name <span className="text-red-400">*</span>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Company Name <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -188,15 +172,15 @@ export default function NewCompanyPage() {
                 value={formData.name}
                 onChange={handleInputChange}
                 required
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="ABC Financial Group"
               />
             </div>
 
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Company Email <span className="text-red-400">*</span>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Company Email <span className="text-red-500">*</span>
               </label>
               <input
                 type="email"
@@ -204,15 +188,15 @@ export default function NewCompanyPage() {
                 value={formData.email}
                 onChange={handleInputChange}
                 required
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="admin@abcfinancial.com"
               />
             </div>
 
             {/* Phone */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Company Phone <span className="text-red-400">*</span>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Company Phone <span className="text-red-500">*</span>
               </label>
               <input
                 type="tel"
@@ -220,22 +204,22 @@ export default function NewCompanyPage() {
                 value={formData.phone}
                 onChange={handleInputChange}
                 required
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="+6281234567890"
               />
             </div>
 
             {/* Country */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Country <span className="text-red-400">*</span>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Country <span className="text-red-500">*</span>
               </label>
               <select
                 name="country"
                 value={formData.country}
                 onChange={handleInputChange}
                 required
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Select country</option>
                 {COUNTRIES.map((country) => (
@@ -248,8 +232,8 @@ export default function NewCompanyPage() {
 
             {/* City */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                City <span className="text-red-400">*</span>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                City <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -257,15 +241,15 @@ export default function NewCompanyPage() {
                 value={formData.city}
                 onChange={handleInputChange}
                 required
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Jakarta"
               />
             </div>
 
             {/* Timezone */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Timezone <span className="text-red-400">*</span>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Timezone <span className="text-red-500">*</span>
               </label>
               <select
                 name="timezone"
@@ -273,7 +257,7 @@ export default function NewCompanyPage() {
                 onChange={handleInputChange}
                 required
                 disabled={!formData.country}
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <option value="">
                   {formData.country ? 'Select timezone' : 'Select country first'}
@@ -288,8 +272,8 @@ export default function NewCompanyPage() {
 
             {/* Subscribed Plans */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Subscribed Plans <span className="text-red-400">*</span>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Subscribed Plans <span className="text-red-500">*</span>
               </label>
               <div className="space-y-2">
                 {['oracle', 'meeting_tracker'].map((plan) => (
@@ -310,14 +294,14 @@ export default function NewCompanyPage() {
                           }));
                         }
                       }}
-                      className="w-4 h-4 text-purple-600 bg-gray-700 border-gray-600 rounded focus:ring-purple-500 focus:ring-2"
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                     />
-                    <span className="text-white capitalize">{plan.replace('_', ' ')}</span>
+                    <span className="text-gray-900 capitalize">{plan.replace('_', ' ')}</span>
                   </label>
                 ))}
               </div>
               {formData.subscribed_plans.length === 0 && (
-                <p className="text-red-400 text-sm mt-1">Please select at least one plan</p>
+                <p className="text-red-600 text-sm mt-1">Please select at least one plan</p>
               )}
               <p className="text-gray-500 text-xs mt-2">
                 Note: Wealthlens and Digivault are not yet available
@@ -326,7 +310,7 @@ export default function NewCompanyPage() {
 
             {/* Website (Optional) */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Website <span className="text-gray-500 text-xs">(optional)</span>
               </label>
               <input
@@ -334,14 +318,14 @@ export default function NewCompanyPage() {
                 name="website"
                 value={formData.website}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="abcfinancial.com"
               />
             </div>
 
             {/* Meeting Prefix (Optional) */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Meeting Prefix <span className="text-gray-500 text-xs">(optional)</span>
               </label>
               <input
@@ -350,7 +334,7 @@ export default function NewCompanyPage() {
                 value={formData.meeting_prefix}
                 onChange={handleInputChange}
                 maxLength={10}
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="ABC-"
               />
               <p className="text-gray-500 text-xs mt-1">
@@ -363,7 +347,7 @@ export default function NewCompanyPage() {
               <button
                 type="button"
                 onClick={() => router.back()}
-                className="px-6 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
+                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
                 disabled={loading}
               >
                 Cancel
@@ -371,7 +355,7 @@ export default function NewCompanyPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Creating...' : 'Create Company & Continue'}
               </button>
@@ -379,12 +363,12 @@ export default function NewCompanyPage() {
           </form>
 
           {/* Info Box */}
-          <div className="mt-6 bg-blue-900/20 border border-blue-700 rounded-lg p-4">
+          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div className="flex items-start">
-              <span className="text-blue-400 text-xl mr-3">ℹ️</span>
+              <span className="text-blue-500 text-xl mr-3">ℹ️</span>
               <div>
-                <h3 className="text-blue-400 font-semibold mb-2">What's Next?</h3>
-                <ul className="text-blue-300 text-sm space-y-1">
+                <h3 className="text-blue-700 font-semibold mb-2">What's Next?</h3>
+                <ul className="text-blue-600 text-sm space-y-1">
                   <li>1. Company will be created in "draft" status</li>
                   <li>2. You'll download a CSV template with examples</li>
                   <li>3. Send the template to the company to fill in their team data</li>
@@ -395,6 +379,6 @@ export default function NewCompanyPage() {
           </div>
         </div>
       </div>
-    </MeetingTrackerSidebar>
+    </Sidebar>
   );
 }

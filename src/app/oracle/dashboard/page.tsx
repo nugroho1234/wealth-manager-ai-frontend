@@ -81,12 +81,12 @@ function DashboardContent() {
       case UserRole.SUPER_ADMIN:
         return [
           ...baseActions,
-          { title: 'Admin Panel', href: '/oracle/admin', icon: '⚙️', description: 'Company administration' },
+          { title: 'Admin Panel', href: '/oracle/admin-panel', icon: '⚙️', description: 'Company administration' },
         ];
       case UserRole.ADMIN:
         return [
           ...baseActions,
-          { title: 'Manage Users', href: '/oracle/admin/users', icon: '👥', description: 'Manage team members' },
+          { title: 'Admin Panel', href: '/oracle/admin-panel', icon: '⚙️', description: 'Company administration' },
         ];
       case UserRole.ADVISOR:
         return [
@@ -97,12 +97,13 @@ function DashboardContent() {
       case UserRole.LEADER_2:
         return [
           ...baseActions,
-          { title: 'Team Dashboard', href: '/oracle/team', icon: '📈', description: 'View team performance' },
+          { title: 'Team Dashboard', href: '/oracle/team', icon: '📈', description: 'View team performance', comingSoon: true },
         ];
       case UserRole.SENIOR_PARTNER:
         return [
           ...baseActions,
-          { title: 'Analytics', href: '/oracle/analytics', icon: '📊', description: 'Strategic insights' },
+          { title: 'Team Performance', href: '/oracle/team', icon: '📈', description: 'View team performance', comingSoon: true },
+          { title: 'Analytics', href: '/oracle/analytics', icon: '📊', description: 'Strategic insights', comingSoon: true },
         ];
       default:
         return baseActions;
@@ -437,11 +438,22 @@ function DashboardContent() {
           {quickActions.map((action, index) => (
             <div
               key={index}
-              className="group bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20 hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
-              onClick={() => router.push(action.href)}
+              className={`group rounded-2xl p-6 shadow-lg border transition-all duration-300 relative ${
+                action.comingSoon
+                  ? 'bg-gray-100/80 backdrop-blur-sm border-gray-200 cursor-not-allowed opacity-60'
+                  : 'bg-white/60 backdrop-blur-sm border-white/20 hover:shadow-xl hover:scale-105 cursor-pointer'
+              }`}
+              onClick={() => !action.comingSoon && router.push(action.href)}
             >
+              {action.comingSoon && (
+                <div className="absolute top-2 right-2">
+                  <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                    Coming Soon
+                  </span>
+                </div>
+              )}
               <div className="text-center">
-                <div className="text-4xl mb-4 group-hover:scale-110 transition-transform duration-300">
+                <div className={`text-4xl mb-4 transition-transform duration-300 ${!action.comingSoon && 'group-hover:scale-110'}`}>
                   {action.icon}
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">

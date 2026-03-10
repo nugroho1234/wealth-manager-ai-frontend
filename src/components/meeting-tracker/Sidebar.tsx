@@ -63,7 +63,8 @@ export default function MeetingTrackerSidebar({ children }: SidebarProps) {
     },
   ];
 
-  const isAdmin = user?.role_id === 1 || user?.role_id === 2;
+  // Check admin access (MASTER=7, SUPER_ADMIN=1, ADMIN=2)
+  const isAdmin = user?.role_id === 7 || user?.role_id === 1 || user?.role_id === 2;
   const isAdminPage = pathname?.startsWith('/meeting-tracker/admin');
 
   // Check if user is a leader
