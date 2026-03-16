@@ -112,7 +112,11 @@ export type ChatResponse = AnswerResponse | ClarificationResponse;
 // Component Props Types
 // ================================
 
-export interface InsuranceProduct {
+// Re-export comprehensive InsuranceProduct from insurance-product types
+export type { InsuranceProduct } from './insurance-product';
+
+// Minimal product info used in chat contexts (backwards compatible)
+export interface MinimalProductInfo {
   insurance_id: string;
   insurance_name: string;
   pdf_url?: string;
@@ -120,7 +124,7 @@ export interface InsuranceProduct {
 
 export interface ComparisonChatbotProps {
   insuranceIds: string[];
-  products: InsuranceProduct[];
+  products: MinimalProductInfo[];
 }
 
 export interface ChatMessageProps {

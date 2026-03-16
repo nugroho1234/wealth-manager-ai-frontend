@@ -81,7 +81,7 @@ function ClientsPageContent() {
   };
 
   const handleViewClient = (clientId: string) => {
-    router.push(`/clients/${clientId}`);
+    router.push(`/oracle/clients/${clientId}`);
   };
 
   const totalPages = Math.ceil(totalClients / itemsPerPage);

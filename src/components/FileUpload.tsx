@@ -43,24 +43,25 @@ export default function FileUpload({
   // Removed metadata form - backend extracts everything from PDF
 
   // Handle upload progress and completion callbacks after state updates
+  // Note: Only depend on 'files' to prevent infinite loop from callback recreation
   useEffect(() => {
     if (files.length === 0) {
       completionCalledRef.current = false;
       return;
     }
-    
+
     // Always call onUploadProgress when files change
     onUploadProgress?.(files);
-    
+
     // Check if all files are complete or have errors
     const allComplete = files.every(f => f.status === 'completed' || f.status === 'error');
-    
+
     // Only call onUploadComplete once when all files are done
     if (allComplete && !completionCalledRef.current) {
       completionCalledRef.current = true;
       onUploadComplete?.(files);
     }
-  }, [files, onUploadProgress, onUploadComplete]);
+  }, [files]);
 
   const validateFile = (file: File): FileValidationError | null => {
     // Check file type
@@ -228,7 +229,7 @@ export default function FileUpload({
   };
 
   const pollProcessingStatus = async (file: File, uploadId: string): Promise<void> => {
-    const maxAttempts = 60; // 5 minutes with 5-second intervals
+    const maxAttempts = 120; // 10 minutes with 5-second intervals
     let attempts = 0;
 
     const checkStatus = async (): Promise<void> => {

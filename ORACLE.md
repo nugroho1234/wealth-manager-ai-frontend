@@ -179,16 +179,139 @@ interface DashboardStats {
 **Key Interfaces**:
 ```typescript
 interface Product {
+  // Core Fields (23 fields)
   insurance_id: string;
+  company_id: string;
   insurance_name: string;
   provider: string;
   category: string;
   key_features: string;
   created_at: string;
+  updated_at: string;
   processing_status: string;
   pdf_url?: string;
+  page_count?: number;
+  file_size_mb?: number;
+  upload_source: string;
+  extraction_metadata?: Record<string, any>;
+  last_extracted_at?: string;
+  extraction_version?: string;
+  extraction_model?: string;
+  raw_markdown_gcs_path?: string;
+  table_enhanced_markdown_path?: string;
+  chunks_gcs_path?: string;
+  embedding_completed_at?: string;
+  total_chunks?: number;
+  avg_chunk_size?: number;
 
-  // RAG Search fields (NEW!)
+  // Universal Product Structure (5 fields)
+  product_core_type?: string;
+  coverage_term?: string;
+  base_currency_options?: string[];
+  policy_term_maturity?: string;
+  premium_structure?: string;
+
+  // Advisor Verdict (3 fields) - AI-generated insights
+  key_strengths?: string[];
+  key_weaknesses?: string[];
+  best_for?: string[];
+
+  // Critical Illness Category (26 fields)
+  ci_total_conditions_covered?: number;
+  ci_early_minor_stage?: string;
+  ci_intermediate_stage?: string;
+  ci_major_advanced_stage?: string;
+  ci_max_claims_allowed?: string;
+  ci_waiting_period_between_claims?: string;
+  ci_relapse_recurrent_rule?: string;
+  ci_grouping_pot_rules?: string;
+  ci_payout_options?: string[];
+  ci_multipay_feature?: string;
+  ci_waiver_triggers?: string;
+  ci_waiver_duration?: string;
+  ci_icu_benefit?: string;
+  ci_juvenile_special_needs?: string;
+  ci_angioplasty_benefit?: string;
+  ci_benign_tumor_benefit?: string;
+  ci_day_surgery_benefit?: string;
+  ci_carcinoma_in_situ?: string;
+  ci_early_thyroid_cancer?: string;
+  ci_definition_of_cancer?: string;
+  ci_initial_waiting_period?: string;
+  ci_survival_period?: string;
+  ci_pre_existing_conditions?: string;
+  ci_age_limits_on_coverage?: string;
+  ci_renewal_terms?: string;
+  ci_exclusions?: string[];
+
+  // Life Protection Category (23 fields)
+  death_benefit_guarantee?: string;
+  death_benefit_multipliers?: string;
+  death_benefit_payout_options?: string[];
+  terminal_illness_benefit?: string;
+  total_permanent_disability?: string;
+  growth_mechanism?: string;
+  downside_protection_floor?: string;
+  upside_potential_cap?: string;
+  loyalty_special_bonuses?: string;
+  cash_value_access?: string;
+  premium_holiday_pause?: string;
+  critical_illness_rider?: string;
+  premium_waiver_riders?: string;
+  accidental_death_benefit?: string;
+  retrenchment_benefit?: string;
+  change_of_life_insured?: string;
+  policy_split_option?: string;
+  contingent_policy_owner?: string;
+  mental_incapacity_benefit?: string;
+  guaranteed_issuance_option?: string;
+  convertibility_option?: string;
+  suicide_exclusion?: string;
+  medical_underwriting?: string;
+
+  // Savings Plan Category (20 fields)
+  savings_guaranteed_annual_return?: string;
+  savings_projected_annual_return?: string;
+  savings_projected_vs_guaranteed_gap?: string;
+  savings_bonus_structure?: string;
+  savings_cash_bonus_liquidity?: string;
+  savings_reversionary_bonus_timing?: string;
+  savings_terminal_bonus_trigger?: string;
+  savings_full_surrender_value_timeline?: string;
+  savings_early_surrender_penalty?: string;
+  savings_premium_payment_method?: string;
+  savings_premium_payment_duration?: string;
+  savings_premium_holiday_after?: string;
+  savings_guaranteed_maturity_multiple?: string;
+  savings_illustrated_maturity_multiple?: string;
+  savings_withdrawal_rules?: string;
+  savings_partial_withdrawal_fees?: string;
+  savings_premium_redirection?: string;
+  savings_premium_financing?: string;
+  savings_tax_treatment?: string;
+  savings_legacy_estate_planning?: string;
+
+  // Investment-Linked Category (18 fields)
+  ilp_fund_type_categories?: string[];
+  ilp_number_of_funds?: number;
+  ilp_self_managed_funds?: string;
+  ilp_fund_switching_policy?: string;
+  ilp_dollar_cost_averaging?: string;
+  ilp_rebalancing_options?: string;
+  ilp_premium_allocation_rate?: string;
+  ilp_early_bonus_units?: string;
+  ilp_loyalty_bonus_units?: string;
+  ilp_premium_charge?: string;
+  ilp_fund_management_fee?: string;
+  ilp_insurance_charges?: string;
+  ilp_surrender_charge?: string;
+  ilp_mortality_morbidity_charge?: string;
+  ilp_bid_offer_spread?: string;
+  ilp_policy_fee?: string;
+  ilp_total_expense_ratio?: string;
+  ilp_fund_performance_history?: string;
+
+  // RAG Search fields (dynamic, added during search)
   status?: 'approved' | 'partial_match' | 'rejected' | 'uncertain';
   confidence_score?: number;
   similarity_score?: number;
@@ -207,22 +330,79 @@ interface Evidence {
 }
 ```
 
+**Field Organization**:
+- **Total Fields**: 116 (23 core + 5 universal + 3 advisor + 26 CI + 23 life + 20 savings + 18 ILP)
+- **Category-Specific Fields**: Only relevant fields shown based on product category
+- **Advisor Verdict**: AI-generated arrays of key_strengths, key_weaknesses, and best_for insights
+- **RAG Search Fields**: Dynamically added during semantic search operations
+
 **Performance**:
 - Average search time: < 5 seconds
 - Streaming enables progressive result loading
 - Category filtering reduces search space by 80-90%
 
 #### `/oracle/products/compare`
-**Purpose**: Side-by-side comparison of up to 5 insurance products.
+**Purpose**: Side-by-side comparison of up to 5 insurance products with comprehensive 116-field analysis.
 
 **Features**:
-- Comparison table with key attributes
-- Visual similarity scores (AI search)
-- Feature-by-feature breakdown
-- Export comparison to PDF
-- Create proposal from comparison
+- **Enhanced Comparison Tables**:
+  - Core product information (23 fields)
+  - Universal product structure (5 fields)
+  - AI Advisor Verdict (key_strengths, key_weaknesses, best_for)
+  - Category-specific fields with intelligent filtering:
+    - Critical Illness (26 fields): CI coverage, staging, claims, benefits
+    - Life Protection (23 fields): Death benefits, riders, underwriting
+    - Savings Plans (20 fields): Guaranteed returns, bonuses, withdrawals
+    - Investment-Linked (18 fields): Fund options, charges, switching
+
+- **Smart Cross-Category Comparison**:
+  - Warning banner when comparing products from different categories
+  - Automatic filtering of irrelevant fields per product category
+  - Only shows category-specific tables when at least one product has data
+  - Gray italic "N/A" styling for missing values
+
+- **Quick Action Buttons**:
+  - View PDF source with page number references
+  - Clone product for comparison
+  - Create proposal from product
+
+- **PDF Export Optimization**:
+  - Intelligent table skipping (excludes completely empty sub-tables)
+  - AI summary loading detection and user prompt
+  - Clean formatting without loading skeletons
+  - Professional multi-page layout
+
+- **Visual similarity scores** (from AI RAG search)
+- **Create proposal** from comparison
 
 **Access**: All authenticated users (requires product selection)
+
+**Key Components**:
+- `CategorySpecificTable`: Renders category-specific fields with `forPDF` prop for export optimization
+- `CrossCategoryBanner`: Warning UI for cross-category comparisons
+- `QuickActionButtons`: Action buttons with PDF viewing and cloning
+- `FormattedValue`: Consistent value formatting with N/A styling
+
+**Utility Functions** (`utils.ts`):
+```typescript
+// Category detection and grouping
+getCategoryGroup(category: string): CategoryGroup | null
+// Returns: 'critical-illness' | 'life-protection' | 'savings' | 'ilp'
+
+// Field relevance checking
+isFieldApplicable(fieldName: string, category: string): boolean
+
+// Comparison scenario detection
+detectComparisonScenario(products: InsuranceProduct[]): {
+  scenario: 'same-category' | 'same-group' | 'cross-group';
+  primaryGroup: CategoryGroup | null;
+  groups: Set<CategoryGroup>;
+}
+
+// Empty table detection (for PDF export)
+hasTableData(products: InsuranceProduct[], fields: { key: string; label: string }[]): boolean
+// Returns true only if at least one product has at least one non-null/non-empty field
+```
 
 #### `/oracle/proposals`
 **Purpose**: Manage insurance proposals with creation and tracking.
@@ -547,15 +727,50 @@ const ROLE_OPTIONS = [
 **Access**: ADMIN, SUPER_ADMIN, MASTER
 
 #### `/oracle/admin/documents`
-**Purpose**: Document library management.
+**Purpose**: Document library management with enhanced 116-field extraction pipeline.
 
 **Features**:
-- Upload PDF insurance documents
-- Process documents with LlamaParse
-- View document processing status
-- Delete documents
+- **Upload PDF Insurance Documents**:
+  - Automatic file size and page count validation
+  - Multi-tenant upload to Google Cloud Storage
+  - Processing status tracking
+
+- **Enhanced 6-Step Extraction Pipeline**:
+  1. **LlamaParse Extraction**: Parse PDF to structured markdown
+  2. **Table Enhancement**: Fix markdown tables with GPT-4o
+  3. **Structured Extraction**: Extract all 116 fields using GPT-4o with JSON schema validation
+  4. **Chunking**: Create semantic chunks (512-768 tokens) with overlap
+  5. **Vector Embedding**: Generate 768-dimension embeddings with Gemini text-embedding-004
+  6. **Database Storage**: Store in PostgreSQL with pgvector for semantic search
+
+- **Extracted Fields** (116 total):
+  - 23 core fields (metadata, processing info)
+  - 5 universal product structure fields
+  - 3 AI advisor verdict fields (key_strengths, key_weaknesses, best_for)
+  - 26 critical illness fields
+  - 23 life protection fields
+  - 20 savings plan fields
+  - 18 investment-linked fields
+
+- **Document Management**:
+  - View document processing status (pending, processing, completed, failed)
+  - Re-extract existing documents with enhanced pipeline
+  - Delete documents with cascade handling
+  - View extraction metadata and logs
+
+- **Backfill Support**:
+  - Re-extract products uploaded before column expansion
+  - Batch processing with checkpointing
+  - Dry-run mode for validation
 
 **Access**: ADMIN, SUPER_ADMIN, MASTER
+
+**Technical Details**:
+- Uses LlamaParse for high-quality PDF parsing
+- GPT-4o for table enhancement and structured extraction
+- Gemini text-embedding-004 for vector embeddings (768 dimensions)
+- PostgreSQL with pgvector extension for semantic search
+- GIN indexes on key_strengths array for fast filtering
 
 #### `/oracle/admin/commissions`
 **Purpose**: Commission rate management.
@@ -1077,6 +1292,144 @@ interface PageBadgeProps {
 ```
 
 **Context**: Used in the RAG chat system to display AI-generated citations. When the AI answers questions using content from insurance documents, it references specific pages that were used to generate the response.
+
+### Product Comparison Components
+
+#### `<CategorySpecificTable>`
+**Purpose**: Renders category-specific insurance fields in a comparison table with intelligent field filtering and PDF export support.
+
+**Props**:
+```typescript
+interface CategorySpecificTableProps {
+  products: InsuranceProduct[];
+  forPDF?: boolean;  // Optional: optimizes rendering for PDF export
+}
+```
+
+**Features**:
+- **Intelligent Field Display**: Only shows fields relevant to each product's category
+- **Category-Specific Tables**:
+  - Critical Illness (26 fields)
+  - Life Protection (23 fields)
+  - Savings Plans (20 fields)
+  - Investment-Linked (18 fields)
+- **Empty Table Detection**: When `forPDF={true}`, automatically skips sub-tables with no data across all products
+- **Consistent Formatting**: Uses `<FormattedValue>` component for uniform N/A styling
+- **Responsive Layout**: Horizontal scroll for many products, clean mobile view
+
+**Usage**:
+```typescript
+// Regular display
+<CategorySpecificTable products={selectedProducts} />
+
+// PDF export (with empty table skipping)
+<CategorySpecificTable products={selectedProducts} forPDF={true} />
+```
+
+**Technical Details**:
+- Uses `isFieldApplicable()` to filter fields per product category
+- Uses `hasTableData()` to detect completely empty sub-tables
+- Groups fields by category for organized display
+- Returns `null` for empty tables when `forPDF={true}`
+
+#### `<CrossCategoryBanner>`
+**Purpose**: Warning banner displayed when comparing products from different insurance categories.
+
+**Props**:
+```typescript
+interface CrossCategoryBannerProps {
+  products: InsuranceProduct[];
+}
+```
+
+**Features**:
+- **Automatic Detection**: Uses `detectComparisonScenario()` to identify cross-category comparisons
+- **Visual Warning**: Yellow/amber alert banner with info icon
+- **Clear Messaging**: Explains that not all fields are relevant across categories
+- **Smart Display**: Only shows for 'cross-group' scenario (e.g., comparing CI with Savings)
+
+**Usage**:
+```typescript
+<CrossCategoryBanner products={selectedProducts} />
+```
+
+**Example Scenarios**:
+- Comparing Critical Illness + Whole Life → Shows banner (different groups)
+- Comparing Whole Life + Term Life → No banner (same group: life-protection)
+- Comparing Critical Illness + Savings Plan → Shows banner (different groups)
+
+#### `<QuickActionButtons>`
+**Purpose**: Action buttons for each product in the comparison table (View PDF, Clone, Create Proposal).
+
+**Props**:
+```typescript
+interface QuickActionButtonsProps {
+  product: InsuranceProduct;
+  onClone?: (product: InsuranceProduct) => void;
+  onCreateProposal?: (product: InsuranceProduct) => void;
+}
+```
+
+**Features**:
+- **View PDF**: Opens source PDF in new tab with page reference support
+- **Clone Product**: Adds product to comparison for side-by-side viewing
+- **Create Proposal**: Quick proposal creation from single product
+- **Icon Buttons**: Clean, compact design with tooltips
+- **Conditional Display**: Only shows available actions based on product data
+
+**Usage**:
+```typescript
+<QuickActionButtons
+  product={product}
+  onClone={(p) => handleAddToComparison(p)}
+  onCreateProposal={(p) => router.push('/oracle/proposals/create?product=' + p.insurance_id)}
+/>
+```
+
+**Technical Details**:
+- Uses `openPdfInNewTab()` from `pdfUtils.ts` for PDF viewing
+- Integrates with comparison state management
+- Responsive button sizing for mobile/desktop
+
+#### `<FormattedValue>`
+**Purpose**: Consistent value formatting component with enhanced N/A styling for null/empty values.
+
+**Props**:
+```typescript
+interface FormattedValueProps {
+  value: any;  // string, number, array, object, null, undefined
+}
+```
+
+**Features**:
+- **Null/Empty Handling**: Returns gray italic "N/A" for null, undefined, empty string, or empty array
+- **Array Formatting**: Joins array values with comma-space separator
+- **Object Formatting**: JSON stringifies objects
+- **Type Safety**: Handles all primitive types and converts to string
+- **Consistent Styling**:
+  - N/A values: `text-gray-400 italic`
+  - Actual values: `text-gray-700`
+
+**Usage**:
+```typescript
+// String value
+<FormattedValue value="Guaranteed whole life" />
+// Output: <span className="text-gray-700">Guaranteed whole life</span>
+
+// Null value
+<FormattedValue value={null} />
+// Output: <span className="text-gray-400 italic">N/A</span>
+
+// Array value
+<FormattedValue value={["USD", "SGD", "HKD"]} />
+// Output: <span className="text-gray-700">USD, SGD, HKD</span>
+
+// Empty array
+<FormattedValue value={[]} />
+// Output: <span className="text-gray-400 italic">N/A</span>
+```
+
+**Context**: Used throughout comparison tables to ensure consistent formatting. Replaces the plain-string `formatValue()` utility function in contexts where JSX components are allowed.
 
 ---
 

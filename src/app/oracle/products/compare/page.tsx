@@ -9,33 +9,17 @@ import Sidebar from '@/components/Sidebar';
 import { apiClient } from '@/lib/api';
 import ComparisonSummary from '@/components/oracle/ComparisonSummary';
 import ComparisonChatbot from '@/components/oracle/compare/ComparisonChatbot';
+import AdvisorVerdictCard from '@/components/oracle/compare/AdvisorVerdictCard';
+import CategorySpecificTable from '@/components/oracle/compare/CategorySpecificTable';
+import CrossCategoryBanner from '@/components/oracle/compare/CrossCategoryBanner';
+import QuickActionButtons from '@/components/oracle/compare/QuickActionButtons';
+import { InsuranceProduct } from '@/types/oracle/insurance-product';
+import { detectComparisonScenario } from '@/components/oracle/compare/utils';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 
-interface Product {
-  insurance_id: string;
-  insurance_name: string;
-  provider: string;
-  provider_country?: string;
-  category: string;
-  key_features?: string;
-  key_features_bullets?: string;
-  age_of_entry?: string;
-  premium?: string;
-  minimum_sum_assured?: string;
-  maximum_sum_assured?: string;
-  guaranteed_interest_rate?: string;
-  historical_performance?: string;
-  insurance_yield?: string;
-  riders_addons?: string;
-  premium_payment_options?: string;
-  death_benefit_options?: string;
-  suitable_for?: string;
-  time_horizon?: string;
-  specific_needs?: string;
-  reason_for_need?: string;
-  target_market?: string;
-  market_positioning?: string;
-  pdf_url?: string;
-}
+// Use the comprehensive InsuranceProduct type (116 fields: 23 core + 90 category-specific + 3 advisor verdict)
+type Product = InsuranceProduct;
 
 interface CommissionData {
   commission_id: string;
@@ -246,16 +230,12 @@ function CompareContent() {
   const handleSharePDF = async (includeCommission: boolean) => {
     try {
       setIsGeneratingPDF(true);
-      
+
       if (!printContentRef.current) {
         notifyError('PDF Error', 'Unable to generate PDF. Please try again.');
         return;
       }
 
-      // Import libraries directly
-      const { jsPDF } = await import('jspdf');
-      const html2canvas = (await import('html2canvas')).default;
-      
       const element = printContentRef.current;
       
       // Create a clone for PDF generation
@@ -264,12 +244,61 @@ function CompareContent() {
       // Remove buttons from cloned element
       const buttonsToRemove = clonedElement.querySelectorAll('.pdf-hide');
       buttonsToRemove.forEach(button => button.remove());
-      
+
+      // Check if AI summary is still loading and warn user
+      const loadingElements = clonedElement.querySelectorAll('[class*="animate-pulse"]');
+      if (loadingElements.length > 0) {
+        const proceed = window.confirm(
+          'The AI Comparison Summary is still loading. Do you want to continue generating the PDF without it?\n\n' +
+          'Click OK to continue, or Cancel to wait for the summary to finish loading.'
+        );
+
+        if (!proceed) {
+          // Clean up and exit
+          if (document.body.contains(clonedElement)) {
+            document.body.removeChild(clonedElement);
+          }
+          setIsGeneratingPDF(false);
+          return;
+        }
+
+        // Remove loading skeletons from PDF
+        loadingElements.forEach(el => el.remove());
+      }
+
       // Hide commission table if not including commissions
       if (!includeCommission) {
         const commissionTables = clonedElement.querySelectorAll('[data-table="commission"]');
         commissionTables.forEach(table => table.remove());
       }
+
+      // Remove empty category-specific tables (where all values are N/A)
+      // Check each table by examining if all data cells contain "N/A" or "Not applicable"
+      const categoryTables = clonedElement.querySelectorAll('.space-y-8 > div');
+      categoryTables.forEach(tableContainer => {
+        const tableElement = tableContainer.querySelector('table');
+        if (tableElement) {
+          const dataRows = tableElement.querySelectorAll('tbody tr');
+          let hasData = false;
+
+          // Check if any data cell has actual content (not N/A or Not applicable)
+          dataRows.forEach(row => {
+            const dataCells = row.querySelectorAll('td:not(:first-child)'); // Skip field name column
+            dataCells.forEach(cell => {
+              const text = cell.textContent?.trim() || '';
+              // Consider cell has data if it's not "N/A" or "Not applicable"
+              if (text && text !== 'N/A' && text !== 'Not applicable') {
+                hasData = true;
+              }
+            });
+          });
+
+          // Remove the entire table container if no data found
+          if (!hasData && dataRows.length > 0) {
+            tableContainer.remove();
+          }
+        }
+      });
 
       // Remove horizontal scroll containers and optimize table layout for PDF
       const scrollContainers = clonedElement.querySelectorAll('.overflow-x-auto');
@@ -505,6 +534,33 @@ function CompareContent() {
               insuranceIds={products.map(p => p.insurance_id)}
               userQuery={userQuery || undefined}
             />
+
+            {/* Cross-Category Banner (Phase 9) */}
+            {(() => {
+              const comparisonScenario = detectComparisonScenario(products);
+              return <CrossCategoryBanner groups={comparisonScenario.groups} />;
+            })()}
+
+            {/* Quick Action Buttons (Phase 9) */}
+            <QuickActionButtons
+              onQuestionClick={(question) => {
+                // Scroll to chatbot and set the question
+                const chatbotSection = document.querySelector('aside');
+                if (chatbotSection) {
+                  chatbotSection.scrollIntoView({ behavior: 'smooth' });
+                }
+                // Set input value in chatbot (user will still need to press send)
+                const chatInput = document.querySelector('textarea[placeholder*="Ask"]') as HTMLTextAreaElement;
+                if (chatInput) {
+                  chatInput.value = question;
+                  chatInput.focus();
+                  // Trigger input event to update React state
+                  const event = new Event('input', { bubbles: true });
+                  chatInput.dispatchEvent(event);
+                }
+              }}
+              disabled={loading}
+            />
           </div>
 
           {/* Comparison Tables */}
@@ -575,16 +631,6 @@ function CompareContent() {
                         </td>
                       ))}
                     </tr>
-                    <tr>
-                      <td className="px-6 py-4 text-sm font-medium text-gray-900 sticky left-0 bg-white border-r">
-                        Age of Entry
-                      </td>
-                      {products.map(product => (
-                        <td key={product.insurance_id} className="px-6 py-4 text-sm text-gray-700">
-                          {formatValue(product.age_of_entry)}
-                        </td>
-                      ))}
-                    </tr>
                   </tbody>
                 </table>
               </div>
@@ -646,53 +692,7 @@ function CompareContent() {
               </div>
             </div>
 
-            {/* Table 3: Financial Information */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 overflow-hidden">
-              <div className="bg-gradient-to-r from-purple-500 to-purple-600 px-6 py-4">
-                <h3 className="text-xl font-semibold text-white">Financial Information</h3>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-900 sticky left-0 bg-gray-50">
-                        Field
-                      </th>
-                      {products.map(product => (
-                        <th key={product.insurance_id} className="px-6 py-4 text-left text-sm font-medium text-gray-900 min-w-48">
-                          {product.insurance_name}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {[
-                      { key: 'minimum_sum_assured', label: 'Minimum Sum Assured' },
-                      { key: 'maximum_sum_assured', label: 'Maximum Sum Assured' },
-                      { key: 'guaranteed_interest_rate', label: 'Guaranteed Interest Rate' },
-                      { key: 'historical_performance', label: 'Historical Performance' },
-                      { key: 'insurance_yield', label: 'Insurance Yield' },
-                      { key: 'riders_addons', label: 'Riders/Add-ons' },
-                      { key: 'premium_payment_options', label: 'Premium Payment Options' },
-                      { key: 'death_benefit_options', label: 'Death Benefit Options' }
-                    ].map((field, index) => (
-                      <tr key={field.key} className={index % 2 === 0 ? '' : 'bg-gray-50'}>
-                        <td className={`px-6 py-4 text-sm font-medium text-gray-900 sticky left-0 border-r ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                          {field.label}
-                        </td>
-                        {products.map(product => (
-                          <td key={product.insurance_id} className="px-6 py-4 text-sm text-gray-700">
-                            {formatValue(product[field.key as keyof Product])}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Table 4: Suitability Information */}
+            {/* Table 3: Suitability Information */}
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 overflow-hidden" data-table="suitability">
               <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-4">
                 <h3 className="text-xl font-semibold text-white">Suitability Information</h3>
@@ -735,6 +735,27 @@ function CompareContent() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+
+            {/* Category-Specific Tables (116 fields total) */}
+            <CategorySpecificTable products={products} />
+
+            {/* Advisor's Verdict Section - Stacked Layout */}
+            <div className="mt-8">
+              <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-4 rounded-t-2xl">
+                <h3 className="text-xl font-semibold text-white">Advisor's Verdict</h3>
+              </div>
+              <div className="space-y-6 bg-white/80 backdrop-blur-sm rounded-b-2xl shadow-lg border border-white/20 p-6">
+                {products.map((product) => (
+                  <div key={product.insurance_id}>
+                    <div className="mb-4 pb-3 border-b border-gray-200">
+                      <h4 className="text-lg font-semibold text-gray-900">{product.insurance_name}</h4>
+                      <p className="text-sm text-gray-600">{product.provider}</p>
+                    </div>
+                    <AdvisorVerdictCard product={product} />
+                  </div>
+                ))}
               </div>
             </div>
           </div>
