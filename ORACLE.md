@@ -727,39 +727,58 @@ const ROLE_OPTIONS = [
 **Access**: ADMIN, SUPER_ADMIN, MASTER
 
 #### `/oracle/admin/documents`
-**Purpose**: Document library management with enhanced 116-field extraction pipeline.
+**Purpose**: Document library management with enhanced category-specific extraction pipeline.
 
 **Features**:
 - **Upload PDF Insurance Documents**:
+  - **Category Selection UI** ✅ (NEW Mar 2026): Choose from 8 insurance categories before upload
+    - Critical Illness
+    - Whole Life
+    - Term Life
+    - Universal Life
+    - Savings Plan
+    - Endowment
+    - Investment-Linked (ILP)
+    - General/Other (fallback)
+  - **Auto-Detection**: AI automatically detects category if not pre-selected
   - Automatic file size and page count validation
   - Multi-tenant upload to Google Cloud Storage
   - Processing status tracking
 
-- **Enhanced 6-Step Extraction Pipeline**:
-  1. **LlamaParse Extraction**: Parse PDF to structured markdown
-  2. **Table Enhancement**: Fix markdown tables with GPT-4o
-  3. **Structured Extraction**: Extract all 116 fields using GPT-4o with JSON schema validation
-  4. **Chunking**: Create semantic chunks (512-768 tokens) with overlap
-  5. **Vector Embedding**: Generate 768-dimension embeddings with Gemini text-embedding-004
-  6. **Database Storage**: Store in PostgreSQL with pgvector for semantic search
+- **Enhanced 8-Step Extraction Pipeline** ✅:
+  1. **Upload PDF**: Upload to Google Cloud Storage (public bucket)
+  2. **Category Detection** ✅ (NEW): Auto-detect or use pre-selected category
+  3. **LlamaParse Extraction**: Parse PDF to structured markdown
+  4. **Table Enhancement**: Fix markdown tables with GPT-4o
+  5. **Category-Specific Extraction** ✅ (NEW): Extract only relevant fields (46-52 fields vs 116 total)
+     - **Critical Illness**: 46 fields (28 core + 18 CI-specific) - 59% faster
+     - **Life Protection**: 51 fields (28 core + 23 life-specific) - 55% faster
+     - **Savings Plan**: 52 fields (28 core + 24 savings-specific) - 54% faster
+     - **Investment-Linked**: 48 fields (28 core + 20 ILP-specific) - 57% faster
+     - **Fallback**: Full 116-field extraction if no category specified
+  6. **Chunking**: Create semantic chunks (512-768 tokens) with overlap
+  7. **Vector Embedding**: Generate 768-dimension embeddings with Gemini text-embedding-004
+  8. **Database Storage**: Store in PostgreSQL with pgvector for semantic search
 
-- **Extracted Fields** (116 total):
-  - 23 core fields (metadata, processing info)
-  - 5 universal product structure fields
-  - 3 AI advisor verdict fields (key_strengths, key_weaknesses, best_for)
-  - 26 critical illness fields
-  - 23 life protection fields
-  - 20 savings plan fields
-  - 18 investment-linked fields
+- **Extraction Performance** ✅ (NEW):
+  - **Category-specific**: 6-10 minutes (54-59% faster)
+  - **Full extraction**: 15-20 minutes
+  - **Metadata tracking**: All extraction details stored in `extraction_metadata` JSONB column
+
+- **Extracted Fields**:
+  - **Core fields** (28): Shared across all categories
+  - **Category-specific fields** (18-24): Only relevant fields extracted
+  - **Total available** (116): All fields when category unknown
 
 - **Document Management**:
   - View document processing status (pending, processing, completed, failed)
+  - View extraction metadata (category detected, fields extracted/skipped, duration)
   - Re-extract existing documents with enhanced pipeline
   - Delete documents with cascade handling
   - View extraction metadata and logs
 
 - **Backfill Support**:
-  - Re-extract products uploaded before column expansion
+  - Re-extract products uploaded before category-specific extraction
   - Batch processing with checkpointing
   - Dry-run mode for validation
 
@@ -767,10 +786,11 @@ const ROLE_OPTIONS = [
 
 **Technical Details**:
 - Uses LlamaParse for high-quality PDF parsing
-- GPT-4o for table enhancement and structured extraction
+- GPT-4o for category detection, table enhancement, and structured extraction
 - Gemini text-embedding-004 for vector embeddings (768 dimensions)
 - PostgreSQL with pgvector extension for semantic search
 - GIN indexes on key_strengths array for fast filtering
+- Category-specific Pydantic models for validation and performance optimization
 
 #### `/oracle/admin/commissions`
 **Purpose**: Commission rate management.

@@ -50,7 +50,7 @@ export interface FileUploadOptions {
 
 export const DEFAULT_UPLOAD_OPTIONS: FileUploadOptions = {
   maxFiles: 1,
-  maxSizeBytes: 15 * 1024 * 1024, // 15MB
+  maxSizeBytes: 50 * 1024 * 1024, // 50MB
   acceptedFileTypes: ['application/pdf'],
   allowMultiple: false,
 };

@@ -39,8 +39,21 @@ export default function FileUpload({
   const [isDragActive, setIsDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const completionCalledRef = useRef(false);
-  
-  // Removed metadata form - backend extracts everything from PDF
+
+  // Category selection state
+  const [selectedCategory, setSelectedCategory] = useState<string>('auto-detect');
+
+  const INSURANCE_CATEGORIES = [
+    { value: 'auto-detect', label: 'Auto-Detect from PDF', icon: '🤖' },
+    { value: 'critical illness', label: 'Critical Illness', icon: '🏥' },
+    { value: 'whole life', label: 'Whole Life', icon: '💼' },
+    { value: 'term life', label: 'Term Life', icon: '⏱️' },
+    { value: 'universal life', label: 'Universal Life', icon: '🔄' },
+    { value: 'savings plan', label: 'Savings Plan', icon: '💰' },
+    { value: 'endowment', label: 'Endowment', icon: '📈' },
+    { value: 'investment-linked', label: 'Investment-Linked (ILP)', icon: '📊' },
+    { value: 'hospital', label: 'Hospital / Medical', icon: '🏨' },
+  ];
 
   // Handle upload progress and completion callbacks after state updates
   // Note: Only depend on 'files' to prevent infinite loop from callback recreation
@@ -122,14 +135,15 @@ export default function FileUpload({
 
       // Create FormData with all files and metadata
       const formData = new FormData();
-      
+
       // Add all files under the same 'files' key (FastAPI expects List[UploadFile])
       filesToUpload.forEach((file, index) => {
         // console.log(`📎 Adding file ${index + 1}: ${file.name} (${file.size} bytes)`);
         formData.append('files', file);
       });
-      
-      // No metadata needed - backend extracts everything from PDF
+
+      // Add category selection
+      formData.append('category', selectedCategory);
 
       // Debug FormData contents
       // console.log('📤 FormData contents:');
@@ -229,7 +243,7 @@ export default function FileUpload({
   };
 
   const pollProcessingStatus = async (file: File, uploadId: string): Promise<void> => {
-    const maxAttempts = 120; // 10 minutes with 5-second intervals
+    const maxAttempts = 240; // 20 minutes with 5-second intervals
     let attempts = 0;
 
     const checkStatus = async (): Promise<void> => {
@@ -397,7 +411,48 @@ export default function FileUpload({
 
   return (
     <div className={`space-y-6 ${className}`}>
-      {/* Metadata form removed - backend extracts everything from PDF */}
+      {/* Category Selection */}
+      <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+        <label className="block text-sm font-semibold text-gray-900 mb-3">
+          Insurance Category
+        </label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {INSURANCE_CATEGORIES.map((category) => (
+            <button
+              key={category.value}
+              type="button"
+              onClick={() => setSelectedCategory(category.value)}
+              disabled={disabled}
+              className={`
+                flex items-center gap-3 p-3 rounded-lg border-2 transition-all duration-200
+                ${disabled
+                  ? 'cursor-not-allowed opacity-50 border-gray-200 bg-gray-50'
+                  : selectedCategory === category.value
+                    ? 'border-primary-500 bg-primary-50 shadow-sm'
+                    : 'border-gray-200 hover:border-primary-300 hover:bg-primary-25'
+                }
+              `}
+            >
+              <span className="text-2xl">{category.icon}</span>
+              <span className={`text-sm font-medium ${
+                selectedCategory === category.value ? 'text-primary-700' : 'text-gray-700'
+              }`}>
+                {category.label}
+              </span>
+            </button>
+          ))}
+        </div>
+        {selectedCategory === 'auto-detect' && (
+          <p className="mt-3 text-sm text-gray-500 flex items-center gap-2">
+            <span>ℹ️</span>
+            <span>
+              Our AI will analyze the PDF content to automatically detect the insurance category.
+              This may take a few extra seconds.
+            </span>
+          </p>
+        )}
+      </div>
+
       {/* Drop Zone */}
       <div
         {...getRootProps()}

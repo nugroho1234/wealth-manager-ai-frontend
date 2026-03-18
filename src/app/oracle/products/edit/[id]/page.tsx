@@ -146,6 +146,25 @@ interface ProductDetails {
   ilp_change_of_insured?: string;
   ilp_medical_underwriting?: string;
 
+  // GROUP 6: Hospital Insurance (17 fields)
+  hospital_geographical_coverage?: string;
+  hospital_room_board_entitlement?: string;
+  hospital_annual_limit?: string;
+  hospital_lifetime_limit?: string;
+  hospital_as_charged_vs_sublimits?: string;
+  hospital_deductible?: string;
+  hospital_coinsurance_copay?: string;
+  hospital_oop_maximum?: string;
+  hospital_pre_hospitalization_coverage?: string;
+  hospital_post_hospitalization_coverage?: string;
+  hospital_outpatient_cancer_dialysis?: string;
+  hospital_maternity_dental_options?: string;
+  hospital_direct_billing_cashless?: string;
+  hospital_guaranteed_renewability?: string;
+  hospital_pre_existing_conditions?: string;
+  hospital_emergency_evacuation?: string;
+  hospital_second_opinion_concierge?: string;
+
   // Legacy fields (for backward compatibility)
   title?: string;
   company_name?: string;
@@ -167,10 +186,11 @@ const CATEGORY_COLORS: Record<string, string> = {
   'endowment': 'bg-green-100 text-green-800',
   'savings plan': 'bg-emerald-100 text-emerald-800',
   'investment-linked': 'bg-yellow-100 text-yellow-800',
+  'hospital': 'bg-pink-100 text-pink-800',
 };
 
 // Determine category type for conditional rendering
-function getCategoryType(category?: string): 'CI' | 'LIFE' | 'SAVINGS' | 'ILP' | null {
+function getCategoryType(category?: string): 'CI' | 'LIFE' | 'SAVINGS' | 'ILP' | 'HOSPITAL' | null {
   if (!category) return null;
   const cat = category.toLowerCase();
 
@@ -180,6 +200,7 @@ function getCategoryType(category?: string): 'CI' | 'LIFE' | 'SAVINGS' | 'ILP' |
   }
   if (['endowment', 'savings plan'].includes(cat)) return 'SAVINGS';
   if (cat === 'investment-linked') return 'ILP';
+  if (cat === 'hospital') return 'HOSPITAL';
 
   return null;
 }
@@ -385,6 +406,7 @@ function EditProductContent() {
                       <option value="endowment">Endowment</option>
                       <option value="savings plan">Savings Plan</option>
                       <option value="investment-linked">Investment-Linked</option>
+                      <option value="hospital">Hospital / Medical</option>
                     </select>
                     {product.category && (
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${CATEGORY_COLORS[product.category.toLowerCase()] || 'bg-gray-100 text-gray-800'}`}>
@@ -1687,6 +1709,226 @@ function EditProductContent() {
                         value={product.ilp_medical_underwriting || ''}
                         onChange={(e) => updateField('ilp_medical_underwriting', e.target.value)}
                         placeholder="e.g., Guaranteed Issuance / No Medical Questions"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* HOSPITAL CATEGORY-SPECIFIC FIELDS */}
+            {categoryType === 'HOSPITAL' && (
+              <div className="bg-white shadow rounded-lg p-6 mb-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-6 pb-2 border-b">
+                  HOSPITAL / MEDICAL INSURANCE SPECIFIC FIELDS
+                </h2>
+
+                {/* Section 1: Coverage Scope */}
+                <div className="mb-8">
+                  <h3 className="text-lg font-medium text-gray-800 mb-4">Section 1: Coverage Scope</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Geographical Coverage</label>
+                      <input
+                        type="text"
+                        value={product.hospital_geographical_coverage || ''}
+                        onChange={(e) => updateField('hospital_geographical_coverage', e.target.value)}
+                        placeholder="e.g., Worldwide excluding USA, Asia-Pacific region"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Room & Board Entitlement</label>
+                      <input
+                        type="text"
+                        value={product.hospital_room_board_entitlement || ''}
+                        onChange={(e) => updateField('hospital_room_board_entitlement', e.target.value)}
+                        placeholder="e.g., Private room up to SGD 500/day"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Annual Limit</label>
+                      <input
+                        type="text"
+                        value={product.hospital_annual_limit || ''}
+                        onChange={(e) => updateField('hospital_annual_limit', e.target.value)}
+                        placeholder="e.g., SGD 500,000 per year"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Lifetime Limit</label>
+                      <input
+                        type="text"
+                        value={product.hospital_lifetime_limit || ''}
+                        onChange={(e) => updateField('hospital_lifetime_limit', e.target.value)}
+                        placeholder="e.g., Unlimited, or SGD 2 million lifetime"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">As-Charged vs Sublimits</label>
+                      <input
+                        type="text"
+                        value={product.hospital_as_charged_vs_sublimits || ''}
+                        onChange={(e) => updateField('hospital_as_charged_vs_sublimits', e.target.value)}
+                        placeholder="e.g., As-charged for hospitalization, sublimits for outpatient"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 2: Cost Sharing */}
+                <div className="mb-8">
+                  <h3 className="text-lg font-medium text-gray-800 mb-4">Section 2: Cost Sharing</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Deductible</label>
+                      <input
+                        type="text"
+                        value={product.hospital_deductible || ''}
+                        onChange={(e) => updateField('hospital_deductible', e.target.value)}
+                        placeholder="e.g., SGD 5,000 per claim"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Coinsurance / Co-pay</label>
+                      <input
+                        type="text"
+                        value={product.hospital_coinsurance_copay || ''}
+                        onChange={(e) => updateField('hospital_coinsurance_copay', e.target.value)}
+                        placeholder="e.g., 10% coinsurance after deductible"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Out-of-Pocket Maximum</label>
+                      <input
+                        type="text"
+                        value={product.hospital_oop_maximum || ''}
+                        onChange={(e) => updateField('hospital_oop_maximum', e.target.value)}
+                        placeholder="e.g., SGD 10,000 per year"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 3: Coverage Extensions */}
+                <div className="mb-8">
+                  <h3 className="text-lg font-medium text-gray-800 mb-4">Section 3: Coverage Extensions</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Pre-Hospitalization Coverage</label>
+                      <input
+                        type="text"
+                        value={product.hospital_pre_hospitalization_coverage || ''}
+                        onChange={(e) => updateField('hospital_pre_hospitalization_coverage', e.target.value)}
+                        placeholder="e.g., 60 days before admission"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Post-Hospitalization Coverage</label>
+                      <input
+                        type="text"
+                        value={product.hospital_post_hospitalization_coverage || ''}
+                        onChange={(e) => updateField('hospital_post_hospitalization_coverage', e.target.value)}
+                        placeholder="e.g., 90 days after discharge"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Outpatient Cancer / Dialysis</label>
+                      <input
+                        type="text"
+                        value={product.hospital_outpatient_cancer_dialysis || ''}
+                        onChange={(e) => updateField('hospital_outpatient_cancer_dialysis', e.target.value)}
+                        placeholder="e.g., Covered up to annual limit"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Maternity / Dental Options</label>
+                      <input
+                        type="text"
+                        value={product.hospital_maternity_dental_options || ''}
+                        onChange={(e) => updateField('hospital_maternity_dental_options', e.target.value)}
+                        placeholder="e.g., Maternity optional rider, basic dental included"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 4: Service Features */}
+                <div className="mb-8">
+                  <h3 className="text-lg font-medium text-gray-800 mb-4">Section 4: Service Features</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Direct Billing / Cashless</label>
+                      <input
+                        type="text"
+                        value={product.hospital_direct_billing_cashless || ''}
+                        onChange={(e) => updateField('hospital_direct_billing_cashless', e.target.value)}
+                        placeholder="e.g., Available at 500+ panel hospitals"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Guaranteed Renewability</label>
+                      <input
+                        type="text"
+                        value={product.hospital_guaranteed_renewability || ''}
+                        onChange={(e) => updateField('hospital_guaranteed_renewability', e.target.value)}
+                        placeholder="e.g., Guaranteed renewable up to age 99"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Pre-Existing Conditions</label>
+                      <input
+                        type="text"
+                        value={product.hospital_pre_existing_conditions || ''}
+                        onChange={(e) => updateField('hospital_pre_existing_conditions', e.target.value)}
+                        placeholder="e.g., Covered after 3 years"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Evacuation</label>
+                      <input
+                        type="text"
+                        value={product.hospital_emergency_evacuation || ''}
+                        onChange={(e) => updateField('hospital_emergency_evacuation', e.target.value)}
+                        placeholder="e.g., Covered up to USD 100,000"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Second Opinion / Concierge</label>
+                      <input
+                        type="text"
+                        value={product.hospital_second_opinion_concierge || ''}
+                        onChange={(e) => updateField('hospital_second_opinion_concierge', e.target.value)}
+                        placeholder="e.g., Medical concierge service included"
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>

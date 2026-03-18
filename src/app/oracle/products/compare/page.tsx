@@ -8,7 +8,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import Sidebar from '@/components/Sidebar';
 import { apiClient } from '@/lib/api';
 import ComparisonSummary from '@/components/oracle/ComparisonSummary';
-import ComparisonChatbot from '@/components/oracle/compare/ComparisonChatbot';
+import FloatingChatContainer from '@/components/oracle/compare/FloatingChatContainer';
 import AdvisorVerdictCard from '@/components/oracle/compare/AdvisorVerdictCard';
 import CategorySpecificTable from '@/components/oracle/compare/CategorySpecificTable';
 import CrossCategoryBanner from '@/components/oracle/compare/CrossCategoryBanner';
@@ -485,9 +485,9 @@ function CompareContent() {
 
   return (
     <Sidebar>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
         {/* Main content area */}
-        <main className="flex-1 px-6 py-8 overflow-auto">
+        <main className="px-6 py-8 overflow-auto">
           <div ref={printContentRef} className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="mb-8">
@@ -544,20 +544,12 @@ function CompareContent() {
             {/* Quick Action Buttons (Phase 9) */}
             <QuickActionButtons
               onQuestionClick={(question) => {
-                // Scroll to chatbot and set the question
-                const chatbotSection = document.querySelector('aside');
-                if (chatbotSection) {
-                  chatbotSection.scrollIntoView({ behavior: 'smooth' });
-                }
-                // Set input value in chatbot (user will still need to press send)
-                const chatInput = document.querySelector('textarea[placeholder*="Ask"]') as HTMLTextAreaElement;
-                if (chatInput) {
-                  chatInput.value = question;
-                  chatInput.focus();
-                  // Trigger input event to update React state
-                  const event = new Event('input', { bubbles: true });
-                  chatInput.dispatchEvent(event);
-                }
+                // Trigger floating chat to open with the question
+                window.dispatchEvent(
+                  new CustomEvent('openChatWithQuestion', {
+                    detail: { question }
+                  })
+                );
               }}
               disabled={loading}
             />
@@ -812,13 +804,11 @@ function CompareContent() {
           </div>
         </main>
 
-        {/* Chatbot sidebar */}
-        <aside className="w-96 h-screen sticky top-0 pdf-hide">
-          <ComparisonChatbot
-            insuranceIds={products.map(p => p.insurance_id)}
-            products={products}
-          />
-        </aside>
+        {/* Floating Chat Container */}
+        <FloatingChatContainer
+          insuranceIds={products.map(p => p.insurance_id)}
+          products={products}
+        />
       </div>
     </Sidebar>
   );

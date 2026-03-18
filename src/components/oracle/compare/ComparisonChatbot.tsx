@@ -8,7 +8,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { MessageSquare, X } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import type {
   ComparisonChatbotProps,
   ChatMessage,
@@ -35,11 +35,11 @@ export default function ComparisonChatbot({
   const [error, setError] = useState<string | null>(null);
   const [pendingClarification, setPendingClarification] =
     useState<ClarificationResponse | null>(null);
-  const [isOpen, setIsOpen] = useState(true);
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const hasLoadedHistory = useRef(false);
 
   // Session storage key
   const storageKey = `chat-history-${insuranceIds.sort().join("-")}`;
@@ -52,13 +52,17 @@ export default function ComparisonChatbot({
         const parsed = JSON.parse(saved);
         setChatHistory(parsed);
       }
+      hasLoadedHistory.current = true;
     } catch (err) {
       console.error("Failed to load chat history:", err);
+      hasLoadedHistory.current = true;
     }
   }, [storageKey]);
 
-  // Save chat history to sessionStorage whenever it changes
+  // Save chat history to sessionStorage whenever it changes (but only after initial load)
   useEffect(() => {
+    if (!hasLoadedHistory.current) return; // Don't save until we've loaded
+
     try {
       sessionStorage.setItem(storageKey, JSON.stringify(chatHistory));
     } catch (err) {
@@ -70,6 +74,32 @@ export default function ComparisonChatbot({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatHistory, isLoading, pendingClarification]);
+
+  // Listen for clear chat event from FloatingChatContainer
+  useEffect(() => {
+    const handleClearChat = () => {
+      setChatHistory([]);
+      setPendingClarification(null);
+      setError(null);
+    };
+
+    window.addEventListener('clearChatHistory', handleClearChat);
+    return () => {
+      window.removeEventListener('clearChatHistory', handleClearChat);
+    };
+  }, []);
+
+  // Scroll to bottom when chat expands
+  useEffect(() => {
+    const handleChatExpanded = () => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
+
+    window.addEventListener('chatExpanded', handleChatExpanded);
+    return () => {
+      window.removeEventListener('chatExpanded', handleChatExpanded);
+    };
+  }, []);
 
   // Handle sending a message
   const handleSendMessage = async (question: string) => {
@@ -171,132 +201,80 @@ export default function ComparisonChatbot({
     handleSendMessage(inputValue);
   };
 
-  // Clear chat history
-  const handleClearChat = () => {
-    if (confirm("Are you sure you want to clear the chat history?")) {
-      setChatHistory([]);
-      setPendingClarification(null);
-      setError(null);
-      sessionStorage.removeItem(storageKey);
-    }
-  };
-
   return (
-    <div className="flex flex-col h-full bg-white border-l border-gray-200">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
-        <div className="flex items-center gap-2">
-          <MessageSquare className="w-5 h-5 text-blue-600" />
-          <h3 className="font-semibold text-gray-900">Ask Questions</h3>
-        </div>
-        <div className="flex items-center gap-2">
-          {chatHistory.length > 0 && (
+    <div className="flex flex-col h-full bg-transparent">
+      {/* Messages area */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Empty state */}
+        {chatHistory.length === 0 && !isLoading && (
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <MessageSquare className="w-12 h-12 text-gray-300 mb-3" />
+            <p className="text-sm text-gray-500 mb-1">
+              Ask me anything about these products
+            </p>
+            <p className="text-xs text-gray-400">
+              I can answer in English or Indonesian
+            </p>
+          </div>
+        )}
+
+        {/* Chat messages */}
+        {chatHistory.map((message, index) => {
+          // For RAG responses, find the PDF URL from the insurance_id in the message
+          // For multi-product comparisons, we might not have a single PDF
+          let pdfUrl: string | undefined;
+
+          if (message.source === "rag" && message.insurance_id) {
+            // RAG responses are for single products - find the matching product
+            const matchingProduct = products.find(p => p.insurance_id === message.insurance_id);
+            pdfUrl = matchingProduct?.pdf_url;
+          }
+
+          return (
+            <ChatMessageComponent
+              key={index}
+              message={message}
+              pdfUrl={pdfUrl}
+            />
+          );
+        })}
+
+        {/* Loading indicator */}
+        {isLoading && <LoadingIndicator />}
+
+        {/* Clarification buttons */}
+        {pendingClarification && (
+          <ClarificationButtons
+            message={pendingClarification.message}
+            options={pendingClarification.options}
+            onSelect={handleClarificationSelect}
+          />
+        )}
+
+        {/* Error message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+            <p className="text-sm text-red-700">{error}</p>
             <button
-              onClick={handleClearChat}
-              className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-100 transition-colors"
+              onClick={() => setError(null)}
+              className="mt-2 text-xs text-red-600 hover:text-red-700 underline"
             >
-              Clear
+              Dismiss
             </button>
-          )}
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="text-gray-500 hover:text-gray-700 p-1 rounded hover:bg-gray-100 transition-colors"
-            aria-label={isOpen ? "Collapse chat" : "Expand chat"}
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+          </div>
+        )}
+
+        {/* Scroll anchor */}
+        <div ref={messagesEndRef} />
       </div>
 
-      {/* Collapsed state */}
-      {!isOpen && (
-        <div className="p-4 text-center">
-          <button
-            onClick={() => setIsOpen(true)}
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-          >
-            Open chat
-          </button>
-        </div>
-      )}
-
-      {/* Expanded state */}
-      {isOpen && (
-        <>
-          {/* Messages area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {/* Empty state */}
-            {chatHistory.length === 0 && !isLoading && (
-              <div className="flex flex-col items-center justify-center h-full text-center">
-                <MessageSquare className="w-12 h-12 text-gray-300 mb-3" />
-                <p className="text-sm text-gray-500 mb-1">
-                  Ask me anything about these products
-                </p>
-                <p className="text-xs text-gray-400">
-                  I can answer in English or Indonesian
-                </p>
-              </div>
-            )}
-
-            {/* Chat messages */}
-            {chatHistory.map((message, index) => {
-              // For RAG responses, find the PDF URL from the insurance_id in the message
-              // For multi-product comparisons, we might not have a single PDF
-              let pdfUrl: string | undefined;
-
-              if (message.source === "rag" && message.insurance_id) {
-                // RAG responses are for single products - find the matching product
-                const matchingProduct = products.find(p => p.insurance_id === message.insurance_id);
-                pdfUrl = matchingProduct?.pdf_url;
-              }
-
-              return (
-                <ChatMessageComponent
-                  key={index}
-                  message={message}
-                  pdfUrl={pdfUrl}
-                />
-              );
-            })}
-
-            {/* Loading indicator */}
-            {isLoading && <LoadingIndicator />}
-
-            {/* Clarification buttons */}
-            {pendingClarification && (
-              <ClarificationButtons
-                message={pendingClarification.message}
-                options={pendingClarification.options}
-                onSelect={handleClarificationSelect}
-              />
-            )}
-
-            {/* Error message */}
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                <p className="text-sm text-red-700">{error}</p>
-                <button
-                  onClick={() => setError(null)}
-                  className="mt-2 text-xs text-red-600 hover:text-red-700 underline"
-                >
-                  Dismiss
-                </button>
-              </div>
-            )}
-
-            {/* Scroll anchor */}
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Input area */}
-          <ChatInput
-            value={inputValue}
-            onChange={setInputValue}
-            onSubmit={handleSubmit}
-            disabled={isLoading}
-          />
-        </>
-      )}
+      {/* Input area */}
+      <ChatInput
+        value={inputValue}
+        onChange={setInputValue}
+        onSubmit={handleSubmit}
+        disabled={isLoading}
+      />
     </div>
   );
 }
