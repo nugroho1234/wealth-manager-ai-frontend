@@ -10,6 +10,8 @@ import { apiClient } from '@/lib/api';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import PageBadge from '@/components/PageBadge';
+import MobileSessionsBar from '@/components/oracle/chat/MobileSessionsBar';
+import MobileProductSelector from '@/components/oracle/chat/MobileProductSelector';
 
 interface Product {
   insurance_id: string;
@@ -98,8 +100,9 @@ function ChatContent() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const [showProductSelector, setShowProductSelector] = useState(false);
+  const [showMobileProductSelector, setShowMobileProductSelector] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Chat session state
   const [sessions, setSessions] = useState<ChatSessionWithDetails[]>([]);
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
@@ -654,7 +657,13 @@ function ChatContent() {
   
   const handleNewChat = async () => {
     if (!selectedProduct) {
-      setShowProductSelector(true);
+      // Check if we're on mobile (< 1024px)
+      const isMobile = window.innerWidth < 1024;
+      if (isMobile) {
+        setShowMobileProductSelector(true);
+      } else {
+        setShowProductSelector(true);
+      }
       return;
     }
     
@@ -732,8 +741,8 @@ function ChatContent() {
     <Sidebar>
       <div className="h-screen bg-gradient-to-br from-gray-50 to-white overflow-hidden">
         <div className="flex h-full">
-          {/* Chat Sessions Sidebar */}
-          <div className="w-80 bg-white/80 backdrop-blur-sm border-r border-white/20 shadow-lg flex flex-col">
+          {/* Chat Sessions Sidebar - Desktop Only */}
+          <div className="hidden lg:flex w-80 bg-white/80 backdrop-blur-sm border-r border-white/20 shadow-lg flex-col">
             {/* Sidebar Header */}
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between mb-4">
@@ -1070,7 +1079,7 @@ function ChatContent() {
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 lg:pb-6 pb-32">
               {isLoadingMessages ? (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
@@ -1210,7 +1219,7 @@ function ChatContent() {
             </div>
 
             {/* Message Input */}
-            <div className="bg-white/80 backdrop-blur-sm border-t border-white/20 p-6 shadow-sm">
+            <div className="bg-white/80 backdrop-blur-sm border-t border-white/20 shadow-sm lg:relative lg:bottom-auto lg:p-6 fixed bottom-12 left-0 right-0 lg:left-auto lg:right-auto lg:w-auto p-4 pb-3">
               {currentSession ? (
                 currentSession.status === 'archived' ? (
                   <div className="text-center">
@@ -1230,10 +1239,10 @@ function ChatContent() {
                         onChange={(e) => setInputMessage(e.target.value)}
                         onKeyDown={handleKeyDown}
                         placeholder="Ask a question about this insurance product..."
-                        rows={1}
+                        rows={2}
                         disabled={isSendingMessage}
                         className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none disabled:bg-gray-50 disabled:cursor-not-allowed"
-                        style={{ minHeight: '48px' }}
+                        style={{ minHeight: '64px' }}
                       />
                     </div>
                     <button
@@ -1265,6 +1274,33 @@ function ChatContent() {
             </div>
           </div>
         </div>
+
+        {/* Mobile Sessions Bar - Only on mobile */}
+        <div className="lg:hidden">
+          <MobileSessionsBar
+            sessions={sessions}
+            archivedSessions={archivedSessions}
+            currentSession={currentSession}
+            isLoadingSessions={isLoadingSessions}
+            showArchivedSessions={showArchivedSessions}
+            onSessionSelect={handleSessionSelect}
+            onArchiveSession={handleArchiveSession}
+            onRenameSession={handleRenameSession}
+            onNewChat={handleNewChat}
+            onToggleArchived={() => setShowArchivedSessions(!showArchivedSessions)}
+            onFetchArchivedSessions={fetchArchivedSessions}
+          />
+        </div>
+
+        {/* Mobile Product Selector Modal */}
+        <MobileProductSelector
+          isOpen={showMobileProductSelector}
+          onClose={() => setShowMobileProductSelector(false)}
+          products={products}
+          isLoading={isLoadingProducts}
+          onSelectProduct={handleProductSelect}
+          selectedProduct={selectedProduct}
+        />
 
         {/* Click outside handlers are now handled by useEffect */}
 
