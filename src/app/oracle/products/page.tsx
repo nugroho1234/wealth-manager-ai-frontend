@@ -64,7 +64,7 @@ function ProductsContent() {
   // Streaming search state
   const [searchProgress, setSearchProgress] = useState<{ current: number; total: number } | null>(null);
   const [pendingResults, setPendingResults] = useState<number>(0);
-  const [showRejected, setShowRejected] = useState<boolean>(false);
+  const [showPartialMatch, setShowPartialMatch] = useState<boolean>(false);
   
   // Manual Search state
   const [manualProducts, setManualProducts] = useState<Product[]>([]);
@@ -826,47 +826,62 @@ function ProductsContent() {
                     ) : null;
                   })()}
 
-                  {/* Also Consider Section */}
+                  {/* No Perfect Matches Message */}
                   {(() => {
+                    const approvedResults = aiResults.filter(p => p.status === 'approved');
                     const partialResults = aiResults.filter(p => p.status === 'partial_match');
-                    return partialResults.length > 0 ? (
-                      <div className="mb-8">
-                        <h4 className="text-lg font-semibold text-yellow-800 mb-4 flex items-center">
-                          <span className="text-2xl mr-2">⚠️</span>
-                          Also Consider ({partialResults.length})
-                        </h4>
-                        <div className="flex flex-col gap-4 max-w-4xl mx-auto">
-                          {partialResults.map(renderProductCard)}
+                    return approvedResults.length === 0 && partialResults.length > 0 ? (
+                      <div className="mb-6 p-4 bg-blue-50 border-l-4 border-blue-400 rounded-lg">
+                        <div className="flex items-start">
+                          <div className="flex-shrink-0">
+                            <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                          <div className="ml-3">
+                            <p className="text-sm text-blue-800">
+                              No insurance products found that 100% match your query. However, we have found some alternatives that may still be suitable for your client.
+                            </p>
+                          </div>
                         </div>
                       </div>
                     ) : null;
                   })()}
 
-                  {/* Not Recommended Section (Collapsible) */}
+                  {/* Also Consider Section (Collapsible) */}
                   {(() => {
-                    const rejectedResults = aiResults.filter(p => p.status === 'rejected');
-                    return rejectedResults.length > 0 ? (
+                    const partialResults = aiResults.filter(p => p.status === 'partial_match');
+                    return partialResults.length > 0 ? (
                       <div className="mb-8">
+                        {/* Collapsible button */}
                         <button
-                          onClick={() => setShowRejected(!showRejected)}
-                          className="w-full text-left flex items-center justify-between p-4 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                          onClick={() => setShowPartialMatch(!showPartialMatch)}
+                          className="w-full text-left p-4 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition-colors border border-yellow-200"
                         >
-                          <h4 className="text-lg font-semibold text-red-800 flex items-center">
-                            <span className="text-2xl mr-2">❌</span>
-                            Not Recommended ({rejectedResults.length})
-                          </h4>
-                          <span className="text-gray-600">
-                            {showRejected ? '▲ Hide' : '▼ Show'}
-                          </span>
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-lg font-semibold text-yellow-800 flex items-center">
+                              <span className="text-2xl mr-2">⚠️</span>
+                              Also Consider ({partialResults.length})
+                            </h4>
+                            <span className="text-yellow-700">
+                              {showPartialMatch ? '▲ Hide' : '▼ Show'}
+                            </span>
+                          </div>
+                          <p className="text-sm text-yellow-800">
+                            These insurance products do not fully match all requirements in your query, but they may still interest your client. They have been included because they meet some criteria or offer alternative benefits worth considering.
+                          </p>
                         </button>
-                        {showRejected && (
+
+                        {/* Collapsible content */}
+                        {showPartialMatch && (
                           <div className="flex flex-col gap-4 max-w-4xl mx-auto mt-4">
-                            {rejectedResults.map(renderProductCard)}
+                            {partialResults.map(renderProductCard)}
                           </div>
                         )}
                       </div>
                     ) : null;
                   })()}
+
 
                   {/* Skeleton Cards for Pending Results */}
                   {pendingResults > 0 && (
