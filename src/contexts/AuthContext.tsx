@@ -20,7 +20,8 @@ type AuthAction =
   | { type: 'SET_TOKENS'; payload: AuthTokens | null }
   | { type: 'LOGIN_SUCCESS'; payload: { user: User; tokens: AuthTokens } }
   | { type: 'LOGOUT' }
-  | { type: 'UPDATE_PROFILE'; payload: User };
+  | { type: 'UPDATE_PROFILE'; payload: User }
+  | { type: 'SET_COMPANY_JURISDICTION'; payload: string | null };
 
 // Initial state
 const initialState: AuthState = {
@@ -28,6 +29,7 @@ const initialState: AuthState = {
   tokens: null,
   isLoading: true,
   isAuthenticated: false,
+  companyJurisdiction: null,
 };
 
 // Reducer
@@ -65,11 +67,17 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
         tokens: null,
         isAuthenticated: false,
         isLoading: false,
+        companyJurisdiction: null,
       };
     case 'UPDATE_PROFILE':
       return {
         ...state,
         user: action.payload,
+      };
+    case 'SET_COMPANY_JURISDICTION':
+      return {
+        ...state,
+        companyJurisdiction: action.payload,
       };
     default:
       return state;
@@ -121,6 +129,25 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
+  // Helper function to fetch company jurisdiction
+  const fetchCompanyJurisdiction = async (companyId: string): Promise<string | null> => {
+    try {
+      const { apiClient } = await import('@/lib/api');
+      const response = await apiClient.get(`/api/v1/oracle/companies/${companyId}`);
+      const country = response.data?.country;
+
+      if (country) {
+        dispatch({ type: 'SET_COMPANY_JURISDICTION', payload: country });
+        return country;
+      }
+      return null;
+    } catch (error) {
+      console.error('Failed to fetch company jurisdiction:', error);
+      // Don't throw - gracefully fallback to null (all products show as global)
+      return null;
+    }
+  };
+
   // Initialize authentication state
   useEffect(() => {
     const initializeAuth = async () => {
@@ -128,12 +155,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const tokens = getAuthTokens();
         if (tokens) {
           dispatch({ type: 'SET_TOKENS', payload: tokens });
-          
+
           // Validate token and get user
           const isValid = await authService.validateToken();
           if (isValid) {
             const user = await authService.getCurrentUser();
             dispatch({ type: 'SET_USER', payload: user });
+
+            // Fetch company jurisdiction if user has a company
+            if (user?.company_id) {
+              await fetchCompanyJurisdiction(user.company_id);
+            }
           } else {
             // Token is invalid, clear it
             clearAuthTokens();
@@ -211,6 +243,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
           },
         },
       });
+
+      // Fetch company jurisdiction if user has a company
+      if (authResponse.user?.company_id) {
+        await fetchCompanyJurisdiction(authResponse.user.company_id);
+      }
 
       // console.log('[AUTH] ✅ Login successful');
     } catch (error) {

@@ -7,6 +7,7 @@ import { useNotifications } from '@/contexts/NotificationContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Sidebar from '@/components/Sidebar';
 import { apiClient } from '@/lib/api';
+import { CategorySelector, GuidedQuestionnaire, type CategoryOption, type GuidedParameters } from '@/components/guided-discovery';
 
 interface Product {
   insurance_id: string;
@@ -34,6 +35,9 @@ interface Product {
   upsell_reasoning?: string;
   // Summary-based fallback flag
   is_summary_based?: boolean;
+  // Jurisdiction filtering
+  jurisdiction?: string;
+  jurisdiction_confidence_score?: number;
 }
 
 interface SearchResult {
@@ -46,12 +50,15 @@ interface SearchResult {
 }
 
 function ProductsContent() {
-  const { user } = useAuth();
+  const { user, companyJurisdiction } = useAuth();
   const { notifyError, notifySuccess } = useNotifications();
   const router = useRouter();
-  
+
   // Tab state
   const [activeTab, setActiveTab] = useState<'ai' | 'manual'>('ai');
+
+  // Jurisdiction filter state
+  const [jurisdictionFilter, setJurisdictionFilter] = useState<'all' | 'local' | 'global'>('all');
   
   // AI Search state
   const [aiQuery, setAiQuery] = useState('');
@@ -88,6 +95,42 @@ function ProductsContent() {
   const [chatSessions, setChatSessions] = useState<any[]>([]);
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
+
+  // Guided Discovery state
+  const [showCategorySelector, setShowCategorySelector] = useState(false);
+  const [showGuidedQuestionnaire, setShowGuidedQuestionnaire] = useState(false);
+  const [categoryOptions, setCategoryOptions] = useState<CategoryOption[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategoryName, setSelectedCategoryName] = useState<string>('');
+  const [originalQuery, setOriginalQuery] = useState<string>('');
+  const [preFilledAnswers, setPreFilledAnswers] = useState<Record<string, any>>({});
+
+  // Helper: Check if product is local based on jurisdiction
+  const isLocalProduct = (product: Product): boolean => {
+    if (!companyJurisdiction || !product.jurisdiction) return false;
+    return product.jurisdiction.toLowerCase().includes(companyJurisdiction.toLowerCase());
+  };
+
+  // Helper: Filter products by jurisdiction
+  const filterByJurisdiction = (products: Product[]): Product[] => {
+    if (jurisdictionFilter === 'all') return products;
+    if (jurisdictionFilter === 'local') {
+      return products.filter(isLocalProduct);
+    }
+    // global
+    return products.filter(p => !isLocalProduct(p));
+  };
+
+  // Helper: Get jurisdiction tab counts
+  const getJurisdictionCounts = (products: Product[]) => {
+    const local = products.filter(isLocalProduct).length;
+    const global = products.filter(p => !isLocalProduct(p)).length;
+    return {
+      all: products.length,
+      local,
+      global
+    };
+  };
 
   useEffect(() => {
     fetchCategories();
@@ -236,11 +279,37 @@ function ProductsContent() {
                 setAiResults(prev => [...prev, data.data]);
                 setPendingResults(prev => Math.max(0, prev - 1));
                 totalResults++;
+              } else if (data.type === 'guided_discovery_needed') {
+                // Guided discovery needed - either ambiguous query or incomplete information
+                setOriginalQuery(aiQuery);
+
+                if (data.skip_category_selection) {
+                  // Category is clear but incomplete - go straight to questionnaire
+                  const categoryOption = data.detected_category ?
+                    { id: data.detected_category, name: data.detected_category.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) } :
+                    null;
+
+                  setSelectedCategory(data.detected_category);
+                  setSelectedCategoryName(categoryOption?.name || '');
+                  setPreFilledAnswers(data.pre_filled_answers || {});
+                  setShowGuidedQuestionnaire(true);
+                } else {
+                  // Ambiguous query - show category selector first
+                  setCategoryOptions(data.category_options);
+                  setShowCategorySelector(true);
+                }
+
+                setSearchProgress(null);
+                setPendingResults(0);
               } else if (data.type === 'complete') {
                 // Search complete
                 setSearchProgress(null);
                 setPendingResults(0);
-                notifySuccess('Search Complete', `Found ${data.total_results} matching products`);
+
+                // Only show success notification if search actually ran
+                if (!data.requires_category_selection) {
+                  notifySuccess('Search Complete', `Found ${data.total_results} matching products`);
+                }
               } else if (data.type === 'error') {
                 // Error occurred
                 notifyError('Search Error', data.message);
@@ -274,6 +343,117 @@ function ProductsContent() {
       newExpanded.add(productId);
     }
     setExpandedCards(newExpanded);
+  };
+
+  // Guided Discovery handlers
+  const handleCategorySelect = (categoryId: string) => {
+    // Find the category name from options
+    const categoryOption = categoryOptions.find(cat => cat.id === categoryId);
+
+    setSelectedCategory(categoryId);
+    setSelectedCategoryName(categoryOption?.name || '');
+    setPreFilledAnswers({});  // Reset pre-filled answers when manually selecting category
+    setShowCategorySelector(false);
+    setShowGuidedQuestionnaire(true);
+  };
+
+  const handleQuestionnaireComplete = async (parameters: GuidedParameters) => {
+    setShowGuidedQuestionnaire(false);
+
+    // Clear previous results
+    setAiResults([]);
+    setIsAiSearching(true);
+    setSearchProgress(null);
+    setPendingResults(0);
+
+    try {
+      const authTokensStr = localStorage.getItem('auth_tokens');
+      const authTokens = authTokensStr ? JSON.parse(authTokensStr) : null;
+      const token = authTokens?.access_token;
+
+      if (!token) {
+        throw new Error('No authentication token found. Please log in again.');
+      }
+
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+
+      // Re-run search with guided parameters
+      const response = await fetch(
+        `${apiBaseUrl}/api/v1/products/search-ai-stream?query=${encodeURIComponent(originalQuery)}&max_results=5`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'text/event-stream',
+          },
+          body: JSON.stringify({ guided_parameters: parameters })
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Guided search request failed:', response.status, errorText);
+        throw new Error(`Search request failed: ${response.status} ${errorText}`);
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (!reader) {
+        throw new Error('Response body is not readable');
+      }
+
+      let totalResults = 0;
+
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+
+              if (data.type === 'init') {
+                setSearchProgress({ current: 0, total: data.total });
+                setPendingResults(data.total);
+              } else if (data.type === 'progress') {
+                setSearchProgress({ current: data.current, total: data.total });
+              } else if (data.type === 'result') {
+                setAiResults(prev => [...prev, data.data]);
+                setPendingResults(prev => Math.max(0, prev - 1));
+                totalResults++;
+              } else if (data.type === 'complete') {
+                setSearchProgress(null);
+                setPendingResults(0);
+                notifySuccess('Search Complete', `Found ${data.total_results} matching products`);
+              } else if (data.type === 'error') {
+                notifyError('Search Error', data.message);
+                setSearchProgress(null);
+                setPendingResults(0);
+              }
+            } catch (parseError) {
+              console.error('Error parsing SSE data:', parseError);
+            }
+          }
+        }
+      }
+
+    } catch (error: any) {
+      console.error('Error in guided search:', error);
+      const errorMessage = error.detail || error.message || 'Guided search failed';
+      notifyError('Search Error', errorMessage);
+      setAiResults([]);
+      setSearchProgress(null);
+      setPendingResults(0);
+    } finally {
+      setIsAiSearching(false);
+    }
   };
 
   const fetchChatSessions = async () => {
@@ -472,6 +652,16 @@ function ProductsContent() {
               {product.is_summary_based && (
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
                   📝 Summary-Based
+                </span>
+              )}
+              {/* Jurisdiction Badge */}
+              {product.jurisdiction && companyJurisdiction && (
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  isLocalProduct(product)
+                    ? 'bg-green-100 text-green-800 border border-green-200'
+                    : 'bg-blue-100 text-blue-800 border border-blue-200'
+                }`}>
+                  {isLocalProduct(product) ? '🏠 Local' : '🌍 Global'}
                 </span>
               )}
             </div>
@@ -784,9 +974,50 @@ function ProductsContent() {
               {aiResults.length > 0 || pendingResults > 0 ? (
                 <div>
                   <div className="mb-6">
-                    <h3 className="text-xl font-semibold text-gray-900">
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4">
                       AI Search Results
                     </h3>
+
+                    {/* Jurisdiction Filter Tabs */}
+                    {aiResults.length > 0 && (() => {
+                      const counts = getJurisdictionCounts(aiResults);
+                      return (
+                        <div className="flex gap-2 border-b border-gray-200">
+                          <button
+                            onClick={() => setJurisdictionFilter('all')}
+                            className={`px-4 py-2 font-medium transition-colors ${
+                              jurisdictionFilter === 'all'
+                                ? 'border-b-2 border-primary-600 text-primary-600'
+                                : 'text-gray-600 hover:text-gray-900'
+                            }`}
+                          >
+                            All ({counts.all})
+                          </button>
+                          <button
+                            onClick={() => setJurisdictionFilter('local')}
+                            className={`px-4 py-2 font-medium flex items-center gap-2 transition-colors ${
+                              jurisdictionFilter === 'local'
+                                ? 'border-b-2 border-primary-600 text-primary-600'
+                                : 'text-gray-600 hover:text-gray-900'
+                            }`}
+                          >
+                            <span>🏠</span>
+                            Local ({counts.local})
+                          </button>
+                          <button
+                            onClick={() => setJurisdictionFilter('global')}
+                            className={`px-4 py-2 font-medium flex items-center gap-2 transition-colors ${
+                              jurisdictionFilter === 'global'
+                                ? 'border-b-2 border-primary-600 text-primary-600'
+                                : 'text-gray-600 hover:text-gray-900'
+                            }`}
+                          >
+                            <span>🌍</span>
+                            Global ({counts.global})
+                          </button>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Summary-Based Search Banner */}
@@ -810,9 +1041,17 @@ function ProductsContent() {
                     </div>
                   )}
 
+                  {/* Empty State for Filtered Results */}
+                  {aiResults.length > 0 && filterByJurisdiction(aiResults).length === 0 && (
+                    <div className="text-center py-12 text-gray-500">
+                      <p className="text-lg mb-2">No {jurisdictionFilter} products found for your search.</p>
+                      <p className="text-sm">Try switching to a different tab to see all available options.</p>
+                    </div>
+                  )}
+
                   {/* Perfect Matches Section */}
                   {(() => {
-                    const approvedResults = aiResults.filter(p => p.status === 'approved');
+                    const approvedResults = filterByJurisdiction(aiResults.filter(p => p.status === 'approved'));
                     return approvedResults.length > 0 ? (
                       <div className="mb-8">
                         <h4 className="text-lg font-semibold text-green-800 mb-4 flex items-center">
@@ -828,8 +1067,8 @@ function ProductsContent() {
 
                   {/* No Perfect Matches Message */}
                   {(() => {
-                    const approvedResults = aiResults.filter(p => p.status === 'approved');
-                    const partialResults = aiResults.filter(p => p.status === 'partial_match');
+                    const approvedResults = filterByJurisdiction(aiResults.filter(p => p.status === 'approved'));
+                    const partialResults = filterByJurisdiction(aiResults.filter(p => p.status === 'partial_match'));
                     return approvedResults.length === 0 && partialResults.length > 0 ? (
                       <div className="mb-6 p-4 bg-blue-50 border-l-4 border-blue-400 rounded-lg">
                         <div className="flex items-start">
@@ -850,7 +1089,7 @@ function ProductsContent() {
 
                   {/* Also Consider Section (Collapsible) */}
                   {(() => {
-                    const partialResults = aiResults.filter(p => p.status === 'partial_match');
+                    const partialResults = filterByJurisdiction(aiResults.filter(p => p.status === 'partial_match'));
                     return partialResults.length > 0 ? (
                       <div className="mb-8">
                         {/* Collapsible button */}
@@ -1176,6 +1415,24 @@ function ProductsContent() {
             </div>
           </div>
         )}
+
+        {/* Guided Discovery Modals */}
+        <CategorySelector
+          isOpen={showCategorySelector}
+          onClose={() => setShowCategorySelector(false)}
+          categoryOptions={categoryOptions}
+          onSelectCategory={handleCategorySelect}
+          message="What type of insurance are you looking for?"
+        />
+
+        <GuidedQuestionnaire
+          isOpen={showGuidedQuestionnaire}
+          onClose={() => setShowGuidedQuestionnaire(false)}
+          categoryId={selectedCategory || ''}
+          categoryName={selectedCategoryName}
+          onComplete={handleQuestionnaireComplete}
+          preFilledAnswers={preFilledAnswers}
+        />
       </div>
     </Sidebar>
   );

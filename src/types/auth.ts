@@ -25,6 +25,8 @@ export interface Role {
 export interface Company {
   id: number;
   name: string;
+  country: string | null;  // Added for jurisdiction filtering
+  city: string | null;
   logo_url: string | null;
   address: string | null;
   phone: string | null;
@@ -48,6 +50,7 @@ export interface AuthState {
   tokens: AuthTokens | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  companyJurisdiction: string | null;  // Added for local/global filtering
 }
 
 export interface OTPRequest {
