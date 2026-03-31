@@ -24,6 +24,10 @@ interface ProductDetails {
   provider?: string;
   provider_country?: string;
   jurisdiction?: string; // NEW: Nationality/residency restrictions
+  jurisdiction_confidence_score?: number;
+  jurisdiction_confidence_level?: 'HIGH' | 'MEDIUM' | 'LOW' | 'NONE';
+  jurisdiction_requires_review?: boolean;
+  jurisdiction_manually_verified?: boolean;
   category?: string;
   key_features?: string;
   key_features_bullets?: string;
@@ -418,7 +422,20 @@ function EditProductContent() {
 
                 {/* Jurisdiction */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Jurisdiction</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Jurisdiction
+                    {product.jurisdiction_confidence_score && (
+                      <span className={`ml-2 text-xs ${
+                        product.jurisdiction_confidence_level === 'HIGH'
+                          ? 'text-green-600'
+                          : product.jurisdiction_confidence_level === 'MEDIUM'
+                          ? 'text-yellow-600'
+                          : 'text-red-600'
+                      }`}>
+                        ({product.jurisdiction_confidence_score.toFixed(0)}% confidence)
+                      </span>
+                    )}
+                  </label>
                   <input
                     type="text"
                     value={product.jurisdiction || ''}
@@ -426,6 +443,24 @@ function EditProductContent() {
                     placeholder="e.g., Singaporeans only, Malaysia residents"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
+                  {product.jurisdiction_requires_review && (
+                    <div className="mt-2">
+                      <label className="flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={product.jurisdiction_manually_verified || false}
+                          onChange={(e) => updateField('jurisdiction_manually_verified', e.target.checked)}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                        />
+                        <span className="ml-2 text-sm text-gray-700">
+                          I have verified this jurisdiction is correct
+                        </span>
+                      </label>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Checking this box will remove the review warning from the manage products page.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Product Core Type */}

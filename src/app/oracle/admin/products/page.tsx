@@ -18,6 +18,13 @@ interface Product {
   processing_status: string;
   pdf_url?: string;
   discontinued: boolean;
+
+  // Jurisdiction metadata
+  jurisdiction?: string;
+  jurisdiction_confidence_score?: number;
+  jurisdiction_confidence_level?: 'HIGH' | 'MEDIUM' | 'LOW' | 'NONE';
+  jurisdiction_requires_review?: boolean;
+  jurisdiction_manually_verified?: boolean;
 }
 
 interface ProductsResponse {
@@ -611,6 +618,14 @@ function AdminProductsContent() {
                                 {product.discontinued && (
                                   <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
                                     DISCONTINUED
+                                  </span>
+                                )}
+                                {product.jurisdiction_requires_review && !product.jurisdiction_manually_verified && (
+                                  <span
+                                    className="inline-flex items-center cursor-help text-yellow-600"
+                                    title={`Jurisdiction needs review (${product.jurisdiction_confidence_score?.toFixed(0) || 'unknown'}% confidence)`}
+                                  >
+                                    ⚠️
                                   </span>
                                 )}
                               </div>
