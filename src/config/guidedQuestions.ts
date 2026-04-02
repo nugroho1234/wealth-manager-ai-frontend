@@ -140,14 +140,19 @@ export const GUIDED_QUESTIONS: CategoryQuestions = {
       required: true,
       options: [
         {
-          value: 'local_currency',
-          label: 'Local Currency',
-          description: 'I earn and spend in my home currency, so I want my policy in local currency to avoid exchange rate worries.'
+          value: 'local_currency_only',
+          label: 'Local Currency Only',
+          description: 'I earn and spend in my home currency, so I want my policy in my local currency (like SGD, MYR, or IDR) to avoid any exchange rate risks.'
         },
         {
-          value: 'global_currency',
-          label: 'Global Currency',
-          description: 'I want my policy in an international currency (USD, EUR, GBP, etc.) for diversification or legacy planning.'
+          value: 'usd',
+          label: 'US Dollars (USD)',
+          description: 'I specifically want a USD-denominated plan to hold a globally stable currency and diversify my wealth.'
+        },
+        {
+          value: 'multi_currency',
+          label: 'Multi-Currency Flexibility',
+          description: 'I want a plan that lets me switch my money between different global currencies (like USD, GBP, RMB, or AUD) in the future—great for retiring abroad or sending kids overseas!'
         }
       ],
       helpText: 'High-end legacy plans (IULs) are often in global currencies like USD. Choose local currency if you want to avoid exchange rate risk.'
@@ -164,13 +169,18 @@ export const GUIDED_QUESTIONS: CategoryQuestions = {
       options: [
         {
           value: 'advanced_stage',
-          label: 'Only for serious, advanced-stage illness',
-          description: 'Lower cost, covers the worst cases'
+          label: 'Only for severe, advanced illnesses',
+          description: 'Keep my monthly costs as low as possible. I only need a major payout if the condition becomes life-threatening (like late-stage cancer or a major heart attack).'
         },
         {
           value: 'earliest_diagnosis',
-          label: 'From the earliest diagnosis',
-          description: 'I want a payout even if caught early, so I can rest and recover without financial stress'
+          label: 'Only for early detection',
+          description: 'I just want a smaller safety net if an illness is caught in its very first stages, so I can pay for early treatments and take a short break from work.'
+        },
+        {
+          value: 'both_early_and_severe',
+          label: 'Cover me from start to finish (Both)',
+          description: 'I want total peace of mind. I want a payout whether the illness is caught on day one, and I want coverage if it ever progresses to a severe stage.'
         }
       ]
     },
@@ -284,13 +294,18 @@ export const GUIDED_QUESTIONS: CategoryQuestions = {
       options: [
         {
           value: 'lump_sum',
-          label: 'One Big Lump Sum',
-          description: 'Grow my money and give it all back to me in one massive payout at the end.'
+          label: 'One Big Payout',
+          description: 'Grow my money and give it all back to me in one massive lump sum at a specific time (like when I retire or when the policy matures).'
         },
         {
           value: 'yearly_income',
-          label: 'Yearly Passive Income',
-          description: 'Pay me a steady stream of cash every year (like an annual bonus) once the plan is ready.'
+          label: 'Steady Regular Income',
+          description: 'Just pay me a steady, predictable stream of cash every month or year (like a pension or passive dividend) once the plan is ready.'
+        },
+        {
+          value: 'mix_of_both',
+          label: 'A Mix of Both (Lump Sums + Income)',
+          description: 'I want cash payouts at key milestones (like a lump sum to travel when I retire), but I also want a steady stream of regular income afterward.'
         }
       ]
     },
@@ -471,28 +486,43 @@ export const GUIDED_QUESTIONS: CategoryQuestions = {
     {
       id: 'q5_optional_benefits',
       question: 'Do you want to add any of these optional benefits?',
-      type: 'single',
+      type: 'multiple',
       required: false,
       options: [
         {
           value: 'no_extras',
-          label: 'No — standard medical coverage is enough',
-          description: ''
+          label: 'No, keep it basic',
+          description: 'Standard hospital coverage is enough for me.'
         },
         {
           value: 'maternity',
-          label: 'Maternity coverage',
-          description: ''
+          label: 'Maternity',
+          description: 'Cover pregnancy, childbirth, and newborn care.'
         },
         {
           value: 'dental_vision',
-          label: 'Dental & vision care',
-          description: ''
+          label: 'Dental & Vision',
+          description: 'Cover routine scaling, polishing, and eye exams.'
         },
         {
-          value: 'both',
-          label: 'Both maternity and dental/vision',
-          description: ''
+          value: 'wellness',
+          label: 'Wellness & Screenings',
+          description: 'Cover my annual full-body health checks and vaccinations.'
+        },
+        {
+          value: 'alternative_medicine',
+          label: 'Alternative Medicine',
+          description: 'Cover Traditional Chinese Medicine (TCM), acupuncture, or chiropractors.'
+        },
+        {
+          value: 'mental_health',
+          label: 'Mental Health',
+          description: 'Cover psychiatric treatments and therapy.'
+        },
+        {
+          value: 'other',
+          label: 'Other specific needs',
+          description: 'Special coverage like medical evacuation, pre-existing conditions, etc.'
         }
       ]
     }
