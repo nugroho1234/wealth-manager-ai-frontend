@@ -1,7 +1,26 @@
 /**
  * Category-Specific Table Component
  * Displays category-relevant fields based on product type
- * Supports: Critical Illness, Life Protection, Savings, and ILP products
+ * Updated to match client PDF examples (2026-04-17)
+ *
+ * Categories (based on client PDF examples):
+ * - Critical Illness: 13 fields in 3 categories (CI comparison Result.pdf)
+ *   • What am I covered for — and for how long?
+ *   • What do I get back financially? (empty - placeholder for ci_premium_refund)
+ *   • How flexible is this?
+ *
+ * - Life Protection: 14 fields in 3 categories (Protection comparison.pdf)
+ *   • ① coverage & protection — what is covered and for how long
+ *   • ② cash value & growth — what you get back
+ *   • ③ flexibility — what can change during the policy
+ *
+ * - Savings & Wealth: 16 fields in 3 categories (savings_comparison_v2.html)
+ *   • ① arrive — what do I actually walk away with?
+ *   • ② wait — what if something goes wrong along the way?
+ *   • ③ commit — what am I agreeing to pay, and for how long?
+ *
+ * - Hospital: Kept original structure (not yet finalized)
+ * - ILP: Kept original structure (not yet finalized)
  */
 
 import { InsuranceProduct } from '@/types/oracle/insurance-product';
@@ -29,125 +48,109 @@ export default function CategorySpecificTable({ products, forPDF = false }: Cate
     { key: 'premium_structure', label: 'Premium Structure' },
   ];
 
-  // Critical Illness specific fields - organized into separate tables
-  const ciCoverageScope = [
-    { key: 'ci_total_conditions_covered', label: 'Total Conditions Covered' },
-    { key: 'ci_early_minor_stage', label: 'Early/Minor Stage CIs' },
-    { key: 'ci_intermediate_stage', label: 'Intermediate Stage CIs' },
-    { key: 'ci_major_advanced_stage', label: 'Major/Advanced Stage CIs' },
-    { key: 'ci_max_claims_allowed', label: 'Max Claims Allowed' },
+  // ============================================================================
+  // CRITICAL ILLNESS - 3 Categories (13 fields total)
+  // Based on final-columns.md
+  // ============================================================================
+
+  // Category 1: What am I covered for — and for how long? (8 fields)
+  const ciCoveredForHowLong = [
+    { key: 'ci_total_conditions_covered', label: 'Conditions Covered' },
+    { key: 'ci_early_minor_stage', label: 'Early-stage CI' },
+    { key: 'ci_major_advanced_stage', label: 'Major/Advanced Stage' },
+    { key: 'ci_max_claims_allowed', label: 'Multi-claim Allowed' },
+    { key: 'ci_waiting_period_between_claims', label: 'Waiting Period (Between Claims)' },
+    { key: 'ci_initial_waiting_period', label: 'Initial Waiting Period' },
+    { key: 'ci_survival_period', label: 'Survival Period' },
+    { key: 'ci_age_limits_on_coverage', label: 'Age Limits on Coverage' },
   ];
 
-  const ciMultiPayRules = [
-    { key: 'ci_waiting_period_between_claims', label: 'Waiting Period (Between)' },
-    { key: 'ci_relapse_recurrent_rule', label: 'Relapse/Recurrent Rule' },
-    { key: 'ci_grouping_pot_rules', label: 'Grouping/Pot Rules' },
+  // Category 2: What do I get back financially? (0 fields currently)
+  // Note: ci_premium_refund will be added here in future update
+  const ciFinancialReturns: { key: string; label: string }[] = [
+    // Empty for now - placeholder for future ci_premium_refund field
   ];
 
-  const ciPremiumWaivers = [
-    { key: 'ci_waiver_triggers', label: 'Waiver Triggers' },
-    { key: 'ci_waiver_duration', label: 'Waiver Duration' },
-  ];
-
-  const ciSpecialBenefits = [
+  // Category 3: How flexible is this? (5 fields)
+  const ciFlexibility = [
+    { key: 'ci_waiver_triggers', label: 'Premium Waiver' },
+    { key: 'ci_juvenile_special_needs', label: 'Juvenile / Prenatal Cover' },
     { key: 'ci_icu_benefit', label: 'ICU Benefit' },
-    { key: 'ci_juvenile_special_needs', label: 'Juvenile / Special Needs' },
     { key: 'ci_angioplasty_benefit', label: 'Angioplasty Benefit' },
     { key: 'ci_benign_tumor_benefit', label: 'Benign Tumor Benefit' },
   ];
 
-  const ciFinePrint = [
-    { key: 'ci_initial_waiting_period', label: 'Initial Waiting Period' },
-    { key: 'ci_survival_period', label: 'Survival Period' },
-    { key: 'ci_pre_existing_conditions', label: 'Pre-Existing Conditions' },
-    { key: 'ci_age_limits_on_coverage', label: 'Age Limits on Coverage' },
+  // ============================================================================
+  // LIFE PROTECTION - 3 Categories (14 fields total)
+  // Based on final-columns.md
+  // ============================================================================
+
+  // Category 1: Coverage & Protection — What is Covered and For How Long (7 fields)
+  const lifeCoverageProtection = [
+    { key: 'death_benefit_guarantee', label: 'Death Benefit' },
+    { key: 'death_benefit_multipliers', label: 'Death Benefit Multiplier' },
+    { key: 'death_benefit_payout_options', label: 'Payout on Death' },
+    { key: 'terminal_illness_benefit', label: 'Terminal Illness Advance' },
+    { key: 'total_permanent_disability', label: 'Total Permanent Disability' },
+    { key: 'accidental_death_benefit', label: 'Accidental Death' },
+    { key: 'critical_illness_rider', label: 'Critical Illness' },
   ];
 
-  // Life Protection specific fields - organized into separate tables
-  const lifeDeathBenefit = [
-    { key: 'death_benefit_guarantee', label: 'Death Benefit Guarantee' },
-    { key: 'death_benefit_multipliers', label: 'Multipliers Available' },
-    { key: 'death_benefit_payout_options', label: 'Payout Settlement Options' },
-    { key: 'terminal_illness_benefit', label: 'Terminal Illness (TI)' },
-    { key: 'total_permanent_disability', label: 'Total & Perm. Disab. (TPD)' },
+  // Category 2: Cash Value & Growth — What You Get Back (4 fields)
+  const lifeCashValueGrowth = [
+    { key: 'growth_mechanism', label: 'Growth Engine / Index' },
+    { key: 'downside_protection_floor', label: 'Downside Floor' },
+    { key: 'upside_potential_cap', label: 'Upside / Ceiling' },
+    { key: 'cash_value_access', label: 'Cash Access / Policy Loan' },
   ];
 
-  const lifeWealthAccumulation = [
-    { key: 'growth_mechanism', label: 'Growth Mechanism' },
-    { key: 'downside_protection_floor', label: 'Downside Protection / Floor' },
-    { key: 'upside_potential_cap', label: 'Upside Potential / Cap' },
-    { key: 'loyalty_special_bonuses', label: 'Loyalty / Special Bonuses' },
-    { key: 'cash_value_access', label: 'Cash Value Access' },
-  ];
-
-  const lifePremiumFunding = [
-    { key: 'premium_holiday_pause', label: 'Premium Holiday / Pause' },
-  ];
-
-  const lifeRiders = [
-    { key: 'critical_illness_rider', label: 'Critical Illness Rider' },
-    { key: 'premium_waiver_riders', label: 'Premium Waiver Riders' },
-    { key: 'accidental_death_benefit', label: 'Accidental Death Benefit' },
-    { key: 'retrenchment_benefit', label: 'Retrenchment Benefit' },
-  ];
-
-  const lifeLegacyPlanning = [
-    { key: 'change_of_life_insured', label: 'Change of Life Insured' },
-    { key: 'policy_split_option', label: 'Policy Split Option' },
-    { key: 'contingent_policy_owner', label: 'Contingent Policy Owner' },
-    { key: 'mental_incapacity_benefit', label: 'Mental Incapacity Benefit' },
-    { key: 'guaranteed_issuance_option', label: 'Guaranteed Issuance (GIO)' },
-  ];
-
-  const lifeFinePrint = [
-    { key: 'convertibility_option', label: 'Convertibility Option' },
-    { key: 'suicide_exclusion', label: 'Suicide Exclusion' },
+  // Category 3: Flexibility — What Can Change During the Policy (3 fields)
+  const lifeFlexibility = [
+    { key: 'premium_waiver_riders', label: 'Premium Waiver' },
+    { key: 'convertibility_option', label: 'Can Upgrade to Permanent Cover Later?' },
     { key: 'medical_underwriting', label: 'Medical Underwriting' },
   ];
 
-  // Savings specific fields - organized into separate tables
-  const savingsPremiumFunding = [
-    { key: 'savings_premium_funding_options', label: 'Premium Funding Options' },
-    { key: 'savings_top_up_injections', label: 'Top-Up / Ad-Hoc Injections' },
+  // ============================================================================
+  // SAVINGS & WEALTH - 3 Categories (16 fields total)
+  // Based on savings_comparison_v2.html structure
+  // Category headings: ① arrive / ② wait / ③ commit
+  // ============================================================================
+
+  // Category 1: ① arrive — what do I actually walk away with? (5 fields)
+  const savingsArrive = [
+    { key: 'savings_growth_mechanism', label: 'Growth engine' },
+    { key: 'savings_capital_guarantee_status', label: 'Guaranteed return' },
+    { key: 'savings_bonus_structure', label: 'Illustrated upside' },
+    { key: 'savings_income_payout_period', label: 'Income option' },
+    { key: 'policy_term_maturity', label: 'Policy horizon' },
   ];
 
-  const savingsReturnsEngine = [
-    { key: 'savings_growth_mechanism', label: 'Growth Mechanism' },
-    { key: 'savings_bonus_structure', label: 'Bonus Structure' },
-    { key: 'savings_cashback_coupon_payouts', label: 'Cashback / Coupon Payouts' },
-    { key: 'savings_cashback_reinvestment', label: 'Cashback Reinvestment' },
-    { key: 'savings_income_payout_period', label: 'Income Payout Period' },
+  // Category 2: ② wait — what if something goes wrong along the way? (8 fields)
+  const savingsWait = [
+    { key: 'savings_death_settlement', label: 'Death benefit' },
+    { key: 'savings_change_of_insured', label: 'Change of life insured' },
+    { key: 'savings_policy_split', label: 'Policy split option' },
+    { key: 'savings_partial_withdrawals', label: 'Partial withdrawal' },
+    { key: 'savings_premium_holiday', label: 'Premium holiday' },
+    { key: 'savings_accidental_death', label: 'Accidental death benefit' },
+    { key: 'savings_policy_loan', label: 'Policy loan' },
+    { key: 'savings_guaranteed_breakeven_target', label: 'Guaranteed breakeven target' },
   ];
 
-  const savingsCapitalGuarantees = [
-    { key: 'savings_capital_guarantee_status', label: 'Capital Guarantee Status' },
-    { key: 'savings_guaranteed_breakeven_target', label: 'Guaranteed Breakeven Target' },
-    { key: 'savings_partial_withdrawals', label: 'Partial Withdrawals' },
-    { key: 'savings_policy_loan', label: 'Policy Loan Provision' },
+  // Category 3: ③ commit — what am I agreeing to pay, and for how long? (3 fields)
+  const savingsCommit = [
+    { key: 'savings_premium_funding_options', label: 'Premium payment term' },
+    { key: 'savings_top_up_injections', label: 'Top-up / ad-hoc injection' },
+    { key: 'savings_entry_age_limits', label: 'Entry age limits' },
+    { key: 'base_currency_options', label: 'Currency options' },
+    { key: 'savings_medical_underwriting', label: 'Medical underwriting' },
   ];
 
-  const savingsPolicyFlexibility = [
-    { key: 'savings_premium_holiday', label: 'Premium Holiday' },
-    { key: 'savings_retrenchment_benefit', label: 'Retrenchment Benefit' },
-    { key: 'savings_embedded_riders', label: 'Embedded Protection Riders' },
-    { key: 'savings_accidental_death', label: 'Accidental Death Benefit' },
-  ];
+  // ============================================================================
+  // ILP - Keep original structure (not yet finalized)
+  // ============================================================================
 
-  const savingsLegacyPlanning = [
-    { key: 'savings_change_of_insured', label: 'Change of Life Insured' },
-    { key: 'savings_policy_split', label: 'Policy Split Option' },
-    { key: 'savings_contingent_owner', label: 'Contingent Policy Owner' },
-    { key: 'savings_death_settlement', label: 'Death Benefit Settlement' },
-    { key: 'savings_mental_incapacity', label: 'Mental Incapacity Benefit' },
-  ];
-
-  const savingsFinePrint = [
-    { key: 'savings_medical_underwriting', label: 'Medical Underwriting' },
-    { key: 'savings_entry_age_limits', label: 'Entry Age Limits' },
-    { key: 'savings_surrender_penalties', label: 'Surrender Penalties' },
-  ];
-
-  // ILP specific fields - organized into separate tables
   const ilpPremiumFunding = [
     { key: 'ilp_top_up_injections', label: 'Top-Up / Ad-Hoc Injections' },
     { key: 'ilp_premium_funding_options', label: 'Premium Funding Options' },
@@ -188,6 +191,11 @@ export default function CategorySpecificTable({ products, forPDF = false }: Cate
   ];
 
   const renderTable = (title: string, fields: {key: string, label: string}[], bgColor: string) => {
+    // Skip rendering if fields array is empty
+    if (fields.length === 0) {
+      return null;
+    }
+
     // For PDF generation, skip tables where all products have N/A for all fields
     if (forPDF && !hasTableData(products, fields)) {
       return null;
@@ -255,110 +263,77 @@ export default function CategorySpecificTable({ products, forPDF = false }: Cate
       {/* Universal Product Structure (shown for all categories) */}
       {renderTable('Product Structure', universalFields, 'bg-gradient-to-r from-indigo-500 to-indigo-600')}
 
-      {/* Critical Illness - Multiple tables matching template structure */}
+      {/* ========================================================================
+          CRITICAL ILLNESS - 3 Categories (13 fields)
+          Based on CI comparison Result.pdf
+      ========================================================================= */}
       {uniqueCategories.includes('critical-illness') && (
         <>
           {renderTable(
-            'CI Coverage Scope (The Numbers)',
-            ciCoverageScope,
+            'What am I covered for — and for how long?',
+            ciCoveredForHowLong,
             'bg-gradient-to-r from-red-500 to-red-600'
           )}
+          {/* Note: "What do I get back financially?" category is empty for now (will add ci_premium_refund later) */}
           {renderTable(
-            'Multi-Pay & Claim Rules',
-            ciMultiPayRules,
-            'bg-gradient-to-r from-red-500 to-red-600'
-          )}
-          {renderTable(
-            'Built-In Premium Waivers',
-            ciPremiumWaivers,
-            'bg-gradient-to-r from-red-500 to-red-600'
-          )}
-          {renderTable(
-            'Special / Additional Benefits',
-            ciSpecialBenefits,
-            'bg-gradient-to-r from-red-500 to-red-600'
-          )}
-          {renderTable(
-            'The Fine Print',
-            ciFinePrint,
+            'How flexible is this?',
+            ciFlexibility,
             'bg-gradient-to-r from-red-500 to-red-600'
           )}
         </>
       )}
 
-      {/* Life Protection - Multiple tables matching template structure */}
+      {/* ========================================================================
+          LIFE PROTECTION - 3 Categories (14 fields)
+          Based on Protection comparison.pdf
+      ========================================================================= */}
       {uniqueCategories.includes('life-protection') && (
         <>
           {renderTable(
-            'Death Benefit & Payout Mechanics',
-            lifeDeathBenefit,
+            '① coverage & protection — what is covered and for how long',
+            lifeCoverageProtection,
             'bg-gradient-to-r from-blue-500 to-blue-600'
           )}
           {renderTable(
-            'Wealth Accumulation & Growth Engine',
-            lifeWealthAccumulation,
+            '② cash value & growth — what you get back',
+            lifeCashValueGrowth,
             'bg-gradient-to-r from-blue-500 to-blue-600'
           )}
           {renderTable(
-            'Premium & Funding Flexibility',
-            lifePremiumFunding,
-            'bg-gradient-to-r from-blue-500 to-blue-600'
-          )}
-          {renderTable(
-            'Embedded Benefits & Available Riders',
-            lifeRiders,
-            'bg-gradient-to-r from-blue-500 to-blue-600'
-          )}
-          {renderTable(
-            'Legacy & Estate Planning Features',
-            lifeLegacyPlanning,
-            'bg-gradient-to-r from-blue-500 to-blue-600'
-          )}
-          {renderTable(
-            'The Fine Print & Exclusions',
-            lifeFinePrint,
+            '③ flexibility — what can change during the policy',
+            lifeFlexibility,
             'bg-gradient-to-r from-blue-500 to-blue-600'
           )}
         </>
       )}
 
-      {/* Savings - Multiple tables matching template structure */}
+      {/* ========================================================================
+          SAVINGS & WEALTH - 3 Categories
+          Based on savings_comparison_v2.html: arrive / wait / commit
+      ========================================================================= */}
       {uniqueCategories.includes('savings') && (
         <>
           {renderTable(
-            'Premium Commitment & Funding',
-            savingsPremiumFunding,
+            '① arrive — what do I actually walk away with?',
+            savingsArrive,
             'bg-gradient-to-r from-green-500 to-green-600'
           )}
           {renderTable(
-            'Returns Engine & Bonus Structure',
-            savingsReturnsEngine,
+            '② wait — what if something goes wrong along the way?',
+            savingsWait,
             'bg-gradient-to-r from-green-500 to-green-600'
           )}
           {renderTable(
-            'Capital Guarantees & Liquidity',
-            savingsCapitalGuarantees,
-            'bg-gradient-to-r from-green-500 to-green-600'
-          )}
-          {renderTable(
-            'Policy Flexibility & Protection',
-            savingsPolicyFlexibility,
-            'bg-gradient-to-r from-green-500 to-green-600'
-          )}
-          {renderTable(
-            'Legacy & Estate Planning Features',
-            savingsLegacyPlanning,
-            'bg-gradient-to-r from-green-500 to-green-600'
-          )}
-          {renderTable(
-            'The Fine Print',
-            savingsFinePrint,
+            '③ commit — what am I agreeing to pay, and for how long?',
+            savingsCommit,
             'bg-gradient-to-r from-green-500 to-green-600'
           )}
         </>
       )}
 
-      {/* ILP - Multiple tables matching template structure */}
+      {/* ========================================================================
+          ILP - Keep original structure (not yet finalized)
+      ========================================================================= */}
       {uniqueCategories.includes('ilp') && (
         <>
           {renderTable(

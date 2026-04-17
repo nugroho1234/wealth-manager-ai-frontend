@@ -684,53 +684,7 @@ function CompareContent() {
               </div>
             </div>
 
-            {/* Table 3: Suitability Information */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 overflow-hidden" data-table="suitability">
-              <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-4">
-                <h3 className="text-xl font-semibold text-white">Suitability Information</h3>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-900 sticky left-0 bg-gray-50">
-                        Field
-                      </th>
-                      {products.map(product => (
-                        <th key={product.insurance_id} className="px-6 py-4 text-left text-sm font-medium text-gray-900 min-w-48">
-                          {product.insurance_name}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {[
-                      { key: 'suitable_for', label: 'Suitable For' },
-                      { key: 'time_horizon', label: 'Time Horizon' },
-                      { key: 'specific_needs', label: 'Specific Needs' },
-                      { key: 'reason_for_need', label: 'Reason for Need' },
-                      { key: 'target_market', label: 'Target Market' },
-                      { key: 'market_positioning', label: 'Market Positioning' }
-                    ].map((field, index) => (
-                      <tr key={field.key} className={index % 2 === 0 ? '' : 'bg-gray-50'}>
-                        <td className={`px-6 py-4 text-sm font-medium text-gray-900 sticky left-0 border-r ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                          {field.label}
-                        </td>
-                        {products.map(product => (
-                          <td key={product.insurance_id} className="px-6 py-4 text-sm text-gray-700 min-w-64 max-w-80">
-                            <div className="whitespace-pre-wrap break-words leading-relaxed">
-                              {formatValue(product[field.key as keyof Product])}
-                            </div>
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Category-Specific Tables (116 fields total) */}
+            {/* Category-Specific Tables */}
             <CategorySpecificTable products={products} />
 
             {/* Advisor's Verdict Section - Stacked Layout */}
