@@ -4,10 +4,10 @@
  * Updated to match client PDF examples (2026-04-17)
  *
  * Categories (based on client PDF examples):
- * - Critical Illness: 13 fields in 3 categories (CI comparison Result.pdf)
- *   • What am I covered for — and for how long?
- *   • What do I get back financially? (empty - placeholder for ci_premium_refund)
- *   • How flexible is this?
+ * - Critical Illness: 14 fields in 3 categories (CI comparison Result.pdf)
+ *   • What am I covered for — and for how long? (8 fields)
+ *   • What do I get back financially? (1 field: ci_premium_refund)
+ *   • How flexible is this? (5 fields)
  *
  * - Life Protection: 14 fields in 3 categories (Protection comparison.pdf)
  *   • ① coverage & protection — what is covered and for how long
@@ -65,10 +65,9 @@ export default function CategorySpecificTable({ products, forPDF = false }: Cate
     { key: 'ci_age_limits_on_coverage', label: 'Age Limits on Coverage' },
   ];
 
-  // Category 2: What do I get back financially? (0 fields currently)
-  // Note: ci_premium_refund will be added here in future update
-  const ciFinancialReturns: { key: string; label: string }[] = [
-    // Empty for now - placeholder for future ci_premium_refund field
+  // Category 2: What do I get back financially? (1 field)
+  const ciFinancialReturns = [
+    { key: 'ci_premium_refund', label: 'Premium Refund' },
   ];
 
   // Category 3: How flexible is this? (5 fields)
@@ -264,7 +263,7 @@ export default function CategorySpecificTable({ products, forPDF = false }: Cate
       {renderTable('Product Structure', universalFields, 'bg-gradient-to-r from-indigo-500 to-indigo-600')}
 
       {/* ========================================================================
-          CRITICAL ILLNESS - 3 Categories (13 fields)
+          CRITICAL ILLNESS - 3 Categories (14 fields)
           Based on CI comparison Result.pdf
       ========================================================================= */}
       {uniqueCategories.includes('critical-illness') && (
@@ -274,7 +273,11 @@ export default function CategorySpecificTable({ products, forPDF = false }: Cate
             ciCoveredForHowLong,
             'bg-gradient-to-r from-red-500 to-red-600'
           )}
-          {/* Note: "What do I get back financially?" category is empty for now (will add ci_premium_refund later) */}
+          {renderTable(
+            'What do I get back financially?',
+            ciFinancialReturns,
+            'bg-gradient-to-r from-red-500 to-red-600'
+          )}
           {renderTable(
             'How flexible is this?',
             ciFlexibility,
