@@ -15,8 +15,7 @@ import CrossCategoryBanner from '@/components/oracle/compare/CrossCategoryBanner
 import QuickActionButtons from '@/components/oracle/compare/QuickActionButtons';
 import { InsuranceProduct } from '@/types/oracle/insurance-product';
 import { detectComparisonScenario } from '@/components/oracle/compare/utils';
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
+// Removed: jsPDF and html2canvas (now using backend API for PDF generation)
 
 // Use the comprehensive InsuranceProduct type (116 fields: 23 core + 90 category-specific + 3 advisor verdict)
 type Product = InsuranceProduct;
@@ -45,7 +44,6 @@ function CompareContent() {
   const [products, setProducts] = useState<Product[]>([]);
   const [commissionData, setCommissionData] = useState<Record<string, CommissionsByTerm>>({});
   const [loading, setLoading] = useState(true);
-  const [showShareModal, setShowShareModal] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [userQuery, setUserQuery] = useState<string | null>(null);
   const printContentRef = useRef<HTMLDivElement>(null);
@@ -231,13 +229,94 @@ function CompareContent() {
     try {
       setIsGeneratingPDF(true);
 
+      // Validate we have products and company_id
+      if (!products || products.length === 0) {
+        notifyError('PDF Error', 'No products selected for comparison');
+        return;
+      }
+
+      if (!user?.company_id) {
+        notifyError('PDF Error', 'Company information not found. Please contact support.');
+        return;
+      }
+
+      // Prepare request payload for backend API
+      const requestBody = {
+        product_ids: products.map(p => p.insurance_id),
+        company_id: user.company_id,
+        // category_group is optional - backend will auto-detect
+        upload_to_gcs: true
+      };
+
+      // Call backend API to generate professional 9-page PDF
+      const response = await apiClient.post<{
+        pdf_url: string;
+        pdf_path: string;
+        generated_at: string;
+        page_count: number;
+        file_size: number;
+        category_group: string;
+        product_count: number;
+      }>('/api/v1/oracle/compare/generate-pdf', requestBody);
+
+      if (response.data.pdf_url) {
+        // Open PDF in new tab for download
+        window.open(response.data.pdf_url, '_blank');
+
+        notifySuccess(
+          'PDF Generated',
+          `Professional ${response.data.page_count}-page comparison PDF has been generated (${(response.data.file_size / 1024 / 1024).toFixed(2)} MB)`
+        );
+      } else {
+        throw new Error('No PDF URL returned from server');
+      }
+
+    } catch (error: any) {
+      console.error('Error generating PDF:', error);
+
+      // Handle specific error codes from backend
+      const errorDetail = error.response?.data?.detail;
+      let errorMessage = 'Failed to generate PDF';
+
+      if (errorDetail) {
+        if (typeof errorDetail === 'string') {
+          errorMessage = errorDetail;
+        } else if (errorDetail.error) {
+          errorMessage = errorDetail.error;
+
+          // Provide user-friendly messages for common errors
+          if (errorDetail.error_code === 'COMPANY_NOT_FOUND') {
+            errorMessage = 'Company not found. Please contact support.';
+          } else if (errorDetail.error_code === 'CATEGORY_MISMATCH') {
+            errorMessage = 'Cannot compare products from different categories. Please select products from the same category.';
+          } else if (errorDetail.error_code === 'PRODUCTS_NOT_FOUND') {
+            errorMessage = 'Some products could not be found. Please try again.';
+          } else if (errorDetail.error_code === 'UNKNOWN_CATEGORIES') {
+            errorMessage = 'Selected products have unsupported categories. Please select different products.';
+          }
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      notifyError('PDF Generation Error', errorMessage);
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
+  // OLD CLIENT-SIDE PDF GENERATION (REPLACED BY BACKEND API)
+  const handleSharePDF_OLD_UNUSED = async (includeCommission: boolean) => {
+    try {
+      setIsGeneratingPDF(true);
+
       if (!printContentRef.current) {
         notifyError('PDF Error', 'Unable to generate PDF. Please try again.');
         return;
       }
 
       const element = printContentRef.current;
-      
+
       // Create a clone for PDF generation
       const clonedElement = element.cloneNode(true) as HTMLElement;
       
@@ -440,7 +519,6 @@ function CompareContent() {
       }
       
       notifySuccess('PDF Generated', 'Comparison PDF has been downloaded successfully');
-      setShowShareModal(false);
       
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -497,13 +575,23 @@ function CompareContent() {
               </h1>
               <div className="flex items-center space-x-3 pdf-hide">
                 <button
-                  onClick={() => setShowShareModal(true)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                  onClick={() => handleSharePDF(false)}
+                  disabled={isGeneratingPDF}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  <span>Download PDF</span>
+                  {isGeneratingPDF ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Generating PDF...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span>Download PDF</span>
+                    </>
+                  )}
                 </button>
                 <button
                   onClick={() => router.push('/oracle/products')}
@@ -706,55 +794,9 @@ function CompareContent() {
             </div>
           </div>
 
-        {/* Download PDF Modal */}
-        {showShareModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
-              <div className="text-center mb-6">
-                <h3 className="text-2xl font-semibold text-gray-900 mb-2">Download PDF</h3>
-                <p className="text-gray-600">Would you like to include commission rates in the PDF?</p>
-              </div>
-              
-              <div className="space-y-4">
-                <button
-                  onClick={() => handleSharePDF(true)}
-                  disabled={isGeneratingPDF}
-                  className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center justify-center disabled:opacity-50"
-                >
-                  {isGeneratingPDF ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Generating PDF...
-                    </>
-                  ) : (
-                    'Yes - Include Commission Rates'
-                  )}
-                </button>
-                <button
-                  onClick={() => handleSharePDF(false)}
-                  disabled={isGeneratingPDF}
-                  className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center justify-center disabled:opacity-50"
-                >
-                  {isGeneratingPDF ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Generating PDF...
-                    </>
-                  ) : (
-                    'Client Presentation Only (No Internal Data)'
-                  )}
-                </button>
-                <button
-                  onClick={() => setShowShareModal(false)}
-                  disabled={isGeneratingPDF}
-                  className="w-full px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Download PDF Modal - Removed: Now downloads directly as client presentation */}
+        {/* Keeping code commented for future reference if commission option is needed again */}
+        {/* {showShareModal && ( ... )} */}
           </div>
         </main>
 
